@@ -19,7 +19,7 @@ function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AuthProvider>
           <KeysProvider>
             <Routes>

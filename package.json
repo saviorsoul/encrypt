@@ -21,6 +21,7 @@
     "dev": "vite",
     "start": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint .",
