@@ -1,0 +1,69 @@
+export const DB_NAME = 'crypto-db';
+export const DB_VERSION = 6;
+export const USERS_STORE = 'users';
+export const USERS_USERNAME_INDEX = 'username';
+export const MESSAGES_STORE = 'messages';
+export const COMMENTS_STORE = 'comments';
+export const COMMENTS_MESSAGE_ID_INDEX = 'messageId';
+export const MESSAGE_KEY_MANIFEST_STORE = 'messageKeyManifest';
+export const MESSAGE_KEY_MANIFEST_KEY_ID_INDEX = 'keyId';
+export const MESSAGE_KEY_MANIFEST_MESSAGE_ID_INDEX = 'messageId';
+export const ONE_TO_ONE_MESSAGES_STORE = 'oneToOneMessages';
+export const ONE_TO_ONE_THREAD_KEY_INDEX = 'threadKey';
+
+export function openCryptoDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(USERS_STORE)) {
+        const usersStore = db.createObjectStore(USERS_STORE, {
+          keyPath: 'keyId',
+        });
+        usersStore.createIndex(USERS_USERNAME_INDEX, 'username', {
+          unique: true,
+        });
+      }
+
+      if (!db.objectStoreNames.contains(MESSAGES_STORE)) {
+        db.createObjectStore(MESSAGES_STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(COMMENTS_STORE)) {
+        const commentsStore = db.createObjectStore(COMMENTS_STORE, {
+          keyPath: 'id',
+        });
+        commentsStore.createIndex(COMMENTS_MESSAGE_ID_INDEX, 'messageId', {
+          unique: false,
+        });
+      }
+      if (!db.objectStoreNames.contains(MESSAGE_KEY_MANIFEST_STORE)) {
+        const shardStore = db.createObjectStore(MESSAGE_KEY_MANIFEST_STORE, {
+          keyPath: ['messageId', 'keyId'],
+        });
+        shardStore.createIndex(MESSAGE_KEY_MANIFEST_KEY_ID_INDEX, 'keyId', {
+          unique: false,
+        });
+        shardStore.createIndex(
+          MESSAGE_KEY_MANIFEST_MESSAGE_ID_INDEX,
+          'messageId',
+          {
+            unique: false,
+          },
+        );
+      }
+      if (!db.objectStoreNames.contains(ONE_TO_ONE_MESSAGES_STORE)) {
+        const oneToOneStore = db.createObjectStore(ONE_TO_ONE_MESSAGES_STORE, {
+          keyPath: 'id',
+        });
+        oneToOneStore.createIndex(ONE_TO_ONE_THREAD_KEY_INDEX, 'threadKey', {
+          unique: false,
+        });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
