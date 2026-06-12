@@ -35,8 +35,8 @@ sudo apt install -y nodejs npm
 1. Clone the repository and go into the project folder:
 
    ```bash
-   git clone <repository-url>
-   cd social-fe
+   git clone git@github.com:saviorsoul/encrypt.git
+   cd encrypt
    ```
 
 2. Install dependencies:
@@ -55,15 +55,15 @@ sudo apt install -y nodejs npm
 
 ## Other commands
 
-| Command                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `npm test`             | Run tests in watch mode                          |
-| `npm run build`        | Production build to `dist/`                      |
-| `npm run preview`      | Preview the production build                     |
-| `npm run lint`         | Check lint and formatting (ESLint + Prettier)    |
-| `npm run lint:fix`     | Auto-fix lint and formatting issues              |
-| `npm run format`       | Format all files with Prettier                   |
-| `npm run format:check` | Check formatting without writing changes         |
+| Command                | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `npm test`             | Run tests in watch mode                       |
+| `npm run build`        | Production build to `dist/`                   |
+| `npm run preview`      | Preview the production build                  |
+| `npm run lint`         | Check lint and formatting (ESLint + Prettier) |
+| `npm run lint:fix`     | Auto-fix lint and formatting issues           |
+| `npm run format`       | Format all files with Prettier                |
+| `npm run format:check` | Check formatting without writing changes      |
 
 ## Linting and formatting
 
