@@ -8,9 +8,9 @@ import {
 import { HKDF_SALT_LENGTH } from '@/crypto/manifestConstants.ts';
 import {
   aesGcmDecryptManifestBody,
-  decryptStoredMessageDek,
   parseEncryptedContentWire,
 } from '@/crypto/manifestDecrypt.ts';
+import { decryptParentMessageDekForRecipient } from '@/crypto/manifestShare.ts';
 import {
   aesGcmEncryptManifestBody,
   deriveAesGcmKeyFromHkdfMaterial,
@@ -62,9 +62,8 @@ export async function encryptCommentWithMessageKey(
   senderPublicKey: CryptoKey,
   senderSigningPrivateKey: CryptoKey,
 ): Promise<string> {
-  const rawDek = await decryptStoredMessageDek(
+  const rawDek = await decryptParentMessageDekForRecipient(
     messageId,
-    messageCorePayload,
     recipientKeyId,
     recipientPrivateKey,
   );
@@ -118,9 +117,8 @@ export async function decryptComment(
     'Comment signature verification failed (payload may have been tampered with).',
   );
 
-  const rawDek = await decryptStoredMessageDek(
+  const rawDek = await decryptParentMessageDekForRecipient(
     messageId,
-    messageCorePayload,
     recipientKeyId,
     recipientPrivateKey,
   );

@@ -1,8 +1,10 @@
 import {
   openCryptoDb,
+  MESSAGES_PARENT_MESSAGE_ID_INDEX,
   MESSAGES_STORE,
   MESSAGE_KEY_MANIFEST_STORE,
 } from '@/crypto/cryptoDb.ts';
+import type { KeyManifestMap } from '@/types/manifest.ts';
 import { getSenderKeyIdFromCorePayload } from '@/crypto/manifestDecrypt.ts';
 import { splitManifestForStorage } from '@/crypto/manifestStorage.ts';
 import { putMessageKeyManifestShardsInTransaction } from '@/crypto/storedMessageKeyManifest.ts';
@@ -15,6 +17,8 @@ export type StoredMessage = {
   id: string;
   payload: string;
   createdAt: number;
+  /** Set on share deliveries; points at the original feed post. */
+  parentMessageId?: string;
 };
 
 function parseStoredMessage(value: unknown): StoredMessage | null {
@@ -28,7 +32,44 @@ function parseStoredMessage(value: unknown): StoredMessage | null {
     return null;
   }
 
-  return value as StoredMessage;
+  const row = value as StoredMessage;
+  if (
+    row.parentMessageId !== undefined &&
+    typeof row.parentMessageId !== 'string'
+  ) {
+    return null;
+  }
+
+  return row;
+}
+
+export async function saveStoredShare(
+  shareCoreJson: string,
+  keyManifest: KeyManifestMap,
+  parentMessageId: string,
+): Promise<StoredMessage> {
+  const message: StoredMessage = {
+    id: crypto.randomUUID(),
+    payload: shareCoreJson,
+    parentMessageId,
+    createdAt: Date.now(),
+  };
+
+  const db = await openCryptoDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      [MESSAGES_STORE, MESSAGE_KEY_MANIFEST_STORE],
+      'readwrite',
+    );
+    const messagesStore = tx.objectStore(MESSAGES_STORE);
+
+    messagesStore.put(message);
+    putMessageKeyManifestShardsInTransaction(tx, message.id, keyManifest);
+
+    tx.oncomplete = () => resolve(message);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 export async function saveStoredMessage(
@@ -88,6 +129,44 @@ export async function listStoredMessages(): Promise<StoredMessage[]> {
         .map(parseStoredMessage)
         .filter((row): row is StoredMessage => row !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
+      resolve(rows);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function listShareDeliveriesForParentMessage(
+  parentMessageId: string,
+): Promise<StoredMessage[]> {
+  const db = await openCryptoDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(MESSAGES_STORE, 'readonly');
+    const store = tx.objectStore(MESSAGES_STORE);
+
+    if (store.indexNames.contains(MESSAGES_PARENT_MESSAGE_ID_INDEX)) {
+      const index = store.index(MESSAGES_PARENT_MESSAGE_ID_INDEX);
+      const request = index.getAll(parentMessageId);
+      request.onsuccess = () => {
+        const rows = (request.result ?? [])
+          .map(parseStoredMessage)
+          .filter((row): row is StoredMessage => row !== null)
+          .sort((a, b) => a.createdAt - b.createdAt);
+        resolve(rows);
+      };
+      request.onerror = () => reject(request.error);
+      return;
+    }
+
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const rows = (request.result ?? [])
+        .map(parseStoredMessage)
+        .filter(
+          (row): row is StoredMessage =>
+            row !== null && row.parentMessageId === parentMessageId,
+        )
+        .sort((a, b) => a.createdAt - b.createdAt);
       resolve(rows);
     };
     request.onerror = () => reject(request.error);

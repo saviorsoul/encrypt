@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import {
   decryptCommentsWithUploadedPrivateKey,
   decryptMessagesAndCommentsWithUploadedPrivateKey,
@@ -25,7 +26,10 @@ import { useInboxSenderLabels } from '@/hooks/useInboxSenderLabels.ts';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import { MessageCommentsPanel } from '@/components/inbox/MessageCommentsPanel.tsx';
+import { ShareMessageDialog } from '@/components/inbox/ShareMessageDialog.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
+import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
+import type { StoredMessage } from '@/crypto/storedMessages.ts';
 import Divider from '@mui/material/Divider';
 
 function commentButtonLabel(count: number): string {
@@ -86,6 +90,7 @@ type MessageInboxProps = {
   loading: boolean;
   error: string | null;
   recipientKeyId: string | null;
+  onShareCreated?: (shareDelivery: StoredMessage) => void;
 };
 
 const MessageInboxItem = memo(function MessageInboxItem({
@@ -101,6 +106,7 @@ const MessageInboxItem = memo(function MessageInboxItem({
   commentDecryptionById,
   decryptingCommentId,
   onDecryptComment,
+  onShare,
 }: {
   message: InboxMessage;
   senderLabel: string;
@@ -114,10 +120,12 @@ const MessageInboxItem = memo(function MessageInboxItem({
   commentDecryptionById: Record<string, MessageDecryptionResult>;
   decryptingCommentId: string | null;
   onDecryptComment: (commentId: string) => void;
+  onShare: () => void;
 }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const { text: decryptedText, error: decryptError } = decryption;
   const sentAgo = useRelativeTime(message.createdAt);
+  const commentThreadId = getCommentThreadMessageId(message);
 
   return (
     <Card>
@@ -169,6 +177,14 @@ const MessageInboxItem = memo(function MessageInboxItem({
         <Button
           size="small"
           variant="outlined"
+          onClick={onShare}
+          startIcon={<ShareOutlinedIcon />}
+        >
+          Share
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
           disabled
           startIcon={<FavoriteBorderOutlinedIcon />}
         >
@@ -190,7 +206,7 @@ const MessageInboxItem = memo(function MessageInboxItem({
             <Typography variant="caption">Comments</Typography>
           </Divider>
           <MessageCommentsPanel
-            messageId={message.id}
+            messageId={commentThreadId}
             recipientKeyId={recipientKeyId}
             commentDecryptionById={commentDecryptionById}
             decryptingCommentId={decryptingCommentId}
@@ -209,6 +225,7 @@ export function MessageInbox({
   loading,
   error,
   recipientKeyId,
+  onShareCreated,
 }: MessageInboxProps) {
   const [knownMessageIds, setKnownMessageIds] = useState<Set<string>>(
     () => new Set(),
@@ -228,6 +245,8 @@ export function MessageInbox({
   );
   const [bulkDecrypting, setBulkDecrypting] = useState(false);
   const [bulkDecryptError, setBulkDecryptError] = useState<string | null>(null);
+  const [shareSourceMessage, setShareSourceMessage] =
+    useState<StoredMessage | null>(null);
 
   if (loading !== prevLoading) {
     setPrevLoading(loading);
@@ -243,10 +262,13 @@ export function MessageInbox({
     setInitialLoadDone(true);
   }
 
-  const messageIds = messages.map((message) => message.id);
+  const commentThreadIds = useMemo(
+    () => [...new Set(messages.map(getCommentThreadMessageId))],
+    [messages],
+  );
   const senderLabelsById = useInboxSenderLabels(messages);
   const { commentCountByMessageId, incrementCommentCount } =
-    useMessageCommentCounts(messageIds, recipientKeyId);
+    useMessageCommentCounts(commentThreadIds, recipientKeyId);
 
   const handleAnimationDone = useCallback((messageId: string) => {
     setKnownMessageIds((prev) => {
@@ -281,15 +303,9 @@ export function MessageInbox({
       void (async () => {
         setDecryptingMessageId(messageId);
         try {
-          const comments = await listDecryptableCommentsForMessage(
-            message.id,
-            recipientKeyId,
-          );
           const { message: messageResult, comments: commentResults } =
             await decryptStoredMessageAndCommentsWithUploadedPrivateKey(
-              message.id,
-              message.payload,
-              comments,
+              message,
               recipientKeyId,
             );
           setDecryptionById((prev) => ({
@@ -337,8 +353,9 @@ export function MessageInbox({
         }));
 
         try {
+          const commentThreadId = getCommentThreadMessageId(message);
           const comments = await listDecryptableCommentsForMessage(
-            messageId,
+            commentThreadId,
             recipientKeyId,
           );
           const comment = comments.find((entry) => entry.id === commentId);
@@ -500,8 +517,12 @@ export function MessageInbox({
               }
               onDecrypt={() => handleDecryptOne(message.id)}
               recipientKeyId={recipientKeyId}
-              commentCount={commentCountByMessageId[message.id] ?? 0}
-              onCommentPosted={() => incrementCommentCount(message.id)}
+              commentCount={
+                commentCountByMessageId[getCommentThreadMessageId(message)] ?? 0
+              }
+              onCommentPosted={() =>
+                incrementCommentCount(getCommentThreadMessageId(message))
+              }
               commentDecryptionById={
                 commentDecryptionByMessageId[message.id] ?? {}
               }
@@ -509,10 +530,20 @@ export function MessageInbox({
               onDecryptComment={(commentId) =>
                 handleDecryptComment(message.id, commentId)
               }
+              onShare={() => setShareSourceMessage(message)}
             />
           </MessageInboxItemPopIn>
         );
       })}
+
+      <ShareMessageDialog
+        open={shareSourceMessage !== null}
+        sourceMessage={shareSourceMessage}
+        onClose={() => setShareSourceMessage(null)}
+        onShared={(shareDelivery) => {
+          onShareCreated?.(shareDelivery);
+        }}
+      />
     </Stack>
   );
 }

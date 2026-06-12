@@ -15,7 +15,7 @@ import {
   type StoredComment,
 } from '@/crypto/storedComments.ts';
 import { getStoredMessageById } from '@/crypto/storedMessages.ts';
-import { hasMessageKeyManifestShard } from '@/crypto/storedMessageKeyManifest.ts';
+import { canCommentOnParentMessage } from '@/crypto/manifestShare.ts';
 
 type UseEncryptCommentOptions = {
   messageId: string;
@@ -67,13 +67,13 @@ export function useEncryptComment({
           throw new Error(`Message not found: ${messageId}`);
         }
 
-        const canReadMessage = await hasMessageKeyManifestShard(
+        const canComment = await canCommentOnParentMessage(
           messageId,
           recipientKeyId,
         );
-        if (!canReadMessage) {
+        if (!canComment) {
           throw new Error(
-            'You cannot comment on this message — no key manifest entry for your key.',
+            'You cannot comment on this message — you are not the sender or a recipient.',
           );
         }
 

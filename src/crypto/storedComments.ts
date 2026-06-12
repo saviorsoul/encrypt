@@ -5,7 +5,7 @@ import {
 } from '@/crypto/cryptoDb.ts';
 import { getStoredMessageById } from '@/crypto/storedMessages.ts';
 import { parseCommentPayload } from '@/crypto/commentCrypto.ts';
-import { hasMessageKeyManifestShard } from '@/crypto/storedMessageKeyManifest.ts';
+import { canCommentOnParentMessage } from '@/crypto/manifestShare.ts';
 
 export type StoredComment = {
   id: string;
@@ -94,5 +94,5 @@ export async function commentVisibleToRecipient(
     return false;
   }
 
-  return hasMessageKeyManifestShard(messageId, recipientKeyId);
+  return canCommentOnParentMessage(messageId, recipientKeyId);
 }

@@ -1,9 +1,24 @@
 import { useEffect, useState } from 'react';
 import {
   getSenderKeyIdFromPayload,
+  getStoredMessageById,
   type StoredMessage,
 } from '@/crypto/storedMessages.ts';
+import {
+  getSharerKeyIdFromSharePayload,
+  isShareDelivery,
+} from '@/crypto/manifestShare.ts';
 import { listStoredUsers } from '@/crypto/storedPublicKeys.ts';
+
+function labelForKeyId(
+  keyId: string | null,
+  usernameByKeyId: Map<string, string>,
+): string {
+  if (!keyId) {
+    return 'Unknown sender';
+  }
+  return usernameByKeyId.get(keyId) ?? `${keyId.slice(0, 12)}...`;
+}
 
 /** Resolve display names for message senders (username or truncated keyId). */
 export function useInboxSenderLabels(
@@ -26,11 +41,26 @@ export function useInboxSenderLabels(
 
       const entries = await Promise.all(
         messages.map(async (message) => {
+          if (isShareDelivery(message)) {
+            const [authorKeyId, sharerKeyId] = await Promise.all([
+              message.parentMessageId
+                ? getStoredParentSenderKeyId(message.parentMessageId)
+                : Promise.resolve(null),
+              getSharerKeyIdFromSharePayload(message.payload),
+            ]);
+            const authorLabel = labelForKeyId(authorKeyId, usernameByKeyId);
+            const sharerLabel = labelForKeyId(sharerKeyId, usernameByKeyId);
+            return [
+              message.id,
+              `${authorLabel} · shared by ${sharerLabel}`,
+            ] as const;
+          }
+
           const senderKeyId = await getSenderKeyIdFromPayload(message.payload);
-          const label =
-            (senderKeyId && usernameByKeyId.get(senderKeyId)) ||
-            (senderKeyId ? `${senderKeyId.slice(0, 12)}…` : 'Unknown sender');
-          return [message.id, label] as const;
+          return [
+            message.id,
+            labelForKeyId(senderKeyId, usernameByKeyId),
+          ] as const;
         }),
       );
 
@@ -47,4 +77,14 @@ export function useInboxSenderLabels(
   }, [messages]);
 
   return messages.length === 0 ? {} : labelsById;
+}
+
+async function getStoredParentSenderKeyId(
+  parentMessageId: string,
+): Promise<string | null> {
+  const parent = await getStoredMessageById(parentMessageId);
+  if (!parent) {
+    return null;
+  }
+  return getSenderKeyIdFromPayload(parent.payload);
 }

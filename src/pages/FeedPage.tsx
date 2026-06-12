@@ -55,6 +55,7 @@ function FeedContent() {
           loading={inboxLoading}
           error={inboxError}
           recipientKeyId={recipientKeyId}
+          onShareCreated={handleMessageSent}
         />
       </Stack>
     </Box>

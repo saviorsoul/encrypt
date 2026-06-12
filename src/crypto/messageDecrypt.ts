@@ -1,13 +1,17 @@
-import {
-  assembleStoredMessagePayload,
-  decryptWithManifest,
-} from '@/crypto/manifestDecrypt.ts';
 import { decryptComment } from '@/crypto/commentCrypto.ts';
+import { decryptWithManifest } from '@/crypto/manifestDecrypt.ts';
 import {
   commentVisibleToRecipient,
   listCommentsForMessage,
 } from '@/crypto/storedComments.ts';
-import { getStoredMessageById } from '@/crypto/storedMessages.ts';
+import {
+  decryptStoredDeliveryWithPrivateKey,
+  getCommentThreadMessageId,
+} from '@/crypto/manifestShare.ts';
+import {
+  getStoredMessageById,
+  type StoredMessage,
+} from '@/crypto/storedMessages.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -21,10 +25,7 @@ export type MessageDecryptionResult = {
   error: string | null;
 };
 
-export type DecryptableMessage = {
-  id: string;
-  payload: string;
-};
+export type DecryptableMessage = StoredMessage;
 
 export type DecryptableComment = {
   id: string;
@@ -52,19 +53,6 @@ export async function decryptMessageWithUploadedPrivateKey(
     await verifyUploadedPrivateKey(jwk, recipientKeyId);
     return decryptWithManifest(payload, privateKey, recipientKeyId);
   });
-}
-
-export async function decryptStoredMessageWithUploadedPrivateKey(
-  messageId: string,
-  corePayload: string,
-  recipientKeyId: string,
-): Promise<string> {
-  const assembledPayload = await assembleStoredMessagePayload(
-    messageId,
-    corePayload,
-    recipientKeyId,
-  );
-  return decryptMessageWithUploadedPrivateKey(assembledPayload, recipientKeyId);
 }
 
 export async function listDecryptableCommentsForMessage(
@@ -138,9 +126,7 @@ async function decryptCommentsWithPrivateKey(
 }
 
 export async function decryptStoredMessageAndCommentsWithUploadedPrivateKey(
-  messageId: string,
-  corePayload: string,
-  comments: DecryptableComment[],
+  message: StoredMessage,
   recipientKeyId: string,
 ): Promise<{
   message: MessageDecryptionResult;
@@ -149,31 +135,36 @@ export async function decryptStoredMessageAndCommentsWithUploadedPrivateKey(
   return withUploadedPrivateKey(async (privateKey, jwk) => {
     await verifyUploadedPrivateKey(jwk, recipientKeyId);
 
-    let message: MessageDecryptionResult;
+    let messageResult: MessageDecryptionResult;
     try {
-      const assembledPayload = await assembleStoredMessagePayload(
-        messageId,
-        corePayload,
+      const text = await decryptStoredDeliveryWithPrivateKey(
+        message,
         recipientKeyId,
-      );
-      const text = await decryptWithManifest(
-        assembledPayload,
         privateKey,
-        recipientKeyId,
       );
-      message = { text, error: null };
+      messageResult = { text, error: null };
     } catch (e) {
       logError('decryptStoredMessageAndComments', e, {
-        messageId,
+        messageId: message.id,
         recipientKeyId,
       });
-      message = {
+      messageResult = {
         text: null,
         error: errorMessage(e, 'Decryption failed.'),
       };
     }
 
-    const messageCoreById = new Map<string, string>([[messageId, corePayload]]);
+    const commentThreadId = getCommentThreadMessageId(message);
+    const comments = await listDecryptableCommentsForMessage(
+      commentThreadId,
+      recipientKeyId,
+    );
+    const parentMessage = await getStoredMessageById(commentThreadId);
+    const messageCoreById = new Map<string, string>();
+    if (parentMessage) {
+      messageCoreById.set(commentThreadId, parentMessage.payload);
+    }
+
     const commentResults = await decryptCommentsWithPrivateKey(
       comments,
       recipientKeyId,
@@ -181,7 +172,7 @@ export async function decryptStoredMessageAndCommentsWithUploadedPrivateKey(
       messageCoreById,
     );
 
-    return { message, comments: commentResults };
+    return { message: messageResult, comments: commentResults };
   });
 }
 
@@ -199,15 +190,10 @@ async function decryptMessagesWithPrivateKey(
 
   for (const message of messages) {
     try {
-      const assembledPayload = await assembleStoredMessagePayload(
-        message.id,
-        message.payload,
+      const text = await decryptStoredDeliveryWithPrivateKey(
+        message,
         recipientKeyId,
-      );
-      const text = await decryptWithManifest(
-        assembledPayload,
         privateKey,
-        recipientKeyId,
       );
       messageResults[message.id] = { text, error: null };
     } catch (e) {
@@ -253,15 +239,22 @@ export async function decryptMessagesAndCommentsWithUploadedPrivateKey(
     > = {};
 
     for (const message of messages) {
+      const commentThreadId = getCommentThreadMessageId(message);
       const comments = await listDecryptableCommentsForMessage(
-        message.id,
+        commentThreadId,
         recipientKeyId,
       );
+      const parentMessage = await getStoredMessageById(commentThreadId);
+      const messageCoreById = new Map<string, string>();
+      if (parentMessage) {
+        messageCoreById.set(commentThreadId, parentMessage.payload);
+      }
+
       commentsByMessageId[message.id] = await decryptCommentsWithPrivateKey(
         comments,
         recipientKeyId,
         privateKey,
-        new Map([[message.id, message.payload]]),
+        messageCoreById,
       );
     }
 
