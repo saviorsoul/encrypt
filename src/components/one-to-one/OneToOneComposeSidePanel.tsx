@@ -49,9 +49,7 @@ export function OneToOneComposeSidePanel({
   const [publicKeyDialogOpen, setPublicKeyDialogOpen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const buttonsEnabled = keysValid && !jwkImporting;
-  const alignEndOnMd = titleOnRight
-    ? { xs: 'flex-start', md: 'flex-end' }
-    : 'flex-start';
+  const alignEndOnMd = titleOnRight ? 'flex-end' : 'flex-start';
   const encryptEnabled = buttonsEnabled && !encryptBusy && bothKeysValid;
 
   const copyTooltip =
@@ -213,6 +211,15 @@ export function OneToOneComposeSidePanel({
               variant="contained"
               disabled={!encryptEnabled}
               onClick={onEncrypt}
+              endIcon={titleOnRight ? null : <SendIcon fontSize="small" />}
+              startIcon={
+                titleOnRight ? (
+                  <SendIcon
+                    fontSize="small"
+                    sx={{ transform: 'rotate(180deg)' }}
+                  />
+                ) : null
+              }
             >
               Encrypt message
             </Button>

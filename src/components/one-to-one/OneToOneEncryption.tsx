@@ -492,7 +492,7 @@ export function OneToOneEncryption({
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
+          flexDirection: 'row',
           alignItems: 'stretch',
         }}
       >
@@ -509,7 +509,7 @@ export function OneToOneEncryption({
               }}
             >
               <Chip
-                label="Change recipient"
+                label="Change"
                 size="small"
                 variant="outlined"
                 clickable
@@ -519,7 +519,7 @@ export function OneToOneEncryption({
               <Tooltip title="Create a new recipient key pair">
                 <span>
                   <Chip
-                    label="Generate recipient"
+                    label="Generate"
                     size="small"
                     variant="outlined"
                     clickable
@@ -531,7 +531,7 @@ export function OneToOneEncryption({
               <Tooltip title="Use existing public key">
                 <span>
                   <Chip
-                    label="Add recipient"
+                    label="Add"
                     size="small"
                     variant="outlined"
                     clickable
@@ -555,7 +555,7 @@ export function OneToOneEncryption({
 
         <Box
           sx={{
-            display: { xs: 'none', md: 'flex' },
+            display: 'flex',
             alignItems: 'center',
             alignSelf: 'stretch',
             position: 'relative',
@@ -564,7 +564,7 @@ export function OneToOneEncryption({
         >
           <Divider orientation="vertical" flexItem sx={{ height: '100%' }} />
         </Box>
-        <Divider sx={{ display: { xs: 'block', md: 'none' } }} />
+        <Divider />
 
         <OneToOneComposeSidePanel
           title={senderTitle}
