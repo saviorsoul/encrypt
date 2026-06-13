@@ -3,6 +3,7 @@ import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import type {
   ManifestShareCorePayload,
   ManifestShareSignableBody,
+  ManifestShareWirePayload,
 } from '@/types/manifestShare.ts';
 import {
   MANIFEST_SHARE_VERSION,
@@ -13,6 +14,7 @@ import {
   encryptManifestWithPerRecipientKek,
   exportCryptoKeyAsJwk,
   generateManifestEphemeralAgreementKeyPair,
+  recipientsIncludingSender,
   type ManifestRecipientKeys,
 } from '@/crypto/manifestEncrypt.ts';
 import {
@@ -69,18 +71,14 @@ export function parseManifestShareCorePayload(
   return payload;
 }
 
-export function validateManifestShareCorePayload(
-  payload: ManifestShareCorePayload,
+export function validateManifestShareWirePayload(
+  payload: ManifestShareWirePayload,
 ): string | null {
   if (
     payload.version !== MANIFEST_SHARE_VERSION ||
     payload.wrap !== MANIFEST_SHARE_WRAP
   ) {
     return `Only supported version is ${MANIFEST_SHARE_VERSION}, wrap: ${MANIFEST_SHARE_WRAP}.`;
-  }
-
-  if (!payload.parentMessageId) {
-    return 'Missing parentMessageId in share payload.';
   }
 
   if (!payload.sharerPublicJwk) {
@@ -98,13 +96,27 @@ export function validateManifestShareCorePayload(
   return null;
 }
 
+export function validateManifestShareCorePayload(
+  payload: ManifestShareCorePayload,
+): string | null {
+  const wireError = validateManifestShareWirePayload(payload);
+  if (wireError) {
+    return wireError;
+  }
+
+  if (!payload.parentMessageId) {
+    return 'Missing parentMessageId in share payload.';
+  }
+
+  return null;
+}
+
 export function manifestShareSignableBodyForSigning(
   body: ManifestShareSignableBody,
 ): Record<string, unknown> {
   return {
     version: body.version,
     wrap: body.wrap,
-    parentMessageId: body.parentMessageId,
     sharerPublicJwk: body.sharerPublicJwk,
     ephemeralPublicKey: body.ephemeralPublicKey,
   };
@@ -121,7 +133,7 @@ export async function signManifestShareBody(
 }
 
 export async function verifyManifestShareSignature(
-  payload: ManifestShareCorePayload,
+  payload: ManifestShareWirePayload,
 ): Promise<void> {
   const { sharerSignature, ...signableBody } = payload;
   await verifyCanonicalSignature(
@@ -130,6 +142,18 @@ export async function verifyManifestShareSignature(
     manifestShareSignableBodyForSigning(signableBody),
     'Share signature verification failed (payload may have been tampered with).',
   );
+}
+
+export function shareCoreToWirePayload(
+  shareCore: ManifestShareCorePayload,
+): ManifestShareWirePayload {
+  return {
+    version: shareCore.version,
+    wrap: shareCore.wrap,
+    sharerPublicJwk: shareCore.sharerPublicJwk,
+    ephemeralPublicKey: shareCore.ephemeralPublicKey,
+    sharerSignature: shareCore.sharerSignature,
+  };
 }
 
 export async function getSharerKeyIdFromSharePayload(
@@ -226,9 +250,14 @@ export async function buildManifestShare(
     sharerPrivateKey,
   );
 
+  const allRecipients = await recipientsIncludingSender(
+    newRecipients,
+    sharerPublicKey,
+  );
+
   const ephemeralKeyPair = await generateManifestEphemeralAgreementKeyPair();
   const recipientsWithKek = await derivePerRecipientKek(
-    newRecipients,
+    allRecipients,
     ephemeralKeyPair.privateKey,
   );
   const keyManifest = await encryptManifestWithPerRecipientKek(
@@ -244,7 +273,6 @@ export async function buildManifestShare(
   const signableBody: ManifestShareSignableBody = {
     version: MANIFEST_SHARE_VERSION,
     wrap: MANIFEST_SHARE_WRAP,
-    parentMessageId,
     sharerPublicJwk,
     ephemeralPublicKey,
   };
@@ -255,12 +283,48 @@ export async function buildManifestShare(
   );
 
   const shareCoreJson = JSON.stringify(
-    { sharerSignature, ...signableBody },
+    { sharerSignature, ...signableBody, parentMessageId },
     null,
     2,
   );
 
   return { shareCoreJson, keyManifest };
+}
+
+export async function decryptShareImportPayload(
+  shareCorePayloadJson: string,
+  parentCorePayloadJson: string,
+  keyManifest: KeyManifestMap,
+  recipientKeyId: string,
+  recipientPrivateKey: CryptoKey,
+): Promise<string> {
+  const shareCore = parseManifestShareCorePayload(shareCorePayloadJson);
+  await verifyManifestShareSignature(shareCore);
+
+  const parentCore = parseManifestCorePayload(parentCorePayloadJson);
+
+  await verifyManifestSignature({
+    ...parentCore,
+    keyManifest: {},
+  } as ManifestPayload);
+
+  const entry = keyManifest[recipientKeyId];
+  if (!entry) {
+    throw new Error(
+      'No key manifest entry for the given recipientKeyId (wrong key pair?).',
+    );
+  }
+
+  const { rawDek } = await decryptDekFromManifestEntry(
+    entry,
+    recipientPrivateKey,
+    shareCore.ephemeralPublicKey,
+  );
+  const dek = await importManifestDek(rawDek);
+  const encryptedContent = parseEncryptedContentFromPayload(
+    parentCore as ManifestPayload,
+  );
+  return aesGcmDecryptManifestBody(dek, encryptedContent);
 }
 
 export async function decryptSharedStoredMessage(

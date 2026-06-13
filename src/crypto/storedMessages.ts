@@ -72,6 +72,28 @@ export async function saveStoredShare(
   });
 }
 
+/** Store a message core without key-manifest shards (e.g. imported share parent). */
+export async function saveStoredMessageCoreWithId(
+  id: string,
+  corePayloadJson: string,
+): Promise<StoredMessage> {
+  const message: StoredMessage = {
+    id,
+    payload: corePayloadJson,
+    createdAt: Date.now(),
+  };
+
+  const db = await openCryptoDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(MESSAGES_STORE, 'readwrite');
+    const store = tx.objectStore(MESSAGES_STORE);
+    store.put(message);
+    tx.oncomplete = () => resolve(message);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function saveStoredMessage(
   fullPayload: string,
 ): Promise<StoredMessage> {

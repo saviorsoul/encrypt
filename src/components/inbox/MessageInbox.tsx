@@ -1,17 +1,11 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
-import Avatar from '@mui/material/Avatar';
+import React, { useCallback, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
-import CardContent from '@mui/material/CardContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
-import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import {
   decryptCommentsWithUploadedPrivateKey,
   decryptMessagesAndCommentsWithUploadedPrivateKey,
@@ -23,18 +17,12 @@ import { isPrivateKeyFileSelectionCancelled } from '@/crypto/privateKeyFile.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 import type { InboxMessage } from '@/hooks/useInboxMessages.ts';
 import { useInboxSenderLabels } from '@/hooks/useInboxSenderLabels.ts';
-import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
-import { nameInitial } from '@/utils/nameInitial.ts';
-import { MessageCommentsPanel } from '@/components/inbox/MessageCommentsPanel.tsx';
+import { MessageFeedCard } from '@/components/inbox/MessageFeedCard.tsx';
 import { ShareMessageDialog } from '@/components/inbox/ShareMessageDialog.tsx';
+import { ImportFeedMessageDialog } from '@/components/inbox/ImportFeedMessageDialog.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
 import type { StoredMessage } from '@/crypto/storedMessages.ts';
-import Divider from '@mui/material/Divider';
-
-function commentButtonLabel(count: number): string {
-  return count > 0 ? `Comment (${count})` : 'Comment';
-}
 
 const MESSAGE_POP_IN = 'messagePopIn';
 
@@ -91,134 +79,8 @@ type MessageInboxProps = {
   error: string | null;
   recipientKeyId: string | null;
   onShareCreated?: (shareDelivery: StoredMessage) => void;
+  onMessageImported?: (message: StoredMessage) => void;
 };
-
-const MessageInboxItem = memo(function MessageInboxItem({
-  message,
-  senderLabel,
-  decryption,
-  decrypting,
-  decryptDisabled,
-  onDecrypt,
-  recipientKeyId,
-  commentCount,
-  onCommentPosted,
-  commentDecryptionById,
-  decryptingCommentId,
-  onDecryptComment,
-  onShare,
-}: {
-  message: InboxMessage;
-  senderLabel: string;
-  decryption: MessageDecryptionResult;
-  decrypting: boolean;
-  decryptDisabled: boolean;
-  onDecrypt: () => void;
-  recipientKeyId: string;
-  commentCount: number;
-  onCommentPosted: () => void;
-  commentDecryptionById: Record<string, MessageDecryptionResult>;
-  decryptingCommentId: string | null;
-  onDecryptComment: (commentId: string) => void;
-  onShare: () => void;
-}) {
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const { text: decryptedText, error: decryptError } = decryption;
-  const sentAgo = useRelativeTime(message.createdAt);
-  const commentThreadId = getCommentThreadMessageId(message);
-
-  return (
-    <Card>
-      <CardContent sx={{ pb: 1 }}>
-        <Stack spacing={1.5}>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-            <Avatar sx={{ width: 40, height: 40, fontWeight: 600 }}>
-              {nameInitial(senderLabel)}
-            </Avatar>
-            <Box sx={{ minWidth: 0, pt: 0.25 }}>
-              <Typography variant="subtitle2" noWrap>
-                {senderLabel}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {sentAgo}
-              </Typography>
-            </Box>
-          </Box>
-
-          {decryptError && (
-            <Typography color="error" variant="body2">
-              {decryptError}
-            </Typography>
-          )}
-
-          <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              color: decryptedText !== null ? 'text.primary' : 'text.secondary',
-              fontStyle: decryptedText !== null ? 'normal' : 'italic',
-            }}
-          >
-            {decryptedText ?? 'Encrypted message — decrypt to read.'}
-          </Typography>
-        </Stack>
-      </CardContent>
-
-      <CardActions sx={{ px: 2, pb: 2, pt: 0, gap: 1, flexWrap: 'wrap' }}>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={onDecrypt}
-          disabled={decryptDisabled}
-          startIcon={<LockOpenIcon />}
-        >
-          {decrypting ? 'Decrypting…' : 'Decrypt'}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={onShare}
-          startIcon={<ShareOutlinedIcon />}
-        >
-          Share
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          disabled
-          startIcon={<FavoriteBorderOutlinedIcon />}
-        >
-          Like
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => setCommentsOpen(true)}
-          startIcon={<ChatBubbleOutlineOutlinedIcon />}
-        >
-          {commentButtonLabel(commentCount)}
-        </Button>
-      </CardActions>
-
-      {commentsOpen && (
-        <Box sx={{ px: 2, pb: 2 }}>
-          <Divider>
-            <Typography variant="caption">Comments</Typography>
-          </Divider>
-          <MessageCommentsPanel
-            messageId={commentThreadId}
-            recipientKeyId={recipientKeyId}
-            commentDecryptionById={commentDecryptionById}
-            decryptingCommentId={decryptingCommentId}
-            onDecryptComment={onDecryptComment}
-            onCommentPosted={onCommentPosted}
-            onClose={() => setCommentsOpen(false)}
-          />
-        </Box>
-      )}
-    </Card>
-  );
-});
 
 export function MessageInbox({
   messages,
@@ -226,6 +88,7 @@ export function MessageInbox({
   error,
   recipientKeyId,
   onShareCreated,
+  onMessageImported,
 }: MessageInboxProps) {
   const [knownMessageIds, setKnownMessageIds] = useState<Set<string>>(
     () => new Set(),
@@ -247,6 +110,7 @@ export function MessageInbox({
   const [bulkDecryptError, setBulkDecryptError] = useState<string | null>(null);
   const [shareSourceMessage, setShareSourceMessage] =
     useState<StoredMessage | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   if (loading !== prevLoading) {
     setPrevLoading(loading);
@@ -457,16 +321,28 @@ export function MessageInbox({
         }}
       >
         <Typography variant="h6">Messages</Typography>
-        {recipientKeyId && messages.length > 0 && (
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={handleBulkDecrypt}
-            disabled={decryptBusy}
-            startIcon={<LockOpenIcon />}
-          >
-            {bulkDecrypting ? 'Decrypting…' : 'Bulk decrypt'}
-          </Button>
+        {recipientKeyId && (
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => setImportDialogOpen(true)}
+              startIcon={<FileUploadOutlinedIcon />}
+            >
+              Import message
+            </Button>
+            {messages.length > 0 && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleBulkDecrypt}
+                disabled={decryptBusy}
+                startIcon={<LockOpenIcon />}
+              >
+                {bulkDecrypting ? 'Decrypting…' : 'Bulk decrypt'}
+              </Button>
+            )}
+          </Box>
         )}
       </Box>
 
@@ -505,7 +381,7 @@ export function MessageInbox({
             animateEntry={animateEntry}
             onAnimationDone={handleAnimationDone}
           >
-            <MessageInboxItem
+            <MessageFeedCard
               message={message}
               senderLabel={senderLabelsById[message.id] ?? 'Unknown sender'}
               decryption={decryption}
@@ -542,6 +418,16 @@ export function MessageInbox({
         onClose={() => setShareSourceMessage(null)}
         onShared={(shareDelivery) => {
           onShareCreated?.(shareDelivery);
+        }}
+      />
+
+      <ImportFeedMessageDialog
+        open={importDialogOpen}
+        recipientKeyId={recipientKeyId}
+        existingMessages={messages}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={(message) => {
+          onMessageImported?.(message);
         }}
       />
     </Stack>

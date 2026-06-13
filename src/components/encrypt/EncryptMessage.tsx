@@ -79,7 +79,7 @@ export function EncryptMessage({
         multiline
         minRows={3}
         fullWidth
-        placeholder="Enter text to encrypt…"
+        placeholder="Enter text to encrypt..."
       />
 
       <Box>
@@ -126,7 +126,7 @@ export function EncryptMessage({
             startIcon={<SendIcon />}
             sx={{ flexShrink: 0, height: 40 }}
           >
-            {busy ? 'Sending…' : 'Send message'}
+            Send message
           </Button>
         </Box>
 

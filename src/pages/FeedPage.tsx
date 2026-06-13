@@ -56,6 +56,7 @@ function FeedContent() {
           error={inboxError}
           recipientKeyId={recipientKeyId}
           onShareCreated={handleMessageSent}
+          onMessageImported={handleMessageSent}
         />
       </Stack>
     </Box>

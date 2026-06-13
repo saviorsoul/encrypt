@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 import { useShareMessage } from '@/hooks/useShareMessage.ts';
 import { useMessageRecipients } from '@/hooks/useMessageRecipients.ts';
@@ -36,7 +37,15 @@ export function ShareMessageDialog({
     error: recipientsError,
   } = useMessageRecipients();
 
-  const { keysReady, keysLoading, error, busy, handleShare } = useShareMessage({
+  const {
+    keysReady,
+    keysLoading,
+    error,
+    busy,
+    busyAction,
+    handleShare,
+    handleExportFile,
+  } = useShareMessage({
     sourceMessage,
     recipients,
     recipientsLoading: loadingRecipientKeys,
@@ -44,13 +53,18 @@ export function ShareMessageDialog({
       onShared?.(shareDelivery);
       onClose();
     },
+    onExported: onClose,
   });
 
-  const handleSubmit = useCallback(() => {
+  const handleShareLocally = useCallback(() => {
     void handleShare(recipients);
   }, [handleShare, recipients]);
 
-  const shareDisabled =
+  const handleExport = useCallback(() => {
+    void handleExportFile(recipients);
+  }, [handleExportFile, recipients]);
+
+  const actionDisabled =
     !keysReady || busy || recipients.length === 0 || keysLoading;
 
   return (
@@ -59,9 +73,10 @@ export function ShareMessageDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Share with new recipients using a fresh ephemeral key. Existing
-            recipients keep their original access; only selected users receive a
-            new delivery.
+            Select recipients to receive a fresh key wrap for this message.
+            Share locally saves a delivery in this browser. Export file
+            downloads a JSON file (you will be prompted for your private key
+            once to build the wraps, then the file downloads automatically).
           </Typography>
 
           <RecipientMultiSelect
@@ -85,16 +100,26 @@ export function ShareMessageDialog({
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
+      <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+        <Button onClick={onClose} disabled={busy} sx={{ mr: 'auto' }}>
           Cancel
         </Button>
         <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={shareDisabled}
+          type="button"
+          variant="outlined"
+          onClick={handleShareLocally}
+          disabled={actionDisabled}
         >
-          {busy ? 'Sharing…' : 'Share'}
+          {busyAction === 'share' ? 'Sharing…' : 'Share locally'}
+        </Button>
+        <Button
+          type="button"
+          variant="contained"
+          onClick={handleExport}
+          disabled={actionDisabled}
+          startIcon={<FileDownloadOutlinedIcon />}
+        >
+          {busyAction === 'export' ? 'Exporting…' : 'Export file'}
         </Button>
       </DialogActions>
     </Dialog>
