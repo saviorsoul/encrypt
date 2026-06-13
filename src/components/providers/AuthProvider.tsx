@@ -11,9 +11,15 @@ export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
 
 export type AuthUser = { username: string };
 
+export type LoginOptions = {
+  existingUser?: boolean;
+};
+
 export type AuthContextValue = {
   user: AuthUser | null;
-  login: (username: string) => void;
+  loginNotice: string | null;
+  login: (username: string, options?: LoginOptions) => void;
+  clearLoginNotice: () => void;
   logout: () => void;
 };
 
@@ -29,11 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
 
-  const login = useCallback((username: string) => {
+  const login = useCallback((username: string, options?: LoginOptions) => {
     const trimmed = username.trim();
     if (!trimmed) return;
     setUser({ username: trimmed });
+    setLoginNotice(
+      options?.existingUser
+        ? `User already exists in database, logged in as: ${trimmed}`
+        : null,
+    );
     try {
       sessionStorage.setItem(STORAGE_KEY, trimmed);
       localStorage.setItem(LAST_USERNAME_STORAGE_KEY, trimmed);
@@ -42,8 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const clearLoginNotice = useCallback(() => {
+    setLoginNotice(null);
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
+    setLoginNotice(null);
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -51,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  const value = useMemo(
+    () => ({ user, loginNotice, login, clearLoginNotice, logout }),
+    [user, loginNotice, login, clearLoginNotice, logout],
+  );
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }

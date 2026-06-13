@@ -3,9 +3,11 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Snackbar from '@mui/material/Snackbar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import {
@@ -25,8 +27,10 @@ const NAV_ITEMS = [
   { label: 'Glossary', to: '/glossary' },
 ];
 
+const EXISTING_USER_LOGIN_SNACKBAR_MS = 5000;
+
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, loginNotice, clearLoginNotice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -134,6 +138,21 @@ export function AppLayout() {
       >
         <Outlet />
       </Box>
+      <Snackbar
+        open={Boolean(loginNotice)}
+        autoHideDuration={EXISTING_USER_LOGIN_SNACKBAR_MS}
+        onClose={clearLoginNotice}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          variant="filled"
+          onClose={clearLoginNotice}
+          sx={{ width: '100%' }}
+        >
+          {loginNotice}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
