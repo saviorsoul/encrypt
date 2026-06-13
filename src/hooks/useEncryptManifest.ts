@@ -22,12 +22,14 @@ type UseEncryptManifestOptions = {
   recipients: ManifestRecipientKeys[];
   recipientsLoading?: boolean;
   onMessageSent?: (message: StoredMessage) => void;
+  onEncryptSuccess?: (payload: string) => void;
 };
 
 export function useEncryptManifest({
   recipients,
   recipientsLoading = false,
   onMessageSent,
+  onEncryptSuccess,
 }: UseEncryptManifestOptions) {
   const keys = useKeysContext();
   const [message, setMessage] = useState('');
@@ -88,6 +90,7 @@ export function useEncryptManifest({
         const savedMessage = await saveStoredMessage(payload);
         setMessage('');
         onMessageSent?.(savedMessage);
+        onEncryptSuccess?.(payload);
       });
     } catch (e) {
       if (isPrivateKeyFileSelectionCancelled(e)) {
@@ -97,7 +100,7 @@ export function useEncryptManifest({
     } finally {
       setBusy(false);
     }
-  }, [keys, message, recipients, onMessageSent]);
+  }, [keys, message, recipients, onMessageSent, onEncryptSuccess]);
 
   const keysLoading = Boolean(keys?.loading ?? true);
 

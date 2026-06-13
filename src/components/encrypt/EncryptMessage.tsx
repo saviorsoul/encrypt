@@ -8,6 +8,7 @@ import SendIcon from '@mui/icons-material/Send';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
 import type { StoredMessage } from '@/crypto/storedMessages.ts';
 import { useEncryptManifest } from '@/hooks/useEncryptManifest.ts';
+import { usePayloadCopiedSnackbar } from '@/hooks/usePayloadCopiedSnackbar.tsx';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 
 type EncryptMessageProps = {
@@ -35,6 +36,8 @@ export function EncryptMessage({
   loadingMockRecipients = false,
   recipientsError = null,
 }: EncryptMessageProps) {
+  const { copyPayloadAndNotify, payloadCopiedSnackbar } =
+    usePayloadCopiedSnackbar();
   const {
     keysLoading,
     keysReady,
@@ -43,7 +46,12 @@ export function EncryptMessage({
     error,
     busy,
     handleSend,
-  } = useEncryptManifest({ recipients, recipientsLoading, onMessageSent });
+  } = useEncryptManifest({
+    recipients,
+    recipientsLoading,
+    onMessageSent,
+    onEncryptSuccess: copyPayloadAndNotify,
+  });
 
   const handleSubmit = useCallback(
     (event: React.SubmitEvent) => {
@@ -67,92 +75,104 @@ export function EncryptMessage({
   }
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-    >
-      <TextField
-        label="Message"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        multiline
-        minRows={3}
-        fullWidth
-        placeholder="Enter text to encrypt..."
-      />
+    <>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+      >
+        <TextField
+          label="Message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          multiline
+          minRows={3}
+          fullWidth
+          placeholder="Enter text to encrypt..."
+        />
 
-      <Box>
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          {loadingRecipients ? (
-            <Box
-              sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}
-            >
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="text.secondary">
-                {loadingMockRecipients && !loadingUsers
-                  ? 'Generating mock recipients…'
-                  : 'Loading recipients…'}
-              </Typography>
-            </Box>
-          ) : availableOptions.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-              No recipients available yet. Log in as another user on this
-              browser to add stored users, or wait for mock recipients to finish
-              loading.
-            </Typography>
-          ) : (
-            <RecipientMultiSelect
-              options={availableOptions}
-              value={selectedOptions}
-              onChange={onSelectedOptionsChange}
-              getOptionLabel={getOptionLabel}
-            />
-          )}
-
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={!keysReady || !message.trim()}
-            loading={busy}
-            loadingPosition="start"
-            startIcon={<SendIcon />}
-            sx={{ flexShrink: 0, height: 40 }}
+        <Box>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
           >
-            Send message
-          </Button>
+            {loadingRecipients ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  flex: 1,
+                }}
+              >
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  {loadingMockRecipients && !loadingUsers
+                    ? 'Generating mock recipients…'
+                    : 'Loading recipients…'}
+                </Typography>
+              </Box>
+            ) : availableOptions.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ flex: 1 }}
+              >
+                No recipients available yet. Log in as another user on this
+                browser to add stored users, or wait for mock recipients to
+                finish loading.
+              </Typography>
+            ) : (
+              <RecipientMultiSelect
+                options={availableOptions}
+                value={selectedOptions}
+                onChange={onSelectedOptionsChange}
+                getOptionLabel={getOptionLabel}
+              />
+            )}
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={!keysReady || !message.trim()}
+              loading={busy}
+              loadingPosition="start"
+              startIcon={<SendIcon />}
+              sx={{ flexShrink: 0, height: 40 }}
+            >
+              Send message
+            </Button>
+          </Box>
+
+          {!loadingRecipients && availableOptions.length > 0 && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', mt: 0.5 }}
+            >
+              Public keys are loaded from IndexedDB for each selected user. Mock
+              users are generated locally for stress testing.
+            </Typography>
+          )}
         </Box>
 
-        {!loadingRecipients && availableOptions.length > 0 && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: 'block', mt: 0.5 }}
-          >
-            Public keys are loaded from IndexedDB for each selected user. Mock
-            users are generated locally for stress testing.
+        {recipientsError && (
+          <Typography color="error" variant="body2">
+            {recipientsError}
+          </Typography>
+        )}
+
+        {error && (
+          <Typography color="error" variant="body2">
+            {error}
           </Typography>
         )}
       </Box>
-
-      {recipientsError && (
-        <Typography color="error" variant="body2">
-          {recipientsError}
-        </Typography>
-      )}
-
-      {error && (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
-      )}
-    </Box>
+      {payloadCopiedSnackbar}
+    </>
   );
 }

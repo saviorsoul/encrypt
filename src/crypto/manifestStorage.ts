@@ -52,3 +52,19 @@ export function assembleManifestForRecipient(
   };
   return JSON.stringify(payload);
 }
+
+export function assembleManifestWithKeyManifest(
+  corePayloadJson: string,
+  keyManifest: KeyManifestMap,
+): string {
+  if (Object.keys(keyManifest).length === 0) {
+    throw new Error('Manifest has no keyManifest entries to assemble.');
+  }
+
+  const core = parseManifestCorePayload(corePayloadJson);
+  const payload: ManifestPayload = {
+    ...core,
+    keyManifest,
+  };
+  return JSON.stringify(payload, null, 2);
+}

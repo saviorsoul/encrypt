@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -10,14 +10,19 @@ import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
+import { assembleStoredFeedMessageCopyPayload } from '@/crypto/exportFeedMessage.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
 import type { StoredMessage } from '@/crypto/storedMessages.ts';
 import { MessageCommentsPanel } from '@/components/inbox/MessageCommentsPanel.tsx';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
+import type { CopyState } from '@/types/copyState.ts';
+import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 
 function commentButtonLabel(count: number): string {
@@ -58,9 +63,25 @@ export const MessageFeedCard = memo(function MessageFeedCard({
   onShare,
 }: MessageFeedCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [copyBusy, setCopyBusy] = useState(false);
   const { text: decryptedText, error: decryptError } = decryption;
   const sentAgo = useRelativeTime(message.createdAt);
   const commentThreadId = getCommentThreadMessageId(message);
+
+  const handleCopy = useCallback(async () => {
+    setCopyBusy(true);
+    try {
+      const payloadJson = await assembleStoredFeedMessageCopyPayload(message);
+      await copyTextToClipboard(payloadJson);
+      setCopyState('ok');
+    } catch {
+      setCopyState('err');
+    } finally {
+      setCopyBusy(false);
+      window.setTimeout(() => setCopyState('idle'), 2000);
+    }
+  }, [message]);
 
   return (
     <Card variant={preview ? 'outlined' : 'elevation'}>
@@ -118,6 +139,22 @@ export const MessageFeedCard = memo(function MessageFeedCard({
                 startIcon={<LockOpenIcon />}
               >
                 {decrypting ? 'Decrypting…' : 'Decrypt'}
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => void handleCopy()}
+                disabled={copyBusy}
+                color={copyState === 'ok' ? 'success' : 'primary'}
+                startIcon={
+                  copyState === 'ok' ? (
+                    <CheckIcon />
+                  ) : (
+                    <ContentCopyOutlinedIcon />
+                  )
+                }
+              >
+                Copy
               </Button>
               <Button
                 size="small"

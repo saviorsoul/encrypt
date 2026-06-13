@@ -114,3 +114,23 @@ export async function listKeyIdsForMessage(
     request.onerror = () => reject(request.error);
   });
 }
+
+export async function getKeyManifestForMessage(
+  messageId: string,
+): Promise<KeyManifestMap> {
+  const keyIds = await listKeyIdsForMessage(messageId);
+  if (keyIds.length === 0) {
+    throw new Error('Message has no key manifest entries.');
+  }
+
+  const keyManifest: KeyManifestMap = {};
+  for (const keyId of keyIds) {
+    const entry = await getMessageKeyManifestEntry(messageId, keyId);
+    if (!entry) {
+      throw new Error(`Missing key manifest entry for recipient ${keyId}.`);
+    }
+    keyManifest[keyId] = entry;
+  }
+
+  return keyManifest;
+}
