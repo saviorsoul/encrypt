@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import SendIcon from '@mui/icons-material/Send';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
+import SendAndArchiveOutlinedIcon from '@mui/icons-material/SendAndArchiveOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -17,6 +19,8 @@ import Typography from '@mui/material/Typography';
 import { StepOutputTextField } from '@/components/manifest-steps/StepOutputTextField.tsx';
 import type { CopyState } from '@/types/copyState.ts';
 
+type PrimaryActionMode = 'encrypt' | 'import';
+
 type OneToOneComposeSidePanelProps = {
   title: string;
   titleAction?: React.ReactNode;
@@ -26,9 +30,10 @@ type OneToOneComposeSidePanelProps = {
   jwkImporting: boolean;
   keysValid: boolean;
   bothKeysValid: boolean;
-  encryptError: string | null;
-  encryptBusy: boolean;
-  onEncrypt: () => void;
+  actionError: string | null;
+  actionBusy: boolean;
+  primaryActionMode?: PrimaryActionMode;
+  onPrimaryAction: () => void;
   publicKeySectionCollapsed?: boolean;
 };
 
@@ -41,16 +46,26 @@ export function OneToOneComposeSidePanel({
   jwkImporting,
   keysValid,
   bothKeysValid,
-  encryptError,
-  encryptBusy,
-  onEncrypt,
+  actionError,
+  actionBusy,
+  primaryActionMode = 'encrypt',
+  onPrimaryAction,
   publicKeySectionCollapsed = false,
 }: OneToOneComposeSidePanelProps) {
   const [publicKeyDialogOpen, setPublicKeyDialogOpen] = useState(false);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const buttonsEnabled = keysValid && !jwkImporting;
   const alignEndOnMd = titleOnRight ? 'flex-end' : 'flex-start';
-  const encryptEnabled = buttonsEnabled && !encryptBusy && bothKeysValid;
+  const primaryActionEnabled =
+    primaryActionMode === 'import'
+      ? !actionBusy
+      : buttonsEnabled && !actionBusy && bothKeysValid;
+  const primaryActionLabel =
+    primaryActionMode === 'import' ? 'Import message' : 'Encrypt message';
+  const PrimaryActionIcon =
+    primaryActionMode === 'import'
+      ? CloudDownloadOutlinedIcon
+      : SendAndArchiveOutlinedIcon;
 
   const copyTooltip =
     copyState === 'ok'
@@ -75,8 +90,8 @@ export function OneToOneComposeSidePanel({
       sx={{
         flex: 1,
         minWidth: 0,
-        px: { xs: 1, sm: 2 },
-        py: 2,
+        px: 0.5,
+        py: 0.5,
       }}
     >
       <Box sx={{ width: '100%' }}>
@@ -114,22 +129,15 @@ export function OneToOneComposeSidePanel({
                     mr: titleOnRight ? 1 : 0,
                   }}
                 >
-                  <Tooltip title="Encrypt message">
+                  <Tooltip title={primaryActionLabel}>
                     <span>
                       <IconButton
                         size="small"
-                        aria-label="Encrypt message"
-                        disabled={!encryptEnabled}
-                        onClick={onEncrypt}
+                        aria-label={primaryActionLabel}
+                        disabled={!primaryActionEnabled}
+                        onClick={onPrimaryAction}
                       >
-                        <SendIcon
-                          fontSize="small"
-                          sx={{
-                            transform: titleOnRight
-                              ? 'rotate(180deg)'
-                              : undefined,
-                          }}
-                        />
+                        <PrimaryActionIcon fontSize="small" />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -209,25 +217,34 @@ export function OneToOneComposeSidePanel({
           >
             <Button
               variant="contained"
-              disabled={!encryptEnabled}
-              onClick={onEncrypt}
-              endIcon={titleOnRight ? null : <SendIcon fontSize="small" />}
+              disabled={!primaryActionEnabled}
+              onClick={onPrimaryAction}
+              endIcon={
+                titleOnRight || primaryActionMode === 'import' ? null : (
+                  <PrimaryActionIcon fontSize="small" />
+                )
+              }
               startIcon={
-                titleOnRight ? (
-                  <SendIcon
+                titleOnRight || primaryActionMode === 'import' ? (
+                  <PrimaryActionIcon
                     fontSize="small"
-                    sx={{ transform: 'rotate(180deg)' }}
+                    sx={{
+                      transform:
+                        primaryActionMode === 'encrypt' && titleOnRight
+                          ? 'rotate(180deg)'
+                          : undefined,
+                    }}
                   />
                 ) : null
               }
             >
-              Encrypt message
+              {primaryActionLabel}
             </Button>
           </Box>
         </Collapse>
       </Box>
 
-      {encryptError && <Alert severity="error">{encryptError}</Alert>}
+      {actionError && <Alert severity="error">{actionError}</Alert>}
 
       <Dialog
         open={publicKeyDialogOpen}

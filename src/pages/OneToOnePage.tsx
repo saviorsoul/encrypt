@@ -11,7 +11,6 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { DecryptMessageDialog } from '@/components/one-to-one/DecryptMessageDialog.tsx';
 import { NameUnknownRecipientDialog } from '@/components/one-to-one/NameUnknownRecipientDialog.tsx';
 import { OneToOneConversationThread } from '@/components/one-to-one/OneToOneConversationThread.tsx';
-import { OneToOneDecryptPanel } from '@/components/one-to-one/OneToOneDecryptPanel.tsx';
 import { OneToOneEncryption } from '@/components/one-to-one/OneToOneEncryption.tsx';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useOneToOneThread } from '@/hooks/useOneToOneThread.ts';
@@ -595,7 +594,7 @@ export function OneToOnePage() {
     [handleDecrypt],
   );
 
-  const isReceiveMessageBlocked =
+  const isImportMessageBlocked =
     unknownRecipientDialog !== null ||
     unknownRecipientSaving ||
     peerKeyIdToSelect !== null ||
@@ -664,15 +663,10 @@ export function OneToOnePage() {
           onEncryptedMessage={(item, side, decryptedText) =>
             appendThreadItem(item, side, { decryptedText })
           }
+          onImportMessage={handleOpenDecryptDialog}
+          importBusy={isDecryptBusy}
           onPartyKeyIdsChange={setPartyKeyIds}
           onPeerLabelChange={setPeerLabel}
-        />
-
-        <Divider />
-
-        <OneToOneDecryptPanel
-          decryptBusy={isDecryptBusy}
-          onDecrypt={handleOpenDecryptDialog}
         />
 
         <Divider>
@@ -754,7 +748,7 @@ export function OneToOnePage() {
       <DecryptMessageDialog
         open={decryptDialogOpen}
         decrypting={decryptBusy}
-        decryptDisabled={isReceiveMessageBlocked}
+        decryptDisabled={isImportMessageBlocked}
         error={decryptError}
         onClose={handleCloseDecryptDialog}
         onPayloadChange={() => setDecryptError(null)}

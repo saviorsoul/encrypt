@@ -52,7 +52,7 @@ export function DecryptMessageDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Decrypt message</DialogTitle>
+      <DialogTitle>Import message</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus

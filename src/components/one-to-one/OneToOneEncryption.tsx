@@ -61,6 +61,8 @@ type OneToOneEncryptionProps = {
     side: ThreadSide,
     decryptedText: string,
   ) => Promise<void>;
+  onImportMessage: () => void;
+  importBusy?: boolean;
   onPartyKeyIdsChange: (keyIds: PartyKeyIds) => void;
   onPeerLabelChange?: (label: string) => void;
 };
@@ -72,6 +74,8 @@ export function OneToOneEncryption({
   onPeerKeyIdSelected,
   onPeerNeedsName,
   onEncryptedMessage,
+  onImportMessage,
+  importBusy = false,
   onPartyKeyIdsChange,
   onPeerLabelChange,
 }: OneToOneEncryptionProps) {
@@ -89,14 +93,11 @@ export function OneToOneEncryption({
   const [senderEncryptError, setSenderEncryptError] = useState<string | null>(
     null,
   );
-  const [recipientEncryptError, setRecipientEncryptError] = useState<
-    string | null
-  >(null);
-  const [senderEncryptBusy, setSenderEncryptBusy] = useState(false);
-  const [recipientEncryptBusy, setRecipientEncryptBusy] = useState(false);
-  const [encryptDialogSide, setEncryptDialogSide] = useState<ThreadSide | null>(
+  const [recipientPanelError, setRecipientPanelError] = useState<string | null>(
     null,
   );
+  const [senderEncryptBusy, setSenderEncryptBusy] = useState(false);
+  const [encryptDialogOpen, setEncryptDialogOpen] = useState(false);
 
   const senderKeys = usePublicKeyJwkInput(senderJwkText);
   const recipientKeys = usePublicKeyJwkInput(recipientJwkText);
@@ -151,7 +152,7 @@ export function OneToOneEncryption({
     let cancelled = false;
 
     void (async () => {
-      setRecipientEncryptError(null);
+      setRecipientPanelError(null);
       setStoredUserLoading(true);
 
       try {
@@ -189,7 +190,7 @@ export function OneToOneEncryption({
         onPeerKeyIdSelected?.();
       } catch (e) {
         if (!cancelled) {
-          setRecipientEncryptError(
+          setRecipientPanelError(
             errorMessage(e, 'Failed to load recipient public key.'),
           );
         }
@@ -214,7 +215,7 @@ export function OneToOneEncryption({
   const handleSelectStoredUser = useCallback(
     async (username: string | null) => {
       setSelectedStoredUsername(username);
-      setRecipientEncryptError(null);
+      setRecipientPanelError(null);
       setRecipientTitle(username ?? 'Recipient');
       onPeerLabelChange?.(username ?? 'Recipient');
 
@@ -233,7 +234,7 @@ export function OneToOneEncryption({
           JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
         );
       } catch (e) {
-        setRecipientEncryptError(
+        setRecipientPanelError(
           errorMessage(e, 'Failed to load stored user public key.'),
         );
       } finally {
@@ -252,7 +253,7 @@ export function OneToOneEncryption({
     async (username: string) => {
       setGenerateRecipientBusy(true);
       setGenerateRecipientError(null);
-      setRecipientEncryptError(null);
+      setRecipientPanelError(null);
 
       try {
         const existingNames = await listStoredUsernames();
@@ -347,36 +348,28 @@ export function OneToOneEncryption({
     [refreshStoredUsernames, onPeerLabelChange],
   );
 
-  const handleOpenEncryptDialog = useCallback((side: ThreadSide) => {
-    if (side === 'sender') {
-      setSenderEncryptError(null);
-    } else {
-      setRecipientEncryptError(null);
-    }
-    setEncryptDialogSide(side);
+  const handleOpenEncryptDialog = useCallback(() => {
+    setSenderEncryptError(null);
+    setEncryptDialogOpen(true);
   }, []);
 
   const handleCloseEncryptDialog = useCallback(() => {
-    if (encryptDialogSide === 'sender' && senderEncryptBusy) {
+    if (senderEncryptBusy) {
       return;
     }
-    if (encryptDialogSide === 'recipient' && recipientEncryptBusy) {
-      return;
-    }
-    setEncryptDialogSide(null);
-  }, [encryptDialogSide, senderEncryptBusy, recipientEncryptBusy]);
+    setEncryptDialogOpen(false);
+  }, [senderEncryptBusy]);
 
   const handleEncryptAs = useCallback(
-    async (side: ThreadSide, messageText: string): Promise<boolean> => {
-      const setError =
-        side === 'sender' ? setSenderEncryptError : setRecipientEncryptError;
-      const setBusy =
-        side === 'sender' ? setSenderEncryptBusy : setRecipientEncryptBusy;
+    async (messageText: string): Promise<boolean> => {
+      const side: ThreadSide = 'sender';
+      const setError = setSenderEncryptError;
+      const setBusy = setSenderEncryptBusy;
 
-      const encryptorKeys = side === 'sender' ? senderKeys : recipientKeys;
-      const peerKeys = side === 'sender' ? recipientKeys : senderKeys;
-      const roleLabel = side === 'sender' ? senderTitle : recipientTitle;
-      const peerLabel = side === 'sender' ? recipientTitle : senderTitle;
+      const encryptorKeys = senderKeys;
+      const peerKeys = recipientKeys;
+      const roleLabel = senderTitle;
+      const peerLabel = recipientTitle;
 
       setError(null);
 
@@ -470,15 +463,12 @@ export function OneToOneEncryption({
 
   const handleEncryptFromDialog = useCallback(
     async (message: string) => {
-      if (!encryptDialogSide) {
-        return;
-      }
-      const success = await handleEncryptAs(encryptDialogSide, message);
+      const success = await handleEncryptAs(message);
       if (success) {
-        setEncryptDialogSide(null);
+        setEncryptDialogOpen(false);
       }
     },
-    [encryptDialogSide, handleEncryptAs],
+    [handleEncryptAs],
   );
 
   if (keys?.loading) {
@@ -552,9 +542,10 @@ export function OneToOneEncryption({
           jwkImporting={recipientKeys.importing}
           keysValid={recipientKeys.isValid}
           bothKeysValid={bothKeysValid}
-          encryptError={recipientEncryptError ?? storedUsersError}
-          encryptBusy={recipientEncryptBusy}
-          onEncrypt={() => handleOpenEncryptDialog('recipient')}
+          actionError={recipientPanelError ?? storedUsersError}
+          actionBusy={importBusy}
+          primaryActionMode="import"
+          onPrimaryAction={onImportMessage}
           publicKeySectionCollapsed={publicKeySectionCollapsed}
         />
 
@@ -586,9 +577,9 @@ export function OneToOneEncryption({
           jwkImporting={senderKeys.importing}
           keysValid={senderKeys.isValid}
           bothKeysValid={bothKeysValid}
-          encryptError={senderEncryptError}
-          encryptBusy={senderEncryptBusy}
-          onEncrypt={() => handleOpenEncryptDialog('sender')}
+          actionError={senderEncryptError}
+          actionBusy={senderEncryptBusy}
+          onPrimaryAction={handleOpenEncryptDialog}
           publicKeySectionCollapsed={publicKeySectionCollapsed}
         />
       </Box>
@@ -628,36 +619,12 @@ export function OneToOneEncryption({
       />
 
       <EncryptMessageDialog
-        open={encryptDialogSide !== null}
-        roleLabel={
-          encryptDialogSide === 'sender'
-            ? senderTitle
-            : encryptDialogSide === 'recipient'
-              ? recipientTitle
-              : ''
-        }
-        encrypting={
-          encryptDialogSide === 'sender'
-            ? senderEncryptBusy
-            : encryptDialogSide === 'recipient'
-              ? recipientEncryptBusy
-              : false
-        }
-        error={
-          encryptDialogSide === 'sender'
-            ? senderEncryptError
-            : encryptDialogSide === 'recipient'
-              ? recipientEncryptError
-              : null
-        }
+        open={encryptDialogOpen}
+        roleLabel={senderTitle}
+        encrypting={senderEncryptBusy}
+        error={senderEncryptError}
         onClose={handleCloseEncryptDialog}
-        onMessageChange={() => {
-          if (encryptDialogSide === 'sender') {
-            setSenderEncryptError(null);
-          } else if (encryptDialogSide === 'recipient') {
-            setRecipientEncryptError(null);
-          }
-        }}
+        onMessageChange={() => setSenderEncryptError(null)}
         onEncrypt={(message) => void handleEncryptFromDialog(message)}
       />
       {payloadCopiedSnackbar}
