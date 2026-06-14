@@ -17,18 +17,6 @@ export type StepOutputTextFieldPaletteColor = keyof Theme['palette'];
 function coloredFieldSx(color: StepOutputTextFieldPaletteColor) {
   return {
     ...monospaceFieldSx,
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': {
-        borderColor: `${color}.main`,
-        borderWidth: 2,
-      },
-      '&:hover fieldset': {
-        borderColor: `${color}.dark`,
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: `${color}.main`,
-      },
-    },
     '& .MuiInputLabel-root': {
       color: `${color}.main`,
     },
