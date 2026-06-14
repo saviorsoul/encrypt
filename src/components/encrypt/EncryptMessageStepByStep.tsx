@@ -184,7 +184,6 @@ function EcdheSharedSecretExampleCaption({
       </Typography>
       <StepOutputTextField
         color="error"
-        tooltipMessage="Included in payload"
         label={`Shared secret (recipient ${recipientLabel})`}
         value={sharedSecretBase64}
         multiline
