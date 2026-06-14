@@ -1,10 +1,10 @@
-# social-fe
+# Encrypt
 
-Social app run locally. Built with React.
+Encryption app run locally. Build with React and Electron.
 
 ## Prerequisites
 
-You need **Node.js 18 or newer** (LTS recommended) and **npm** (included with Node.js).
+You need **Node.js 24 or newer** and **npm** (included with Node.js).
 
 Check that they are installed:
 
@@ -30,6 +30,15 @@ sudo apt update
 sudo apt install -y nodejs npm
 ```
 
+If the installed version is below 24, install Node.js 24 globally with [NodeSource](https://github.com/nodesource/distributions):
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+Alternatively, download the Linux installer from [https://nodejs.org](https://nodejs.org). If you use [nvm](https://github.com/nvm-sh/nvm), run `nvm use` in the project directory (see `.nvmrc`).
+
 ## Getting started
 
 1. Clone the repository and go into the project folder:
@@ -53,17 +62,53 @@ sudo apt install -y nodejs npm
 
    The app opens at [http://localhost:5173](http://localhost:5173). The page reloads when you edit files.
 
+## Desktop app (Electron)
+
+The same UI runs as a desktop app via Electron. In Electron mode the app uses hash-based routing (`HashRouter`) so navigation works from the `file://` protocol.
+
+### Development
+
+Starts Vite and opens the app in an Electron window with hot reload:
+
+```bash
+npm run electron:dev
+```
+
+### Preview production build
+
+Builds the app for Electron and runs it locally without packaging:
+
+```bash
+npm run electron:preview
+```
+
+### Package installers
+
+Builds platform-specific installers with [electron-builder](https://www.electron.build/):
+
+```bash
+npm run electron:build
+```
+
+Output is written to `release/`. Linux builds produce **AppImage** and **deb** packages; Windows builds produce an **NSIS** installer; macOS builds produce a **dmg**.
+
+On Linux, the dev and preview scripts pass `--no-sandbox` to Electron to avoid sandbox issues in some environments.
+
 ## Other commands
 
-| Command                | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `npm test`             | Run tests in watch mode                       |
-| `npm run build`        | Production build to `dist/`                   |
-| `npm run preview`      | Preview the production build                  |
-| `npm run lint`         | Check lint and formatting (ESLint + Prettier) |
-| `npm run lint:fix`     | Auto-fix lint and formatting issues           |
-| `npm run format`       | Format all files with Prettier                |
-| `npm run format:check` | Check formatting without writing changes      |
+| Command                   | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| `npm test`                | Run tests in watch mode                       |
+| `npm run build`           | Production web build to `dist/`               |
+| `npm run build:pages`     | Build for GitHub Pages (`dist/` + `404.html`) |
+| `npm run preview`         | Preview the production web build              |
+| `npm run electron:dev`    | Electron dev server with hot reload           |
+| `npm run electron:preview`| Build and run the Electron app locally        |
+| `npm run electron:build`  | Package desktop installers to `release/`      |
+| `npm run lint`            | Check lint and formatting (ESLint + Prettier) |
+| `npm run lint:fix`        | Auto-fix lint and formatting issues           |
+| `npm run format`          | Format all files with Prettier                |
+| `npm run format:check`    | Check formatting without writing changes      |
 
 ## Linting and formatting
 
@@ -82,3 +127,7 @@ Install the recommended extensions when prompted, or from `.vscode/extensions.js
 - **Prettier** (`esbenp.prettier-vscode`)
 
 Workspace settings in `.vscode/settings.json` enable format on save (Prettier) and ESLint auto-fix on save.
+
+## License
+
+[MIT](LICENSE)
