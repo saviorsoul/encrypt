@@ -3,6 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tsconfig*.json'
+      - 'index.html'
   workflow_dispatch:
 
 permissions:
@@ -91,7 +98,7 @@ jobs:
             color=5763719
             status="Build and GitHub Pages deploy completed successfully."
             if [[ -n "${PAGE_URL:-}" ]]; then
-              status="${status}\n\n**Live site:** ${PAGE_URL}"
+              status="$(printf '%s\n\n**Live site:** %s' "$PAGE_URL")"
             fi
           elif [[ "$BUILD_RESULT" != "success" ]]; then
             title="Build failed"
