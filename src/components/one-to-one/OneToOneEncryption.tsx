@@ -43,7 +43,8 @@ import { recoverPeerPublicJwkFromStoredThread } from '@/crypto/oneToOneMessagePa
 import { errorMessage } from '@/utils/errorMessage.ts';
 import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
-import { usePayloadCopiedSnackbar } from '@/hooks/usePayloadCopiedSnackbar.tsx';
+import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
 import type {
   OneToOneThreadItem,
   PartyKeyIds,
@@ -86,8 +87,7 @@ export function OneToOneEncryption({
 }: OneToOneEncryptionProps) {
   const { user } = useAuth();
   const keys = useKeysContext();
-  const { copyPayloadAndNotify, payloadCopiedSnackbar } =
-    usePayloadCopiedSnackbar();
+  const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const senderTitle = user?.username ?? 'Sender';
   const [recipientTitle, setRecipientTitle] = useState('Recipient');
@@ -448,7 +448,7 @@ export function OneToOneEncryption({
             side,
             plaintext,
           );
-          await copyPayloadAndNotify(payload);
+          await copyAndNotify(payload);
         });
         return true;
       } catch (e) {
@@ -468,7 +468,7 @@ export function OneToOneEncryption({
       senderTitle,
       recipientTitle,
       onEncryptedMessage,
-      copyPayloadAndNotify,
+      copyAndNotify,
     ],
   );
 
@@ -512,9 +512,7 @@ export function OneToOneEncryption({
               variant="outlined"
               clickable
               disabled={
-                storedUsersLoading ||
-                generateRecipientBusy ||
-                saveRecipientBusy
+                storedUsersLoading || generateRecipientBusy || saveRecipientBusy
               }
               onClick={() => setRecipientDialogOpen(true)}
             />
@@ -647,7 +645,7 @@ export function OneToOneEncryption({
         onMessageChange={() => setSenderEncryptError(null)}
         onEncrypt={(message) => void handleEncryptFromDialog(message)}
       />
-      {payloadCopiedSnackbar}
+      <CopiedToClipboardSnackbar {...snackbarProps} />
     </>
   );
 }

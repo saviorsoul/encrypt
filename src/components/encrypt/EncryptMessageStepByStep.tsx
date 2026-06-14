@@ -59,6 +59,9 @@ const PlaintextMessageInput = memo(function PlaintextMessageInput({
       multiline
       rows={4}
       fullWidth
+      onClick={() => {
+        /* do nothing */
+      }}
     />
   );
 });

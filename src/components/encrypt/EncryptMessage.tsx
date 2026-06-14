@@ -8,7 +8,8 @@ import SendIcon from '@mui/icons-material/Send';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
 import type { StoredMessage } from '@/crypto/storedMessages.ts';
 import { useEncryptManifest } from '@/hooks/useEncryptManifest.ts';
-import { usePayloadCopiedSnackbar } from '@/hooks/usePayloadCopiedSnackbar.tsx';
+import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 
 type EncryptMessageProps = {
@@ -36,8 +37,7 @@ export function EncryptMessage({
   loadingMockRecipients = false,
   recipientsError = null,
 }: EncryptMessageProps) {
-  const { copyPayloadAndNotify, payloadCopiedSnackbar } =
-    usePayloadCopiedSnackbar();
+  const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
   const {
     keysLoading,
     keysReady,
@@ -50,7 +50,7 @@ export function EncryptMessage({
     recipients,
     recipientsLoading,
     onMessageSent,
-    onEncryptSuccess: copyPayloadAndNotify,
+    onEncryptSuccess: copyAndNotify,
   });
 
   const handleSubmit = useCallback(
@@ -172,7 +172,7 @@ export function EncryptMessage({
           </Typography>
         )}
       </Box>
-      {payloadCopiedSnackbar}
+      <CopiedToClipboardSnackbar {...snackbarProps} />
     </>
   );
 }

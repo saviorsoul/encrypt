@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { Theme } from '@mui/material/styles';
+import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
 
 const monospaceFieldSx = {
   fontFamily: 'monospace',
@@ -61,6 +63,13 @@ function isEmptyValue(value: unknown): boolean {
   return false;
 }
 
+function valueToCopyText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.join('');
+  return String(value);
+}
+
 function labelWithTopBarPlaceholder(
   label: React.ReactNode,
   placeholder: string,
@@ -89,8 +98,26 @@ export function StepOutputTextField({
   label,
   value,
   slotProps,
+  onClick,
   ...props
 }: StepOutputTextFieldProps) {
+  const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
+
+  const handleClick = useCallback(
+    async (event: React.MouseEvent<HTMLDivElement>) => {
+      if (onClick) {
+        onClick(event);
+        return;
+      }
+
+      const text = valueToCopyText(value);
+      if (text.length === 0) return;
+
+      await copyAndNotify(text);
+    },
+    [copyAndNotify, onClick, value],
+  );
+
   const showPlaceholderInLabel =
     placeholder != null && placeholder !== '' && isEmptyValue(value);
 
@@ -104,6 +131,7 @@ export function StepOutputTextField({
       {...props}
       label={resolvedLabel}
       value={value}
+      onClick={handleClick}
       slotProps={
         {
           ...slotProps,
@@ -120,13 +148,25 @@ export function StepOutputTextField({
     />
   );
 
+  const snackbar = !onClick ? (
+    <CopiedToClipboardSnackbar {...snackbarProps} />
+  ) : null;
+
   if (!tooltipMessage) {
-    return field;
+    return (
+      <>
+        {field}
+        {snackbar}
+      </>
+    );
   }
 
   return (
-    <Tooltip title={formatTooltipTitle(tooltipMessage)} arrow placement="top">
-      {field}
-    </Tooltip>
+    <>
+      <Tooltip title={formatTooltipTitle(tooltipMessage)} arrow placement="top">
+        {field}
+      </Tooltip>
+      {snackbar}
+    </>
   );
 }
