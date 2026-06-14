@@ -3,9 +3,9 @@ import {
   commentVisibleToRecipient,
   listCommentsForMessage,
   type StoredComment,
-} from '@/crypto/storedComments.ts';
+} from '@/services/db/storedComments.ts';
 import { getCommentAuthorKeyIdFromPayload } from '@/crypto/commentCrypto.ts';
-import { listStoredUsers } from '@/crypto/storedPublicKeys.ts';
+import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
 
 export type InboxComment = StoredComment & {
   authorLabel: string;

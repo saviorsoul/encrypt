@@ -10,7 +10,7 @@ import {
   loadStoredPublicKeyMaterial,
   markPrivateKeyDownloadedForUsername,
   saveStoredPublicKeyForUsername,
-} from '@/crypto/storedPublicKeys.ts';
+} from '@/services/db/storedPublicKeys.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { downloadJsonFile } from '@/utils/downloadJson.ts';
 import { privateKeyDownloadFilename } from '@/utils/privateKeyFilename.ts';

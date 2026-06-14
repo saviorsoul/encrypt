@@ -3,7 +3,7 @@ import {
   slimEcPublicJwk,
 } from '@/crypto/jwkThumbprint.ts';
 import { parseManifestPayload } from '@/crypto/manifestDecrypt.ts';
-import { listOneToOneMessagesForThread } from '@/crypto/storedOneToOneMessages.ts';
+import { listOneToOneMessagesForThread } from '@/services/db/storedOneToOneMessages.ts';
 import type { PartyKeyIds } from '@/types/oneToOne.ts';
 
 export type MessagePartyKeyIds = {

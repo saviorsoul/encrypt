@@ -3,7 +3,7 @@ import { decryptWithManifest } from '@/crypto/manifestDecrypt.ts';
 import {
   commentVisibleToRecipient,
   listCommentsForMessage,
-} from '@/crypto/storedComments.ts';
+} from '@/services/db/storedComments.ts';
 import {
   decryptStoredDeliveryWithPrivateKey,
   getCommentThreadMessageId,
@@ -11,7 +11,7 @@ import {
 import {
   getStoredMessageById,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,

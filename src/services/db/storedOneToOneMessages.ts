@@ -2,7 +2,7 @@ import {
   ONE_TO_ONE_MESSAGES_STORE,
   ONE_TO_ONE_THREAD_KEY_INDEX,
   openCryptoDb,
-} from '@/crypto/cryptoDb.ts';
+} from './cryptoDb.ts';
 import type { OneToOneThreadItem, ThreadSide } from '@/types/oneToOne.ts';
 
 export type StoredOneToOneMessage = {

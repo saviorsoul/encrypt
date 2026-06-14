@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { loadRecipientKeysForUsername } from '@/crypto/storedPublicKeys.ts';
+import { loadRecipientKeysForUsername } from '@/services/db/storedPublicKeys.ts';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 

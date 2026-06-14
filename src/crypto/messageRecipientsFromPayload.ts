@@ -4,7 +4,7 @@ import { parseManifestPayload } from '@/crypto/manifestDecrypt.ts';
 import {
   getMessageKeyManifestEntry,
   listKeyIdsForMessage,
-} from '@/crypto/storedMessageKeyManifest.ts';
+} from '@/services/db/storedMessageKeyManifest.ts';
 
 export async function getRecipientsFromMessagePayload(
   payload: string,

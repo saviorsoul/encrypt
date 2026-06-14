@@ -30,8 +30,8 @@ import {
   getUsernameForKeyId,
   loadStoredPublicKeyMaterialByKeyId,
   saveStoredRecipientForUsername,
-} from '@/crypto/storedPublicKeys.ts';
-import { loadOneToOneThread } from '@/crypto/storedOneToOneMessages.ts';
+} from '@/services/db/storedPublicKeys.ts';
+import { loadOneToOneThread } from '@/services/db/storedOneToOneMessages.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 import type {
   EncryptedMessageFingerprint,

@@ -5,11 +5,7 @@ import {
 } from '@/crypto/jwkThumbprint.ts';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
 import { isRecord } from '@/utils/isRecord.ts';
-import {
-  USERS_STORE,
-  USERS_USERNAME_INDEX,
-  openCryptoDb,
-} from '@/crypto/cryptoDb.ts';
+import { USERS_STORE, USERS_USERNAME_INDEX, openCryptoDb } from './cryptoDb.ts';
 
 export type StoredPublicKeyRecord = {
   keyId: string;

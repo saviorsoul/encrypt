@@ -4,7 +4,7 @@ import {
   messagePartyKeyIds,
   saveOneToOneMessage,
   threadItemToStoredMessage,
-} from '@/crypto/storedOneToOneMessages.ts';
+} from '@/services/db/storedOneToOneMessages.ts';
 import type { OneToOneThreadItem, ThreadSide } from '@/types/oneToOne.ts';
 
 type UseOneToOneThreadOptions = {

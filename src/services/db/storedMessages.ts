@@ -3,15 +3,15 @@ import {
   MESSAGES_PARENT_MESSAGE_ID_INDEX,
   MESSAGES_STORE,
   MESSAGE_KEY_MANIFEST_STORE,
-} from '@/crypto/cryptoDb.ts';
+} from './cryptoDb.ts';
 import type { KeyManifestMap } from '@/types/manifest.ts';
 import { getSenderKeyIdFromCorePayload } from '@/crypto/manifestDecrypt.ts';
 import { splitManifestForStorage } from '@/crypto/manifestStorage.ts';
-import { putMessageKeyManifestShardsInTransaction } from '@/crypto/storedMessageKeyManifest.ts';
+import { putMessageKeyManifestShardsInTransaction } from './storedMessageKeyManifest.ts';
 import {
   getMessageKeyManifestEntry,
   listMessageIdsForRecipientKeyId,
-} from '@/crypto/storedMessageKeyManifest.ts';
+} from './storedMessageKeyManifest.ts';
 
 export type StoredMessage = {
   id: string;

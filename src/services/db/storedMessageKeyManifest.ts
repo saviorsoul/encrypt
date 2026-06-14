@@ -3,7 +3,7 @@ import {
   MESSAGE_KEY_MANIFEST_STORE,
   MESSAGE_KEY_MANIFEST_KEY_ID_INDEX,
   MESSAGE_KEY_MANIFEST_MESSAGE_ID_INDEX,
-} from '@/crypto/cryptoDb.ts';
+} from './cryptoDb.ts';
 import type {
   KeyManifestMap,
   KeyManifestRecipientPayload,

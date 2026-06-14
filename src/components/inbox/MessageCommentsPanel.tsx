@@ -1,7 +1,7 @@
 import React from 'react';
 import { MessageComments } from '@/components/inbox/MessageComments.tsx';
 import { useMessageComments } from '@/hooks/useMessageComments.ts';
-import type { StoredComment } from '@/crypto/storedComments.ts';
+import type { StoredComment } from '@/services/db/storedComments.ts';
 import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
 
 type MessageCommentsPanelProps = {

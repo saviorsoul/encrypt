@@ -6,7 +6,7 @@ import {
   loadStoredPublicKeyMaterial,
   loadStoredPublicKeyMaterialByKeyId,
   saveStoredPublicKey,
-} from '@/crypto/storedPublicKeys.ts';
+} from '@/services/db/storedPublicKeys.ts';
 
 export type PrivateKeyLoginResult = {
   username: string;

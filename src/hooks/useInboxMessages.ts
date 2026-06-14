@@ -4,8 +4,8 @@ import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import {
   listStoredMessagesForRecipientKeyId,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
-import { hasMessageKeyManifestShard } from '@/crypto/storedMessageKeyManifest.ts';
+} from '@/services/db/storedMessages.ts';
+import { hasMessageKeyManifestShard } from '@/services/db/storedMessageKeyManifest.ts';
 
 export type InboxMessage = StoredMessage;
 

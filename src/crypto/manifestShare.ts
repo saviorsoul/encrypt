@@ -36,12 +36,12 @@ import { parseManifestCorePayload } from '@/crypto/manifestStorage.ts';
 import {
   getMessageKeyManifestEntry,
   hasMessageKeyManifestShard,
-} from '@/crypto/storedMessageKeyManifest.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessageKeyManifest.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 import {
   getStoredMessageById,
   listShareDeliveriesForParentMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 
 export function isShareDelivery(
   message: Pick<StoredMessage, 'parentMessageId'>,

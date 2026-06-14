@@ -22,7 +22,7 @@ import { ShareMessageDialog } from '@/components/inbox/ShareMessageDialog.tsx';
 import { ImportFeedMessageDialog } from '@/components/inbox/ImportFeedMessageDialog.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 const MESSAGE_POP_IN = 'messagePopIn';
 

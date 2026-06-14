@@ -23,7 +23,7 @@ import {
   getStoredMessageById,
   saveStoredShare,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 import { downloadTextFile } from '@/utils/downloadJson.ts';
 
 type UseShareMessageOptions = {

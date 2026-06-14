@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   loadStoredPublicKeyMaterial,
   requiresPrivateKeyOnboarding,
-} from '@/crypto/storedPublicKeys.ts';
+} from '@/services/db/storedPublicKeys.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 
 export type PrivateKeyOnboardingGuardStatus =

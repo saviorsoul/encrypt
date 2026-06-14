@@ -18,7 +18,7 @@ import {
   assembleManifestForRecipient,
   parseManifestCorePayload,
 } from '@/crypto/manifestStorage.ts';
-import { getMessageKeyManifestEntry } from '@/crypto/storedMessageKeyManifest.ts';
+import { getMessageKeyManifestEntry } from '@/services/db/storedMessageKeyManifest.ts';
 
 export function parseManifestPayload(payloadJson: string): ManifestPayload {
   let payload: ManifestPayload;

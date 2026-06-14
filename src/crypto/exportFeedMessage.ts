@@ -8,11 +8,11 @@ import {
   parseManifestShareCorePayload,
   shareCoreToWirePayload,
 } from '@/crypto/manifestShare.ts';
-import { getKeyManifestForMessage } from '@/crypto/storedMessageKeyManifest.ts';
+import { getKeyManifestForMessage } from '@/services/db/storedMessageKeyManifest.ts';
 import {
   getStoredMessageById,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 
 export function assembleShareExportPayloadJson(
   shareCoreJson: string,

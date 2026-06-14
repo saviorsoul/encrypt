@@ -38,7 +38,7 @@ import {
   loadStoredPublicKeyMaterialByKeyId,
   saveStoredPublicKey,
   saveStoredRecipientForUsername,
-} from '@/crypto/storedPublicKeys.ts';
+} from '@/services/db/storedPublicKeys.ts';
 import { recoverPeerPublicJwkFromStoredThread } from '@/crypto/oneToOneMessageParties.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';

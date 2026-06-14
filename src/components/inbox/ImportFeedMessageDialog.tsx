@@ -26,7 +26,7 @@ import {
   readValidatedImportJsonFromFile,
   validateImportJsonText,
 } from '@/utils/readImportJsonFile.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 type ImportFeedMessageDialogProps = {
   open: boolean;

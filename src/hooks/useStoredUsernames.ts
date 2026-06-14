@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listStoredUsers } from '@/crypto/storedPublicKeys.ts';
+import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 
 export function useStoredUsernames() {

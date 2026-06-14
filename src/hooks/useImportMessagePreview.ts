@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { splitManifestForStorage } from '@/crypto/manifestStorage.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 import { resolveSenderLabelFromImportText } from '@/utils/resolveSenderLabel.ts';
 import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
 

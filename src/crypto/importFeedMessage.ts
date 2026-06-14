@@ -13,7 +13,7 @@ import {
   saveStoredMessageCoreWithId,
   saveStoredShare,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 
 export async function importParsedFeedMessage(
   payload: ParsedImportPayload,

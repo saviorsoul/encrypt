@@ -16,7 +16,7 @@ import {
 import {
   saveStoredMessage,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 
 type UseEncryptManifestOptions = {
   recipients: ManifestRecipientKeys[];

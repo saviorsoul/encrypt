@@ -10,7 +10,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 import { useShareMessage } from '@/hooks/useShareMessage.ts';
 import { useMessageRecipients } from '@/hooks/useMessageRecipients.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 type ShareMessageDialogProps = {
   open: boolean;

@@ -1,5 +1,5 @@
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
-import { listStoredUsers } from '@/crypto/storedPublicKeys.ts';
+import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
 import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
 
 export const UNKNOWN_SENDER_LABEL = 'Not known';

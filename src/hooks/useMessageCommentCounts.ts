@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   commentVisibleToRecipient,
   listCommentsForMessage,
-} from '@/crypto/storedComments.ts';
+} from '@/services/db/storedComments.ts';
 
 async function countVisibleCommentsForMessage(
   messageId: string,

@@ -12,7 +12,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SendIcon from '@mui/icons-material/Send';
 import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
 import { useEncryptComment } from '@/hooks/useEncryptComment.ts';
-import type { StoredComment } from '@/crypto/storedComments.ts';
+import type { StoredComment } from '@/services/db/storedComments.ts';
 import type { InboxComment } from '@/hooks/useMessageComments.ts';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';

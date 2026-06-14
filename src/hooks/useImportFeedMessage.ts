@@ -14,7 +14,7 @@ import {
 } from '@/utils/parseImportPayloadText.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 function findDuplicateMessageId(
   messages: StoredMessage[],

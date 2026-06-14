@@ -2,8 +2,8 @@ import {
   openCryptoDb,
   COMMENTS_STORE,
   COMMENTS_MESSAGE_ID_INDEX,
-} from '@/crypto/cryptoDb.ts';
-import { getStoredMessageById } from '@/crypto/storedMessages.ts';
+} from './cryptoDb.ts';
+import { getStoredMessageById } from './storedMessages.ts';
 import { parseCommentPayload } from '@/crypto/commentCrypto.ts';
 import { canCommentOnParentMessage } from '@/crypto/manifestShare.ts';
 

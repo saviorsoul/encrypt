@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import SendIcon from '@mui/icons-material/Send';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 import { useEncryptManifest } from '@/hooks/useEncryptManifest.ts';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';

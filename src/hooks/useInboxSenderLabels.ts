@@ -3,12 +3,12 @@ import {
   getSenderKeyIdFromPayload,
   getStoredMessageById,
   type StoredMessage,
-} from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedMessages.ts';
 import {
   getSharerKeyIdFromSharePayload,
   isShareDelivery,
 } from '@/crypto/manifestShare.ts';
-import { listStoredUsers } from '@/crypto/storedPublicKeys.ts';
+import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
 
 function labelForKeyId(
   keyId: string | null,

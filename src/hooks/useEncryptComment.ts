@@ -13,8 +13,8 @@ import {
 import {
   saveStoredComment,
   type StoredComment,
-} from '@/crypto/storedComments.ts';
-import { getStoredMessageById } from '@/crypto/storedMessages.ts';
+} from '@/services/db/storedComments.ts';
+import { getStoredMessageById } from '@/services/db/storedMessages.ts';
 import { canCommentOnParentMessage } from '@/crypto/manifestShare.ts';
 
 type UseEncryptCommentOptions = {

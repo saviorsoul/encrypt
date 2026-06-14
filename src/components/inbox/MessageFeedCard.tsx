@@ -18,7 +18,7 @@ import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
 import { assembleStoredFeedMessageCopyPayload } from '@/crypto/exportFeedMessage.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
-import type { StoredMessage } from '@/crypto/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 import { MessageCommentsPanel } from '@/components/inbox/MessageCommentsPanel.tsx';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import type { CopyState } from '@/types/copyState.ts';
