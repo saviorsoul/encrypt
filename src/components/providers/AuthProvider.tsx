@@ -6,7 +6,7 @@ import React, {
   type ReactNode,
 } from 'react';
 
-const STORAGE_KEY = 'social-fe-session-user';
+export const SESSION_USER_STORAGE_KEY = 'social-fe-session-user';
 export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
 
 export type AuthUser = { username: string };
@@ -28,7 +28,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
+      const stored = sessionStorage.getItem(SESSION_USER_STORAGE_KEY);
       if (!stored) return null;
       return { username: stored };
     } catch {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : null,
     );
     try {
-      sessionStorage.setItem(STORAGE_KEY, trimmed);
+      sessionStorage.setItem(SESSION_USER_STORAGE_KEY, trimmed);
       localStorage.setItem(LAST_USERNAME_STORAGE_KEY, trimmed);
     } catch {
       /* ignore quota / privacy mode */
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setLoginNotice(null);
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_USER_STORAGE_KEY);
     } catch {
       /* ignore */
     }

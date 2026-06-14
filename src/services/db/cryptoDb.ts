@@ -12,6 +12,18 @@ export const MESSAGE_KEY_MANIFEST_MESSAGE_ID_INDEX = 'messageId';
 export const ONE_TO_ONE_MESSAGES_STORE = 'oneToOneMessages';
 export const ONE_TO_ONE_THREAD_KEY_INDEX = 'threadKey';
 
+export function deleteCryptoDb(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onerror = () =>
+      reject(request.error ?? new Error('Failed to delete database'));
+    request.onsuccess = () => resolve();
+    request.onblocked = () => {
+      window.location.reload();
+    };
+  });
+}
+
 export function openCryptoDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);

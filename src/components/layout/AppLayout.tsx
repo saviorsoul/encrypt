@@ -11,6 +11,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
   Outlet,
@@ -22,7 +23,9 @@ import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
+import { CleanDataDialog } from '@/components/shared/CleanDataDialog.tsx';
 import { PublicKeyDialog } from '@/components/shared/PublicKeyDialog.tsx';
+import { clearAppLocalData } from '@/utils/clearAppLocalData';
 import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 
@@ -41,6 +44,7 @@ export function AppLayout() {
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [publicKeyDialogOpen, setPublicKeyDialogOpen] = useState(false);
+  const [cleanDataDialogOpen, setCleandataDialogOpen] = useState(false);
 
   const publicKeyJwkText = useMemo(
     () =>
@@ -58,6 +62,13 @@ export function AppLayout() {
     logout();
     navigate('/login', { replace: true });
   };
+
+  const handleCleandata = useCallback(async () => {
+    logout();
+    await clearAppLocalData();
+    setCleandataDialogOpen(false);
+    navigate('/login', { replace: true });
+  }, [logout, navigate]);
 
   const isNavActive = (to: string) =>
     to === '/'
@@ -115,7 +126,19 @@ export function AppLayout() {
               <Box sx={{ flexGrow: 1 }} />
             )}
             {user ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title="Clean local data">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      aria-label="Clean local data"
+                      onClick={() => setCleandataDialogOpen(true)}
+                      size="small"
+                    >
+                      <DeleteOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 <Tooltip title="Show public key">
                   <span>
                     <IconButton
@@ -159,12 +182,19 @@ export function AppLayout() {
         />
       ) : null}
       {user ? (
-        <PublicKeyDialog
-          open={publicKeyDialogOpen}
-          onClose={() => setPublicKeyDialogOpen(false)}
-          title={`${user.username} — public key`}
-          publicKeyJwkText={publicKeyJwkText}
-        />
+        <>
+          <PublicKeyDialog
+            open={publicKeyDialogOpen}
+            onClose={() => setPublicKeyDialogOpen(false)}
+            title={`${user.username} — public key`}
+            publicKeyJwkText={publicKeyJwkText}
+          />
+          <CleanDataDialog
+            open={cleanDataDialogOpen}
+            onClose={() => setCleandataDialogOpen(false)}
+            onConfirm={handleCleandata}
+          />
+        </>
       ) : null}
       <Box
         component="main"
