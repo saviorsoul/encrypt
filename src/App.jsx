@@ -31,7 +31,8 @@ function App() {
                     element={<PrivateKeyDownloadPage />}
                   />
                   <Route element={<OnboardedRoute />}>
-                    <Route index element={<FeedPage />} />
+                    <Route index element={<OneToOnePage />} />
+                    <Route path="feed" element={<FeedPage />} />
                     <Route
                       path="proof-of-concept"
                       element={
@@ -48,9 +49,9 @@ function App() {
                     />
                     <Route
                       path="proof-of-concepts/1-1"
-                      element={<Navigate to="/1-1" replace />}
+                      element={<Navigate to="/" replace />}
                     />
-                    <Route path="1-1" element={<OneToOnePage />} />
+                    <Route path="1-1" element={<Navigate to="/" replace />} />
                     <Route path="glossary" element={<GlossaryPage />} />
                   </Route>
                 </Route>

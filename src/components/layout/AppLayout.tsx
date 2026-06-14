@@ -22,8 +22,8 @@ import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 
 const NAV_ITEMS = [
-  { label: 'Feed', to: '/' },
-  { label: '1:1', to: '/1-1' },
+  { label: '1:1', to: '/' },
+  { label: 'Feed', to: '/feed' },
   { label: 'Glossary', to: '/glossary' },
 ];
 
@@ -45,7 +45,9 @@ export function AppLayout() {
   };
 
   const isNavActive = (to: string) =>
-    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+    to === '/'
+      ? location.pathname === '/' || location.pathname === '/1-1'
+      : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
   const isFullscreenAuthPage =
     location.pathname === '/login' || location.pathname === '/save-private-key';
