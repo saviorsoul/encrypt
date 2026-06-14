@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -8,8 +8,10 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from '@mui/material/Snackbar';
+import Tooltip from '@mui/material/Tooltip';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {
   Outlet,
   useNavigate,
@@ -17,7 +19,10 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.ts';
+import { useKeysContext } from '@/hooks/useKeysContext.ts';
+import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
+import { PublicKeyDialog } from '@/components/shared/PublicKeyDialog.tsx';
 import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 
@@ -31,9 +36,19 @@ const EXISTING_USER_LOGIN_SNACKBAR_MS = 5000;
 
 export function AppLayout() {
   const { user, logout, loginNotice, clearLoginNotice } = useAuth();
+  const { publicKeyJwk } = useKeysContext();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [publicKeyDialogOpen, setPublicKeyDialogOpen] = useState(false);
+
+  const publicKeyJwkText = useMemo(
+    () =>
+      publicKeyJwk
+        ? JSON.stringify(slimEcPublicJwk(publicKeyJwk), null, 2)
+        : '',
+    [publicKeyJwk],
+  );
 
   const handleCloseMobileNav = useCallback(() => {
     setMobileNavOpen(false);
@@ -64,16 +79,16 @@ export function AppLayout() {
                   aria-label="Open menu"
                   edge="start"
                   onClick={() => setMobileNavOpen(true)}
-                  sx={{ display: { xs: 'inline-flex', sm: 'none' }, mr: 1 }}
+                  sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 1 }}
                 >
                   <MenuIcon />
                 </IconButton>
                 <Box
-                  sx={{ flexGrow: 1, display: { xs: 'block', sm: 'none' } }}
+                  sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }}
                 />
                 <Box
                   sx={{
-                    display: { xs: 'none', sm: 'flex' },
+                    display: { xs: 'none', md: 'flex' },
                     gap: 0.5,
                     flexGrow: 1,
                     alignItems: 'center',
@@ -101,6 +116,18 @@ export function AppLayout() {
             )}
             {user ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Tooltip title="Show public key">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      aria-label="Show public key"
+                      onClick={() => setPublicKeyDialogOpen(true)}
+                      size="small"
+                    >
+                      <VisibilityOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 <Typography variant="body2">{user.username}</Typography>
                 <Avatar sx={{ width: 34, height: 34 }}>
                   {nameInitial(user.username)}
@@ -129,6 +156,14 @@ export function AppLayout() {
           onClose={handleCloseMobileNav}
           navItems={NAV_ITEMS}
           isNavActive={isNavActive}
+        />
+      ) : null}
+      {user ? (
+        <PublicKeyDialog
+          open={publicKeyDialogOpen}
+          onClose={() => setPublicKeyDialogOpen(false)}
+          title={`${user.username} — public key`}
+          publicKeyJwkText={publicKeyJwkText}
         />
       ) : null}
       <Box
