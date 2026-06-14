@@ -3,8 +3,11 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
+import SendAndArchiveOutlinedIcon from '@mui/icons-material/SendAndArchiveOutlined';
 import { ChangeRecipientDialog } from '@/components/one-to-one/ChangeRecipientDialog.tsx';
 import { EncryptMessageDialog } from '@/components/one-to-one/EncryptMessageDialog.tsx';
 import { GenerateRecipientDialog } from '@/components/one-to-one/GenerateRecipientDialog.tsx';
@@ -65,6 +68,7 @@ type OneToOneEncryptionProps = {
   importBusy?: boolean;
   onPartyKeyIdsChange: (keyIds: PartyKeyIds) => void;
   onPeerLabelChange?: (label: string) => void;
+  threadActions?: React.ReactNode;
 };
 
 export function OneToOneEncryption({
@@ -78,6 +82,7 @@ export function OneToOneEncryption({
   importBusy = false,
   onPartyKeyIdsChange,
   onPeerLabelChange,
+  threadActions,
 }: OneToOneEncryptionProps) {
   const { user } = useAuth();
   const keys = useKeysContext();
@@ -129,6 +134,12 @@ export function OneToOneEncryption({
 
   const bothKeysValid = senderKeys.isValid && recipientKeys.isValid;
   const publicKeySectionCollapsed = thread.length > 0 || threadLoading;
+  const importActionEnabled = !importBusy;
+  const encryptActionEnabled =
+    senderKeys.isValid &&
+    !senderKeys.importing &&
+    !senderEncryptBusy &&
+    bothKeysValid;
 
   if (keys?.publicKeyJwk && !senderJwkPrefilled) {
     setSenderJwkText(
@@ -495,47 +506,18 @@ export function OneToOneEncryption({
           title={recipientTitle}
           titleOnRight
           titleAction={
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                flexWrap: 'wrap',
-              }}
-            >
-              <Chip
-                label="Change"
-                size="small"
-                variant="outlined"
-                clickable
-                disabled={storedUsersLoading || storedUsernames.length === 0}
-                onClick={() => setRecipientDialogOpen(true)}
-              />
-              <Tooltip title="Create a new recipient key pair">
-                <span>
-                  <Chip
-                    label="Generate"
-                    size="small"
-                    variant="outlined"
-                    clickable
-                    disabled={generateRecipientBusy}
-                    onClick={handleOpenGenerateRecipientDialog}
-                  />
-                </span>
-              </Tooltip>
-              <Tooltip title="Use existing public key">
-                <span>
-                  <Chip
-                    label="Add"
-                    size="small"
-                    variant="outlined"
-                    clickable
-                    disabled={saveRecipientBusy}
-                    onClick={handleOpenSaveRecipientDialog}
-                  />
-                </span>
-              </Tooltip>
-            </Box>
+            <Chip
+              label="Change Recipient"
+              size="small"
+              variant="outlined"
+              clickable
+              disabled={
+                storedUsersLoading ||
+                generateRecipientBusy ||
+                saveRecipientBusy
+              }
+              onClick={() => setRecipientDialogOpen(true)}
+            />
           }
           publicKeyJwkText={recipientJwkText}
           jwkError={recipientKeys.jwkError}
@@ -584,6 +566,40 @@ export function OneToOneEncryption({
         />
       </Box>
 
+      <Divider>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {publicKeySectionCollapsed && (
+            <Tooltip title="Import message">
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="Import message"
+                  disabled={!importActionEnabled}
+                  onClick={onImportMessage}
+                >
+                  <CloudDownloadOutlinedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {threadActions}
+          {publicKeySectionCollapsed && (
+            <Tooltip title="Encrypt message">
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="Encrypt message"
+                  disabled={!encryptActionEnabled}
+                  onClick={handleOpenEncryptDialog}
+                >
+                  <SendAndArchiveOutlinedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Box>
+      </Divider>
+
       <ChangeRecipientDialog
         open={recipientDialogOpen}
         onClose={() => setRecipientDialogOpen(false)}
@@ -593,6 +609,10 @@ export function OneToOneEncryption({
         error={storedUsersError}
         selectedUsername={selectedStoredUsername}
         onSelect={(username) => void handleSelectStoredUser(username)}
+        onGenerate={handleOpenGenerateRecipientDialog}
+        onAdd={handleOpenSaveRecipientDialog}
+        generateDisabled={generateRecipientBusy}
+        addDisabled={saveRecipientBusy}
       />
 
       <SaveRecipientDialog

@@ -1,7 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
-import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import SendAndArchiveOutlinedIcon from '@mui/icons-material/SendAndArchiveOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import Alert from '@mui/material/Alert';
@@ -67,12 +65,12 @@ export function OneToOneComposeSidePanel({
       ? CloudDownloadOutlinedIcon
       : SendAndArchiveOutlinedIcon;
 
-  const copyTooltip =
+  const copyButtonLabel =
     copyState === 'ok'
       ? 'Copied'
       : copyState === 'err'
         ? 'Copy failed'
-        : 'Copy public key';
+        : 'Copy';
 
   const handleCopyPublicKey = useCallback(async () => {
     try {
@@ -129,30 +127,6 @@ export function OneToOneComposeSidePanel({
                     mr: titleOnRight ? 1 : 0,
                   }}
                 >
-                  <Tooltip title={primaryActionLabel}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        aria-label={primaryActionLabel}
-                        disabled={!primaryActionEnabled}
-                        onClick={onPrimaryAction}
-                      >
-                        <PrimaryActionIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title={copyTooltip}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        aria-label="Copy public key"
-                        onClick={() => void handleCopyPublicKey()}
-                        color={copyState === 'ok' ? 'success' : 'default'}
-                      >
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
                   <Tooltip title="Show public key">
                     <span>
                       <IconButton
@@ -248,7 +222,10 @@ export function OneToOneComposeSidePanel({
 
       <Dialog
         open={publicKeyDialogOpen}
-        onClose={() => setPublicKeyDialogOpen(false)}
+        onClose={() => {
+          setPublicKeyDialogOpen(false);
+          setCopyState('idle');
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -267,8 +244,22 @@ export function OneToOneComposeSidePanel({
             sx={{ mt: 1 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPublicKeyDialogOpen(false)}>Close</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setPublicKeyDialogOpen(false);
+              setCopyState('idle');
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            color={copyState === 'ok' ? 'success' : 'primary'}
+            onClick={() => void handleCopyPublicKey()}
+          >
+            {copyButtonLabel}
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

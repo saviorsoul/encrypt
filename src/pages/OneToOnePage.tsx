@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
@@ -667,10 +666,7 @@ export function OneToOnePage() {
           importBusy={isDecryptBusy}
           onPartyKeyIdsChange={setPartyKeyIds}
           onPeerLabelChange={setPeerLabel}
-        />
-
-        <Divider>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          threadActions={
             <Tooltip
               title={
                 bulkDecryptBusy
@@ -693,8 +689,8 @@ export function OneToOnePage() {
                 </IconButton>
               </span>
             </Tooltip>
-          </Box>
-        </Divider>
+          }
+        />
 
         {bulkDecryptError && (
           <Typography
