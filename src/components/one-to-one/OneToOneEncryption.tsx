@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -41,6 +41,11 @@ import {
 } from '@/services/db/storedPublicKeys.ts';
 import { recoverPeerPublicJwkFromStoredThread } from '@/crypto/oneToOneMessageParties.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
+import {
+  loadLastOneToOneRecipientUsername,
+  resolveInitialOneToOneRecipientUsername,
+  saveLastOneToOneRecipientUsername,
+} from '@/utils/lastOneToOneRecipient.ts';
 import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
@@ -90,7 +95,6 @@ export function OneToOneEncryption({
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const senderTitle = user?.username ?? 'Sender';
-  const [recipientTitle, setRecipientTitle] = useState('Recipient');
 
   const [senderJwkText, setSenderJwkText] = useState('');
   const [recipientJwkText, setRecipientJwkText] = useState('');
@@ -117,7 +121,8 @@ export function OneToOneEncryption({
 
   const [selectedStoredUsername, setSelectedStoredUsername] = useState<
     string | null
-  >(null);
+  >(() => resolveInitialOneToOneRecipientUsername(user?.username));
+  const recipientTitle = selectedStoredUsername ?? 'Recipient';
   const [storedUserLoading, setStoredUserLoading] = useState(false);
   const [recipientDialogOpen, setRecipientDialogOpen] = useState(false);
   const [saveRecipientDialogOpen, setSaveRecipientDialogOpen] = useState(false);
@@ -131,6 +136,7 @@ export function OneToOneEncryption({
   const [generateRecipientError, setGenerateRecipientError] = useState<
     string | null
   >(null);
+  const lastRecipientRestoredForUserRef = useRef<string | null>(null);
 
   const bothKeysValid = senderKeys.isValid && recipientKeys.isValid;
   const publicKeySectionCollapsed = thread.length > 0 || threadLoading;
@@ -154,6 +160,14 @@ export function OneToOneEncryption({
       recipientKeyId: recipientKeys.keyId,
     });
   }, [senderKeys.keyId, recipientKeys.keyId, onPartyKeyIdsChange]);
+
+  useEffect(() => {
+    const loggedInUsername = user?.username;
+    if (!loggedInUsername || !selectedStoredUsername) {
+      return;
+    }
+    saveLastOneToOneRecipientUsername(loggedInUsername, selectedStoredUsername);
+  }, [user?.username, selectedStoredUsername]);
 
   useEffect(() => {
     if (!peerKeyIdToSelect) {
@@ -193,7 +207,6 @@ export function OneToOneEncryption({
 
         const username = material.username;
         setSelectedStoredUsername(username);
-        setRecipientTitle(username);
         onPeerLabelChange?.(username);
         setRecipientJwkText(
           JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
@@ -227,7 +240,6 @@ export function OneToOneEncryption({
     async (username: string | null) => {
       setSelectedStoredUsername(username);
       setRecipientPanelError(null);
-      setRecipientTitle(username ?? 'Recipient');
       onPeerLabelChange?.(username ?? 'Recipient');
 
       if (!username) {
@@ -254,6 +266,66 @@ export function OneToOneEncryption({
     },
     [onPeerLabelChange],
   );
+
+  useEffect(() => {
+    const loggedInUsername = user?.username;
+    if (
+      !loggedInUsername ||
+      peerKeyIdToSelect ||
+      storedUsersLoading ||
+      lastRecipientRestoredForUserRef.current === loggedInUsername
+    ) {
+      return;
+    }
+
+    const savedRecipientUsername =
+      loadLastOneToOneRecipientUsername(loggedInUsername);
+    lastRecipientRestoredForUserRef.current = loggedInUsername;
+    if (
+      !savedRecipientUsername ||
+      !storedUsernames.includes(savedRecipientUsername)
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      setRecipientPanelError(null);
+      setStoredUserLoading(true);
+
+      try {
+        const material = await loadStoredPublicKeyMaterial(
+          savedRecipientUsername,
+        );
+        if (cancelled) {
+          return;
+        }
+        if (!material) {
+          throw new Error(`No public key found for ${savedRecipientUsername}.`);
+        }
+
+        setSelectedStoredUsername(savedRecipientUsername);
+        setRecipientJwkText(
+          JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setRecipientPanelError(
+            errorMessage(e, 'Failed to load stored user public key.'),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setStoredUserLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.username, peerKeyIdToSelect, storedUsersLoading, storedUsernames]);
 
   const handleOpenGenerateRecipientDialog = useCallback(() => {
     setGenerateRecipientError(null);
@@ -291,7 +363,6 @@ export function OneToOneEncryption({
         );
 
         setSelectedStoredUsername(username);
-        setRecipientTitle(username);
         onPeerLabelChange?.(username);
         setRecipientJwkText(JSON.stringify(slimPublicJwk, null, 2));
         setGenerateRecipientDialogOpen(false);
@@ -346,7 +417,6 @@ export function OneToOneEncryption({
         await saveStoredRecipientForUsername(username, parsed.jwk);
         await refreshStoredUsernames();
         setSelectedStoredUsername(username);
-        setRecipientTitle(username);
         onPeerLabelChange?.(username);
         setRecipientJwkText(JSON.stringify(parsed.jwk, null, 2));
         setSaveRecipientDialogOpen(false);

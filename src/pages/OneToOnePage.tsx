@@ -33,6 +33,7 @@ import {
 } from '@/services/db/storedPublicKeys.ts';
 import { loadOneToOneThread } from '@/services/db/storedOneToOneMessages.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
+import { resolveInitialOneToOneRecipientLabel } from '@/utils/lastOneToOneRecipient.ts';
 import type {
   EncryptedMessageFingerprint,
   PartyKeyIds,
@@ -124,7 +125,9 @@ export function OneToOnePage() {
     message: '',
     key: 0,
   });
-  const [peerLabel, setPeerLabel] = useState('Recipient');
+  const [peerLabel, setPeerLabel] = useState(() =>
+    resolveInitialOneToOneRecipientLabel(user?.username),
+  );
   const [decryptingMessageId, setDecryptingMessageId] = useState<string | null>(
     null,
   );
@@ -169,7 +172,6 @@ export function OneToOnePage() {
 
   useEffect(() => {
     if (!partyKeyIds.recipientKeyId) {
-      setPeerLabel('Recipient');
       return;
     }
 
@@ -180,7 +182,7 @@ export function OneToOnePage() {
       if (cancelled) {
         return;
       }
-      setPeerLabel(username ?? `${peerKeyId.slice(0, 12)}…`);
+      setPeerLabel(username ?? `${peerKeyId.slice(0, 12)}`);
     });
 
     return () => {

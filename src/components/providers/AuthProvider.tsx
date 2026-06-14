@@ -9,6 +9,15 @@ import React, {
 export const SESSION_USER_STORAGE_KEY = 'social-fe-session-user';
 export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
 
+export function clearAuthStorage(): void {
+  try {
+    sessionStorage.removeItem(SESSION_USER_STORAGE_KEY);
+    localStorage.removeItem(LAST_USERNAME_STORAGE_KEY);
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
 export type AuthUser = { username: string };
 
 export type LoginOptions = {
