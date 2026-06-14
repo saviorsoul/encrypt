@@ -1,4 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import {
+  BrowserRouter,
+  HashRouter,
+  Navigate,
+  Route,
+  Routes,
+} from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { darkTheme } from '@/theme.ts';
@@ -15,11 +21,17 @@ import { GlossaryPage } from '@/pages/GlossaryPage.tsx';
 import { PrivateKeyDownloadPage } from '@/pages/PrivateKeyDownloadPage.tsx';
 import { OnboardedRoute } from '@/components/routes/OnboardedRoute.tsx';
 
+const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
+
 function App() {
+  const routerProps = import.meta.env.VITE_ELECTRON
+    ? {}
+    : { basename: import.meta.env.BASE_URL };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Router {...routerProps}>
         <AuthProvider>
           <KeysProvider>
             <Routes>
@@ -60,7 +72,7 @@ function App() {
             </Routes>
           </KeysProvider>
         </AuthProvider>
-      </BrowserRouter>
+      </Router>
     </ThemeProvider>
   );
 }

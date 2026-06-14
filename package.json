@@ -1,7 +1,20 @@
 {
-  "name": "social-fe",
+  "name": "encrypt",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://saviorsoul.github.io/encrypt",
+  "bugs": "https://github.com/saviorsoul/encrypt/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saviorsoul/encrypt"
+  },
+  "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
+  "license": "MIT",
+  "keywords": [
+    "encrypt",
+    "encryption",
+    "cryptography"
+  ],
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -20,19 +33,56 @@
     "react-router-dom": "^6.30.3",
     "web-vitals": "^2.1.4"
   },
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "start": "vite",
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
+    "electron:dev": "concurrently -k \"vite --mode electron\" \"wait-on http://localhost:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
+    "electron:preview": "vite build --mode electron && electron . --no-sandbox",
+    "electron:build": "vite build --mode electron && electron-builder",
     "test": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "build": {
+    "appId": "com.encrypt.app",
+    "productName": "Encrypt",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  },
   "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.3",
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.15.21",
     "@vitejs/plugin-react": "^4.5.0",
