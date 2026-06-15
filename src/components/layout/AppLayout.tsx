@@ -186,7 +186,7 @@ export function AppLayout() {
           <PublicKeyDialog
             open={publicKeyDialogOpen}
             onClose={() => setPublicKeyDialogOpen(false)}
-            title={`${user.username} — public key`}
+            title={`${user.username} - public key`}
             publicKeyJwkText={publicKeyJwkText}
           />
           <CleanDataDialog

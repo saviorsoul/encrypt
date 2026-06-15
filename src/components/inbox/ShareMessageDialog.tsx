@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
+import { AppDialog } from '@/components/shared/AppDialog.tsx';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -68,7 +68,7 @@ export function ShareMessageDialog({
     !keysReady || busy || recipients.length === 0 || keysLoading;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Share message</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -122,6 +122,6 @@ export function ShareMessageDialog({
           {busyAction === 'export' ? 'Exporting…' : 'Export file'}
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 }

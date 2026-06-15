@@ -46,19 +46,16 @@ export async function importParsedFeedMessage(
     payload.parentCorePayloadJson,
   );
 
-  return saveStoredShare(
-    shareCoreJson,
-    payload.keyManifest,
-    parentMessageId,
-  );
+  return saveStoredShare(shareCoreJson, payload.keyManifest, parentMessageId);
 }
 
 async function recipientAlreadyHasSharedMessageContent(
   parentCorePayloadJson: string,
   recipientKeyId: string,
 ): Promise<boolean> {
-  const fingerprint =
-    encryptedMessageFingerprintFromPayloadJson(parentCorePayloadJson);
+  const fingerprint = encryptedMessageFingerprintFromPayloadJson(
+    parentCorePayloadJson,
+  );
   if (fingerprint === null) {
     return false;
   }

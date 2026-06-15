@@ -201,7 +201,7 @@ export function OneToOneComposeSidePanel({
       <PublicKeyDialog
         open={publicKeyDialogOpen}
         onClose={() => setPublicKeyDialogOpen(false)}
-        title={`${title} — public key`}
+        title={`${title} - public key`}
         publicKeyJwkText={publicKeyJwkText}
         jwkError={jwkError}
       />

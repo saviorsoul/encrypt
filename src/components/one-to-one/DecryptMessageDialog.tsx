@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
+import { AppDialog } from '@/components/shared/AppDialog.tsx';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -51,7 +51,7 @@ export function DecryptMessageDialog({
     'You will be prompted to upload a private key that matches the sender or recipient public key.';
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Import message</DialogTitle>
       <DialogContent>
         <TextField
@@ -94,6 +94,6 @@ export function DecryptMessageDialog({
           Decrypt
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 }
