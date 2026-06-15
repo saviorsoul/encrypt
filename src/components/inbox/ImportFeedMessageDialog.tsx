@@ -170,7 +170,7 @@ export function ImportFeedMessageDialog({
         return;
       }
 
-      setPayload(validated.text);
+      setPayload(prettifyJsonText(validated.text));
       setFileError(null);
       clearError();
       setStep('preview');

@@ -14,14 +14,7 @@ import {
 import type { CopyState } from '@/types/copyState.ts';
 import { downloadTextFile } from '@/utils/downloadJson.ts';
 import { oneToOneMessageExportFilename } from '@/utils/oneToOneMessageExportFilename.ts';
-
-function formatEncryptedPayloadForExport(payload: string): string {
-  try {
-    return JSON.stringify(JSON.parse(payload), null, 2);
-  } catch {
-    return payload;
-  }
-}
+import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
 
 const MESSAGE_ENTER = 'oneToOneMessageEnter';
 const MESSAGE_ENTER_MS = 360;
@@ -156,7 +149,9 @@ function ConversationBubble({
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(item.encryptedPayload);
+      await navigator.clipboard.writeText(
+        prettifyJsonText(item.encryptedPayload),
+      );
       setCopyState('ok');
     } catch {
       setCopyState('err');
@@ -167,7 +162,7 @@ function ConversationBubble({
   const handleExport = useCallback(() => {
     const exportNameLabel = onRight ? currentUserLabel : peerLabel;
     downloadTextFile(
-      formatEncryptedPayloadForExport(item.encryptedPayload),
+      prettifyJsonText(item.encryptedPayload),
       oneToOneMessageExportFilename(item.encryptedAt, exportNameLabel),
     );
   }, [
