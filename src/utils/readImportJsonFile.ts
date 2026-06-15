@@ -1,10 +1,10 @@
 import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
 
-export const MAX_IMPORT_JSON_FILE_BYTES = 2 * 1024 * 1024;
+export const MAX_IMPORT_JSON_FILE_BYTES = 5 * 1024 * 1024;
 
 const FORBIDDEN_JSON_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_JSON_NESTING_DEPTH = 16;
-const SIZE_LIMIT_ERROR = 'File exceeds the maximum allowed size (2 MB).';
+const SIZE_LIMIT_ERROR = `File exceeds the maximum allowed size (${Math.floor(MAX_IMPORT_JSON_FILE_BYTES / (1024 * 1024))} MB).`;
 
 export type ValidatedImportJsonResult =
   | { ok: true; text: string }

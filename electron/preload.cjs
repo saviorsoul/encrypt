@@ -13,6 +13,17 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('external-file:opened', listener);
     };
   },
+  onExternalTextImported: (callback) => {
+    const listener = (_event, payload) => {
+      callback(payload);
+    };
+
+    ipcRenderer.on('external-text:imported', listener);
+
+    return () => {
+      ipcRenderer.removeListener('external-text:imported', listener);
+    };
+  },
   readExternalFile: (filePath) =>
     ipcRenderer.invoke('external-file:read', filePath),
   dismissExternalFile: (filePath) =>

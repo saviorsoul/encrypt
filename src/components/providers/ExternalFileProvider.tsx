@@ -21,7 +21,10 @@ import {
   isOnImportDestinationRoute,
   type ImportDestination,
 } from '@/utils/importDestination.ts';
-import type { ExternalFileMetadata } from '@/vite-env.d.ts';
+import type {
+  ExternalFileMetadata,
+  ExternalTextImportPayload,
+} from '@/vite-env.d.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 
 export const PENDING_LOGIN_IMPORT_SNACKBAR_MESSAGE =
@@ -68,14 +71,11 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [pendingImport, setPendingImport] = useState<PendingExternalImport | null>(
-    null,
-  );
+  const [pendingImport, setPendingImport] =
+    useState<PendingExternalImport | null>(null);
   const pendingImportRef = useRef<PendingExternalImport | null>(null);
   const [importRequestId, setImportRequestId] = useState(0);
-  const importHandlersRef = useRef(
-    new Map<ImportDestination, ImportHandler>(),
-  );
+  const importHandlersRef = useRef(new Map<ImportDestination, ImportHandler>());
   const [openExternalFile, setOpenExternalFile] =
     useState<OpenExternalFile | null>(null);
   const [loginImportSnackbarOpen, setLoginImportSnackbarOpen] = useState(false);
@@ -111,7 +111,9 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await window.electron?.dismissExternalFile(openExternalFile.file.path);
+    if (openExternalFile.file.path) {
+      await window.electron?.dismissExternalFile(openExternalFile.file.path);
+    }
     setOpenExternalFile(null);
   }, [openExternalFile]);
 
@@ -135,7 +137,9 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
         destination,
       };
 
-      await window.electron?.dismissExternalFile(metadata.path);
+      if (metadata.path) {
+        await window.electron?.dismissExternalFile(metadata.path);
+      }
 
       const handler = importHandlersRef.current.get(destination);
       if (
@@ -163,6 +167,40 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
     [location.pathname, navigate, queuePendingImport, user],
   );
 
+  const handleExternalJsonContent = useCallback(
+    async (metadata: ExternalFileMetadata, text: string) => {
+      const classified = classifyExternalJsonText(text);
+      if (classified.kind === 'message') {
+        await queueMessageImport(metadata, classified.text);
+        return;
+      }
+
+      setOpenExternalFile({ file: metadata, classified });
+    },
+    [queueMessageImport],
+  );
+
+  const handleExternalTextImport = useCallback(
+    (payload: ExternalTextImportPayload) => {
+      const metadata: ExternalFileMetadata = {
+        path: '',
+        name: payload.sourceName,
+        size: payload.text?.length,
+      };
+
+      if ('error' in payload) {
+        setOpenExternalFile({
+          file: metadata,
+          classified: { kind: 'invalid', error: payload.error },
+        });
+        return;
+      }
+
+      void handleExternalJsonContent(metadata, payload.text);
+    },
+    [handleExternalJsonContent],
+  );
+
   const handlePrivateKeyLoginComplete = useCallback(() => {
     void dismissOpenFile();
   }, [dismissOpenFile]);
@@ -178,13 +216,7 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
           const content = await window.electron!.readExternalFile(
             metadata.path,
           );
-          const classified = classifyExternalJsonText(content.text);
-          if (classified.kind === 'message') {
-            await queueMessageImport(metadata, classified.text);
-            return;
-          }
-
-          setOpenExternalFile({ file: metadata, classified });
+          await handleExternalJsonContent(metadata, content.text);
         } catch (caught) {
           setOpenExternalFile({
             file: metadata,
@@ -196,7 +228,15 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
         }
       })();
     });
-  }, [queueMessageImport]);
+  }, [handleExternalJsonContent]);
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_ELECTRON || !window.electron) {
+      return;
+    }
+
+    return window.electron.onExternalTextImported(handleExternalTextImport);
+  }, [handleExternalTextImport]);
 
   const value = useMemo(
     () => ({

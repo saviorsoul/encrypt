@@ -18,6 +18,10 @@ export type ExternalFileContent = ExternalFileMetadata & {
   text: string;
 };
 
+export type ExternalTextImportPayload =
+  | { sourceName: string; text: string; error?: undefined }
+  | { sourceName: string; error: string; text?: undefined };
+
 export type TrayAuthState = {
   canExportPublicKey: boolean;
   publicKeyText: string | null;
@@ -27,6 +31,9 @@ interface ElectronBridge {
   platform: NodeJS.Platform;
   onExternalFileOpened: (
     callback: (metadata: ExternalFileMetadata) => void,
+  ) => () => void;
+  onExternalTextImported: (
+    callback: (payload: ExternalTextImportPayload) => void,
   ) => () => void;
   readExternalFile: (filePath: string) => Promise<ExternalFileContent>;
   dismissExternalFile: (filePath: string) => Promise<void>;

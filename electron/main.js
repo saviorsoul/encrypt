@@ -9,6 +9,10 @@ import {
   Tray,
 } from 'electron';
 import { getContentSecurityPolicy } from './csp.js';
+import {
+  MAX_IMPORT_JSON_FILE_BYTES,
+  validateBaseJsonText,
+} from './validateBaseJsonText.js';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -17,8 +21,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distIndexPath = path.join(__dirname, '../dist/index.html');
 
-const MAX_EXTERNAL_FILE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_EXTERNAL_EXTENSIONS = new Set(['.json', '.jwk']);
+const CLIPBOARD_IMPORT_SOURCE_NAME = 'Clipboard';
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -37,6 +41,9 @@ let trayPublicKeyText = null;
 
 /** @type {string[]} */
 const externalFileQueue = [];
+
+/** @type {{ text: string; sourceName: string } | { error: string; sourceName: string } | null} */
+let pendingClipboardImport = null;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -153,6 +160,42 @@ function flushExternalFileQueue() {
   sendExternalFileOpened(externalFileQueue[0]);
 }
 
+function sendExternalTextImported(payload) {
+  showMainWindow();
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingClipboardImport = payload;
+    return;
+  }
+
+  mainWindow.webContents.send('external-text:imported', payload);
+}
+
+function flushPendingClipboardImport() {
+  if (!pendingClipboardImport || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send('external-text:imported', pendingClipboardImport);
+  pendingClipboardImport = null;
+}
+
+function importTextFromClipboard() {
+  const validated = validateBaseJsonText(clipboard.readText());
+  if (!validated.ok) {
+    sendExternalTextImported({
+      sourceName: CLIPBOARD_IMPORT_SOURCE_NAME,
+      error: validated.error,
+    });
+    return;
+  }
+
+  sendExternalTextImported({
+    sourceName: CLIPBOARD_IMPORT_SOURCE_NAME,
+    text: validated.text,
+  });
+}
+
 function getTrayIconPath() {
   if (process.platform === 'linux') {
     return path.join(__dirname, 'tray-icon.png');
@@ -202,6 +245,13 @@ function updateTrayMenu() {
       },
     });
   }
+
+  template.push({
+    label: 'Import encrypted text',
+    click: () => {
+      importTextFromClipboard();
+    },
+  });
 
   template.push(
     { type: 'separator' },
@@ -279,6 +329,7 @@ function createWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     flushExternalFileQueue();
+    flushPendingClipboardImport();
   });
 }
 
@@ -301,7 +352,7 @@ function assertAllowedExternalFile(filePath) {
     throw new Error('Path is not a file.');
   }
 
-  if (stats.size > MAX_EXTERNAL_FILE_BYTES) {
+  if (stats.size > MAX_IMPORT_JSON_FILE_BYTES) {
     throw new Error('File exceeds the maximum allowed size (2 MB).');
   }
 
@@ -312,7 +363,7 @@ ipcMain.handle('external-file:read', async (_event, filePath) => {
   const resolved = assertAllowedExternalFile(filePath);
   const text = await fsPromises.readFile(resolved, 'utf8');
 
-  if (Buffer.byteLength(text, 'utf8') > MAX_EXTERNAL_FILE_BYTES) {
+  if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
     throw new Error('File exceeds the maximum allowed size (2 MB).');
   }
 
