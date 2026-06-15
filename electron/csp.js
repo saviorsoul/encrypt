@@ -7,7 +7,7 @@ const META_INCOMPATIBLE_DIRECTIVES = new Set([
   'report-to',
 ]);
 
-const PRODUCTION_DIRECTIVES = {
+const BASE_DIRECTIVES = {
   'default-src': ["'self'"],
   'script-src': ["'self'"],
   'style-src': ["'self'", "'unsafe-inline'"],
@@ -21,8 +21,14 @@ const PRODUCTION_DIRECTIVES = {
   'manifest-src': ["'self'"],
 };
 
+const PRODUCTION_DIRECTIVES = {
+  ...BASE_DIRECTIVES,
+  'require-trusted-types-for': ["'script'"],
+  'trusted-types': ["'none'"],
+};
+
 const DEVELOPMENT_DIRECTIVES = {
-  ...PRODUCTION_DIRECTIVES,
+  ...BASE_DIRECTIVES,
   'script-src': ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
   'connect-src': [
     "'self'",
