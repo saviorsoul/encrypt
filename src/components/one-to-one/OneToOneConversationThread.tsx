@@ -165,7 +165,7 @@ function ConversationBubble({
   }, [item.encryptedPayload]);
 
   const handleExport = useCallback(() => {
-    const exportNameLabel = onRight ? peerLabel : currentUserLabel;
+    const exportNameLabel = onRight ? currentUserLabel : peerLabel;
     downloadTextFile(
       formatEncryptedPayloadForExport(item.encryptedPayload),
       oneToOneMessageExportFilename(item.encryptedAt, exportNameLabel),
