@@ -281,9 +281,13 @@ function createTray() {
   });
 }
 
+function isElectronDevServer() {
+  return Boolean(process.env.VITE_DEV_SERVER_URL);
+}
+
 function configureContentSecurityPolicy() {
   const policy = getContentSecurityPolicy(
-    process.env.VITE_DEV_SERVER_URL ? 'development' : 'production',
+    isElectronDevServer() ? 'development' : 'production',
   );
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -294,6 +298,21 @@ function configureContentSecurityPolicy() {
       },
     });
   });
+}
+
+function blockRemoteNetworkRequests() {
+  if (isElectronDevServer()) {
+    return;
+  }
+
+  session.defaultSession.webRequest.onBeforeRequest(
+    {
+      urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'],
+    },
+    (_details, callback) => {
+      callback({ cancel: true });
+    },
+  );
 }
 
 function createWindow() {
@@ -319,7 +338,9 @@ function createWindow() {
     }
   });
 
-  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  const devServerUrl = isElectronDevServer()
+    ? process.env.VITE_DEV_SERVER_URL
+    : null;
   if (devServerUrl) {
     mainWindow.loadURL(devServerUrl);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -388,6 +409,7 @@ ipcMain.on('tray:set-auth-state', (_event, state) => {
 
 app.whenReady().then(() => {
   configureContentSecurityPolicy();
+  blockRemoteNetworkRequests();
   enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
   createTray();
   createWindow();
