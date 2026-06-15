@@ -10,8 +10,12 @@ export type ValidatedImportJsonResult =
   | { ok: true; text: string }
   | { ok: false; error: string };
 
-function fail(error: string): ValidatedImportJsonResult {
+function failJson(error: string): { ok: false; error: string } {
   return { ok: false, error };
+}
+
+function fail(error: string): ValidatedImportJsonResult {
+  return failJson(error);
 }
 
 function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
@@ -58,6 +62,43 @@ function stripUtf8Bom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
 
+export type ValidatedBaseJsonResult =
+  | { ok: true; text: string; parsed: Record<string, unknown> }
+  | { ok: false; error: string };
+
+/**
+ * Parse JSON text, reject unsafe shapes, and return the canonical object.
+ * Does not validate manifest, JWK, or other domain-specific schemas.
+ */
+export function validateBaseJsonText(text: string): ValidatedBaseJsonResult {
+  const trimmed = stripUtf8Bom(text.trim());
+  if (!trimmed) {
+    return failJson('JSON is empty.');
+  }
+
+  if (trimmed.length > MAX_IMPORT_JSON_FILE_BYTES) {
+    return failJson(SIZE_LIMIT_ERROR);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return failJson('Invalid JSON syntax.');
+  }
+
+  if (!isPlainJsonObject(parsed)) {
+    return failJson('JSON root must be an object.');
+  }
+
+  const unsafeKeyError = assertSafeJsonKeys(parsed);
+  if (unsafeKeyError) {
+    return failJson(unsafeKeyError);
+  }
+
+  return { ok: true, text: JSON.stringify(parsed), parsed };
+}
+
 /** File metadata checks only — content is validated by {@link validateImportJsonText}. */
 function assertSafeJsonFileMetadata(file: File): string | null {
   if (file.size > MAX_IMPORT_JSON_FILE_BYTES) {
@@ -86,37 +127,17 @@ function assertSafeJsonFileMetadata(file: File): string | null {
 export function validateImportJsonText(
   text: string,
 ): ValidatedImportJsonResult {
-  const trimmed = stripUtf8Bom(text.trim());
-  if (!trimmed) {
-    return fail('JSON is empty.');
+  const base = validateBaseJsonText(text);
+  if (base.ok === false) {
+    return base;
   }
 
-  if (trimmed.length > MAX_IMPORT_JSON_FILE_BYTES) {
-    return fail(SIZE_LIMIT_ERROR);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return fail('Invalid JSON syntax.');
-  }
-
-  if (!isPlainJsonObject(parsed)) {
-    return fail('JSON root must be an object.');
-  }
-
-  const unsafeKeyError = assertSafeJsonKeys(parsed);
-  if (unsafeKeyError) {
-    return fail(unsafeKeyError);
-  }
-
-  const importResult = parseImportPayloadText(trimmed);
+  const importResult = parseImportPayloadText(base.text);
   if (importResult.ok === false) {
     return fail(importResult.error);
   }
 
-  return { ok: true, text: JSON.stringify(parsed) };
+  return { ok: true, text: base.text };
 }
 
 /** Read a .json file, validate contents, and return canonical import JSON text. */

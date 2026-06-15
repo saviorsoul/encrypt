@@ -70,4 +70,14 @@ export default tseslint.config(
       sourceType: 'module',
     },
   },
+  {
+    files: ['electron/**/*.cjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'commonjs',
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

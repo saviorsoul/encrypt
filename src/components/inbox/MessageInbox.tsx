@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -20,6 +20,7 @@ import { useInboxSenderLabels } from '@/hooks/useInboxSenderLabels.ts';
 import { MessageFeedCard } from '@/components/inbox/MessageFeedCard.tsx';
 import { ShareMessageDialog } from '@/components/inbox/ShareMessageDialog.tsx';
 import { ImportFeedMessageDialog } from '@/components/inbox/ImportFeedMessageDialog.tsx';
+import { useExternalFileContext } from '@/components/providers/ExternalFileProvider.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
@@ -111,6 +112,28 @@ export function MessageInbox({
   const [shareSourceMessage, setShareSourceMessage] =
     useState<StoredMessage | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [externalImportPayload, setExternalImportPayload] = useState<
+    string | null
+  >(null);
+  const [externalImportFileName, setExternalImportFileName] = useState<
+    string | null
+  >(null);
+  const { pendingImport, consumePendingImport } = useExternalFileContext();
+
+  useEffect(() => {
+    if (!pendingImport) {
+      return;
+    }
+
+    const consumed = consumePendingImport();
+    if (!consumed) {
+      return;
+    }
+
+    setExternalImportPayload(consumed.text);
+    setExternalImportFileName(consumed.fileName);
+    setImportDialogOpen(true);
+  }, [pendingImport, consumePendingImport]);
 
   if (loading !== prevLoading) {
     setPrevLoading(loading);
@@ -425,7 +448,13 @@ export function MessageInbox({
         open={importDialogOpen}
         recipientKeyId={recipientKeyId}
         existingMessages={messages}
-        onClose={() => setImportDialogOpen(false)}
+        initialPayload={externalImportPayload}
+        initialFileName={externalImportFileName}
+        onClose={() => {
+          setImportDialogOpen(false);
+          setExternalImportPayload(null);
+          setExternalImportFileName(null);
+        }}
         onImported={(message) => {
           onMessageImported?.(message);
         }}

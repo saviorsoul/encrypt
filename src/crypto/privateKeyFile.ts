@@ -3,25 +3,53 @@ import { importPrivateKeyNonExtractable } from '@/crypto/ecdhKeys.ts';
 
 const FILE_SELECTION_CANCELLED = 'No private key file selected.';
 
+export type ParsePrivateKeyJwkResult =
+  | { ok: true; jwk: JsonWebKey }
+  | { ok: false; error: string };
+
 function parsePrivateKeyJwk(text: string): JsonWebKey {
+  const parsed = parsePrivateKeyJwkText(text);
+  if (parsed.ok === false) {
+    throw new Error(parsed.error);
+  }
+  return parsed.jwk;
+}
+
+/** Parse and syntactically validate an EC P-256 private JWK from JSON text. */
+export function parsePrivateKeyJwkText(text: string): ParsePrivateKeyJwkResult {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { ok: false, error: 'Private key file is empty.' };
+  }
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(trimmed);
   } catch {
-    throw new Error('Private key file is not valid JSON.');
+    return { ok: false, error: 'Private key file is not valid JSON.' };
   }
 
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('Private key file must contain a JWK object.');
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, error: 'Private key file must contain a JWK object.' };
   }
 
-  return slimEcPrivateJwk(parsed as JsonWebKey);
+  try {
+    return { ok: true, jwk: slimEcPrivateJwk(parsed as JsonWebKey) };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Invalid private key JWK.';
+    return { ok: false, error: message };
+  }
 }
 
 export async function readPrivateKeyJwkFromFile(
   file: File,
 ): Promise<JsonWebKey> {
   const text = await file.text();
+  return readPrivateKeyJwkFromText(text);
+}
+
+export function readPrivateKeyJwkFromText(text: string): JsonWebKey {
   return parsePrivateKeyJwk(text);
 }
 

@@ -90,25 +90,50 @@ Builds platform-specific installers with [electron-builder](https://www.electron
 npm run electron:build
 ```
 
-Output is written to `release/`. Linux builds produce **AppImage** and **deb** packages; Windows builds produce an **NSIS** installer; macOS builds produce a **dmg**.
+Output is written to `release/`. Linux builds produce a **deb** package; Windows builds produce an **NSIS** installer; macOS builds produce a **dmg**.
 
 On Linux, the dev and preview scripts pass `--no-sandbox` to Electron to avoid sandbox issues in some environments.
 
+### Open files from the file manager (Ubuntu)
+
+The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message** or **sign in with a private key**.
+
+After installing the `.deb` package from `release/`, right-click a `.json` or `.jwk` file and choose **Open With → Encrypt**. If Encrypt is not listed, use **Open With Other Application** once; later opens will show it in the menu.
+
+The installed binary is at `/opt/Encrypt/encrypt`. File associations are registered automatically by the `.deb` installer.
+
+#### Manual verification (development)
+
+Build and run the desktop app, passing a file path after `--`:
+
+```bash
+# Cold start with a file (builds dist/, then opens the app)
+npm run electron:preview -- /path/to/file.json
+
+# App already built or already running — open a file without rebuilding
+npm run electron:run -- /path/to/file.json
+```
+
+Use an absolute path to a real `.json` or `.jwk` file. The path must come **after** `--` so npm forwards it to Electron.
+
+Canceling the chooser dialog clears the queued file with no other side effects.
+
 ## Other commands
 
-| Command                   | Description                                   |
-| ------------------------- | --------------------------------------------- |
-| `npm test`                | Run tests in watch mode                       |
-| `npm run build`           | Production web build to `dist/`               |
-| `npm run build:pages`     | Build for GitHub Pages (`dist/` + `404.html`) |
-| `npm run preview`         | Preview the production web build              |
-| `npm run electron:dev`    | Electron dev server with hot reload           |
-| `npm run electron:preview`| Build and run the Electron app locally        |
-| `npm run electron:build`  | Package desktop installers to `release/`      |
-| `npm run lint`            | Check lint and formatting (ESLint + Prettier) |
-| `npm run lint:fix`        | Auto-fix lint and formatting issues           |
-| `npm run format`          | Format all files with Prettier                |
-| `npm run format:check`    | Check formatting without writing changes      |
+| Command                    | Description                                   |
+| -------------------------- | --------------------------------------------- |
+| `npm test`                 | Run tests in watch mode                       |
+| `npm run build`            | Production web build to `dist/`               |
+| `npm run build:pages`      | Build for GitHub Pages (`dist/` + `404.html`) |
+| `npm run preview`          | Preview the production web build              |
+| `npm run electron:dev`     | Electron dev server with hot reload           |
+| `npm run electron:preview` | Build and run the Electron app locally        |
+| `npm run electron:run`     | Run Electron from existing `dist/` build      |
+| `npm run electron:build`   | Package desktop installers to `release/`      |
+| `npm run lint`             | Check lint and formatting (ESLint + Prettier) |
+| `npm run lint:fix`         | Auto-fix lint and formatting issues           |
+| `npm run format`           | Format all files with Prettier                |
+| `npm run format:check`     | Check formatting without writing changes      |
 
 ## Linting and formatting
 

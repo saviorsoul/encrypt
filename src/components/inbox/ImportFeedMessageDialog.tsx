@@ -9,7 +9,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
+import { AppDialog } from '@/components/shared/AppDialog.tsx';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -34,6 +34,8 @@ type ImportFeedMessageDialogProps = {
   existingMessages: StoredMessage[];
   onClose: () => void;
   onImported?: (message: StoredMessage) => void;
+  initialPayload?: string | null;
+  initialFileName?: string | null;
 };
 
 type ImportTab = 'json' | 'file';
@@ -45,6 +47,8 @@ export function ImportFeedMessageDialog({
   existingMessages,
   onClose,
   onImported,
+  initialPayload = null,
+  initialFileName = null,
 }: ImportFeedMessageDialogProps) {
   const [tab, setTab] = useState<ImportTab>('json');
   const [step, setStep] = useState<ImportStep>('input');
@@ -89,11 +93,17 @@ export function ImportFeedMessageDialog({
     setPrevOpen(open);
     if (open) {
       setTab('json');
-      setStep('input');
-      setPayload('');
-      setSelectedFileName(null);
       setFileError(null);
       clearError();
+      if (initialPayload) {
+        setPayload(initialPayload);
+        setSelectedFileName(initialFileName);
+        setStep('preview');
+      } else {
+        setStep('input');
+        setPayload('');
+        setSelectedFileName(null);
+      }
     }
   }
 
@@ -211,7 +221,7 @@ export function ImportFeedMessageDialog({
   const previewBusy = previewLoading || busy;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         {step === 'input' ? 'Import message' : 'Preview import'}
       </DialogTitle>
@@ -361,6 +371,6 @@ export function ImportFeedMessageDialog({
           </>
         )}
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 }

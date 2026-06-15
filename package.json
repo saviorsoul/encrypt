@@ -34,6 +34,7 @@
     "web-vitals": "^2.1.4"
   },
   "main": "electron/main.js",
+  "desktopName": "com.encrypt.app",
   "scripts": {
     "dev": "vite",
     "start": "vite",
@@ -41,7 +42,8 @@
     "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"vite --mode electron\" \"wait-on http://localhost:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
-    "electron:preview": "vite build --mode electron && electron . --no-sandbox",
+    "electron:preview": "bash scripts/electron-preview.sh",
+    "electron:run": "electron . --no-sandbox",
     "electron:build": "vite build --mode electron && electron-builder",
     "test": "vitest",
     "lint": "eslint .",
@@ -52,6 +54,14 @@
   "build": {
     "appId": "com.encrypt.app",
     "productName": "Encrypt",
+    "fileAssociations": [
+      {
+        "ext": ["json", "jwk"],
+        "mimeType": "application/json",
+        "name": "JSON",
+        "description": "Encrypt message or key file"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -60,11 +70,9 @@
       "electron/**/*"
     ],
     "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility"
+      "target": ["deb"],
+      "category": "Utility",
+      "syncDesktopName": true
     },
     "win": {
       "target": [

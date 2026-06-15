@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
+import { AppDialog } from '@/components/shared/AppDialog.tsx';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -14,7 +14,6 @@ type NameUnknownRecipientDialogProps = {
   error: string | null;
   onSave: (username: string) => void;
   onNameChange?: () => void;
-  stacked?: boolean;
 };
 
 export function NameUnknownRecipientDialog({
@@ -25,7 +24,6 @@ export function NameUnknownRecipientDialog({
   error,
   onSave,
   onNameChange,
-  stacked = false,
 }: NameUnknownRecipientDialogProps) {
   const [name, setName] = useState('');
   const [prevOpen, setPrevOpen] = useState(open);
@@ -47,13 +45,7 @@ export function NameUnknownRecipientDialog({
   const canSave = trimmedName.length > 0 && !saving && !nameExists;
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      {...(stacked ? { disableEscapeKeyDown: saving } : {})}
-    >
+    <AppDialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>Name recipient</DialogTitle>
       <DialogContent>
         <TextField
@@ -91,6 +83,6 @@ export function NameUnknownRecipientDialog({
           Save
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 }
