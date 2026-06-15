@@ -761,7 +761,6 @@ export function OneToOnePage() {
         error={unknownRecipientError}
         onNameChange={() => setUnknownRecipientError(null)}
         onSave={(username) => void handleSaveUnknownRecipient(username)}
-        stacked
       />
 
       <Snackbar
