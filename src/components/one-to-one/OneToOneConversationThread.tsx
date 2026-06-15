@@ -2,19 +2,48 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import { OneToOneMessageBubblePopover } from '@/components/one-to-one/OneToOneMessageBubblePopover.tsx';
 import {
   isThreadItemDecrypted,
   type OneToOneThreadItem,
 } from '@/types/oneToOne.ts';
 import type { CopyState } from '@/types/copyState.ts';
+import { downloadTextFile } from '@/utils/downloadJson.ts';
+import { oneToOneMessageExportFilename } from '@/utils/oneToOneMessageExportFilename.ts';
+
+function formatEncryptedPayloadForExport(payload: string): string {
+  try {
+    return JSON.stringify(JSON.parse(payload), null, 2);
+  } catch {
+    return payload;
+  }
+}
 
 const MESSAGE_ENTER = 'oneToOneMessageEnter';
 const MESSAGE_ENTER_MS = 360;
 const MESSAGE_STAGGER_MS = 90;
+
+const messageActionIconButtonSx = {
+  p: 0,
+  fontSize: '1.125rem',
+  lineHeight: 1,
+  borderRadius: 1,
+  transition: 'color 0.15s ease, transform 0.1s ease',
+  '&:hover': {
+    color: 'primary.main',
+  },
+  '&:focus-visible': {
+    color: 'primary.main',
+  },
+  '&:active': {
+    color: 'primary.main',
+    transform: 'scale(0.9)',
+  },
+};
 
 function ConversationBubbleEnter({
   messageId,
@@ -90,16 +119,11 @@ function isCurrentUserMessage(
   return viewerKeyId !== null && item.side === 'sender';
 }
 
-function formatEncryptionDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 type ConversationBubbleProps = {
   item: OneToOneThreadItem;
   authorLabel: string;
+  currentUserLabel: string;
+  peerLabel: string;
   highlighted: boolean;
   decrypting: boolean;
   decryptError: string | null;
@@ -111,6 +135,8 @@ type ConversationBubbleProps = {
 function ConversationBubble({
   item,
   authorLabel,
+  currentUserLabel,
+  peerLabel,
   highlighted,
   decrypting,
   decryptError,
@@ -128,29 +154,6 @@ function ConversationBubble({
     }
   }, [highlighted]);
 
-  const copyTooltip =
-    copyState === 'ok'
-      ? 'Copied'
-      : copyState === 'err'
-        ? 'Copy failed'
-        : 'Copy Encrypted JSON';
-
-  const bubbleTooltip = (
-    <Stack spacing={0.25} sx={{ py: 0.25 }}>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {authorLabel}
-      </Typography>
-      <Typography variant="caption" component="div">
-        Encrypted at: {formatEncryptionDate(item.encryptedAt)}
-      </Typography>
-      {item.decryptedAt !== undefined && (
-        <Typography variant="caption" component="div">
-          Decrypted at: {formatEncryptionDate(item.decryptedAt)}
-        </Typography>
-      )}
-    </Stack>
-  );
-
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(item.encryptedPayload);
@@ -161,6 +164,59 @@ function ConversationBubble({
     window.setTimeout(() => setCopyState('idle'), 2000);
   }, [item.encryptedPayload]);
 
+  const handleExport = useCallback(() => {
+    const exportNameLabel = onRight ? peerLabel : currentUserLabel;
+    downloadTextFile(
+      formatEncryptedPayloadForExport(item.encryptedPayload),
+      oneToOneMessageExportFilename(item.encryptedAt, exportNameLabel),
+    );
+  }, [
+    currentUserLabel,
+    item.encryptedAt,
+    item.encryptedPayload,
+    onRight,
+    peerLabel,
+  ]);
+
+  const messageActions = (
+    <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
+      <IconButton
+        aria-label={
+          copyState === 'ok'
+            ? 'Copied'
+            : copyState === 'err'
+              ? 'Copy failed'
+              : 'Copy Encrypted JSON'
+        }
+        onClick={() => void handleCopy()}
+        color={copyState === 'ok' ? 'success' : 'inherit'}
+        sx={messageActionIconButtonSx}
+      >
+        <ContentCopyIcon fontSize="inherit" />
+      </IconButton>
+
+      <IconButton
+        aria-label="Export message to file"
+        onClick={handleExport}
+        color="inherit"
+        sx={messageActionIconButtonSx}
+      >
+        <FileDownloadOutlinedIcon fontSize="inherit" />
+      </IconButton>
+      {!decrypted && (
+        <IconButton
+          aria-label={decrypting ? 'Decrypting…' : 'Decrypt'}
+          disabled={decrypting || decryptDisabled}
+          onClick={onDecrypt}
+          color="inherit"
+          sx={messageActionIconButtonSx}
+        >
+          <LockOpenIcon fontSize="inherit" />
+        </IconButton>
+      )}
+    </Stack>
+  );
+
   return (
     <Box
       ref={rowRef}
@@ -169,76 +225,28 @@ function ConversationBubble({
         display: 'flex',
         flexDirection: 'column',
         gap: 0.5,
+        alignItems: onRight ? 'flex-end' : 'flex-start',
       }}
     >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 0.5,
-          flexDirection: onRight ? 'row-reverse' : 'row',
-          borderRadius: 2.5,
-          outline: highlighted ? '2px solid' : 'none',
-          outlineColor: 'warning.main',
-          outlineOffset: 2,
-          transition: 'outline-color 0.2s ease',
-        }}
+      <OneToOneMessageBubblePopover
+        messageId={item.id}
+        authorLabel={authorLabel}
+        alignEnd={onRight}
+        highlighted={highlighted}
+        actions={messageActions}
       >
-        <Tooltip title={bubbleTooltip} enterDelay={400}>
-          <Box
-            sx={{
-              px: 1.75,
-              py: 1.25,
-              borderRadius: 2.5,
-              bgcolor: onRight ? 'primary.main' : 'grey.300',
-              color: 'primary.contrastText',
-              boxShadow: highlighted ? 6 : 1,
-              cursor: 'default',
-              transition: 'box-shadow 0.2s ease',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontFamily: decrypted ? undefined : 'monospace',
-                fontSize: decrypted ? undefined : '0.8125rem',
-              }}
-            >
-              {decrypted ? item.text : item.id}
-            </Typography>
-          </Box>
-        </Tooltip>
-        <Tooltip title={copyTooltip}>
-          <span>
-            <IconButton
-              size="small"
-              aria-label="Copy Encrypted JSON"
-              onClick={() => void handleCopy()}
-              color={copyState === 'ok' ? 'success' : 'default'}
-              sx={{ mt: 0.25 }}
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        {!decrypted && (
-          <Tooltip title={decrypting ? 'Decrypting…' : 'Decrypt'}>
-            <span>
-              <IconButton
-                size="small"
-                aria-label="Decrypt"
-                disabled={decrypting || decryptDisabled}
-                onClick={onDecrypt}
-                sx={{ mt: 0.25 }}
-              >
-                <LockOpenIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-      </Box>
+        <Typography
+          variant="body2"
+          sx={{
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            fontFamily: decrypted ? undefined : 'monospace',
+            fontSize: decrypted ? undefined : '0.8125rem',
+          }}
+        >
+          {decrypted ? item.text : item.id}
+        </Typography>
+      </OneToOneMessageBubblePopover>
       {decryptError && (
         <Typography
           variant="caption"
@@ -326,6 +334,8 @@ export function OneToOneConversationThread({
             <ConversationBubble
               item={item}
               authorLabel={onRight ? currentUserLabel : peerLabel}
+              currentUserLabel={currentUserLabel}
+              peerLabel={peerLabel}
               highlighted={item.id === highlightedMessageId}
               decrypting={decryptingMessageId === item.id}
               decryptError={decryptErrorById[item.id] ?? null}
