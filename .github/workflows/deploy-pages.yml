@@ -97,9 +97,9 @@ jobs:
             title="Deploy succeeded"
             color=5763719
             status="Build and GitHub Pages deploy completed successfully."
-            if [[ -n "${PAGE_URL:-}" ]]; then
-              status="$(printf '%s\n\n**Live site:** %s' "$PAGE_URL")"
-            fi
+            # if [[ -n "${PAGE_URL:-}" ]]; then
+            #   status="$(printf '%s\n\n**Live site:** %s' "$PAGE_URL")"
+            # fi
           elif [[ "$BUILD_RESULT" != "success" ]]; then
             title="Build failed"
             color=15548997
