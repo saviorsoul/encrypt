@@ -7,13 +7,16 @@ import CircularProgress from '@mui/material/CircularProgress';
 import DownloadIcon from '@mui/icons-material/Download';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.ts';
+import { useExternalFileContext } from '@/components/providers/ExternalFileProvider.tsx';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
+import { getImportDestinationRoute } from '@/utils/importDestination.ts';
 import Stack from '@mui/material/Stack';
 
 export function PrivateKeyDownloadPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pendingImport } = useExternalFileContext();
   const onboardingStatus = usePrivateKeyOnboardingGuard();
   const {
     loading,
@@ -55,8 +58,14 @@ export function PrivateKeyDownloadPage() {
     ensurePendingPrivateKey,
   ]);
 
+  const postOnboardingRoute = pendingImport
+    ? getImportDestinationRoute(pendingImport.destination)
+    : '/';
+
   if (!user) return <Navigate to="/login" replace />;
-  if (onboardingStatus === 'complete') return <Navigate to="/" replace />;
+  if (onboardingStatus === 'complete') {
+    return <Navigate to={postOnboardingRoute} replace />;
+  }
   if (onboardingStatus === 'loading') {
     return (
       <Box
@@ -82,7 +91,7 @@ export function PrivateKeyDownloadPage() {
   };
 
   const handleNext = () => {
-    navigate('/', { replace: true });
+    navigate(postOnboardingRoute, { replace: true });
   };
 
   return (

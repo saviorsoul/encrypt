@@ -26,6 +26,7 @@ import {
   readValidatedImportJsonFromFile,
   validateImportJsonText,
 } from '@/utils/readImportJsonFile.ts';
+import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 type ImportFeedMessageDialogProps = {
@@ -36,6 +37,7 @@ type ImportFeedMessageDialogProps = {
   onImported?: (message: StoredMessage) => void;
   initialPayload?: string | null;
   initialFileName?: string | null;
+  externalImport?: boolean;
 };
 
 type ImportTab = 'json' | 'file';
@@ -49,6 +51,7 @@ export function ImportFeedMessageDialog({
   onImported,
   initialPayload = null,
   initialFileName = null,
+  externalImport = false,
 }: ImportFeedMessageDialogProps) {
   const [tab, setTab] = useState<ImportTab>('json');
   const [step, setStep] = useState<ImportStep>('input');
@@ -57,6 +60,15 @@ export function ImportFeedMessageDialog({
   const [fileError, setFileError] = useState<string | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const externalPayload = useMemo(() => {
+    if (!externalImport || !initialPayload) {
+      return null;
+    }
+    return prettifyJsonText(initialPayload);
+  }, [externalImport, initialPayload]);
+
+  const displayPayload = externalPayload ?? payload;
 
   const handleImported = useCallback(
     (message: StoredMessage) => {
@@ -80,7 +92,9 @@ export function ImportFeedMessageDialog({
   });
 
   const previewManifest =
-    step === 'preview' && payload.trim().length > 0 ? payload.trim() : null;
+    step === 'preview' && displayPayload.trim().length > 0
+      ? displayPayload.trim()
+      : null;
 
   const {
     previewMessage,
@@ -91,23 +105,17 @@ export function ImportFeedMessageDialog({
 
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) {
+    if (open && !externalImport) {
       setTab('json');
       setFileError(null);
       clearError();
-      if (initialPayload) {
-        setPayload(initialPayload);
-        setSelectedFileName(initialFileName);
-        setStep('preview');
-      } else {
-        setStep('input');
-        setPayload('');
-        setSelectedFileName(null);
-      }
+      setStep('input');
+      setPayload('');
+      setSelectedFileName(null);
     }
   }
 
-  const trimmedPayload = payload.trim();
+  const trimmedPayload = displayPayload.trim();
   const payloadError = useMemo(() => {
     if (step !== 'input' || tab !== 'json' || !trimmedPayload) {
       return null;
@@ -121,6 +129,15 @@ export function ImportFeedMessageDialog({
     }
     return validateForImport(trimmedPayload);
   }, [step, tab, trimmedPayload, payloadError, validateForImport]);
+
+  const canImportFromExternal =
+    externalImport &&
+    step === 'input' &&
+    tab === 'json' &&
+    trimmedPayload.length > 0 &&
+    payloadError === null &&
+    importValidationError === null &&
+    !busy;
 
   const canPreviewFromJson =
     step === 'input' &&
@@ -200,10 +217,10 @@ export function ImportFeedMessageDialog({
   );
 
   useEffect(() => {
-    if (open && step === 'input' && tab === 'file') {
+    if (open && step === 'input' && tab === 'file' && !externalImport) {
       openFilePicker();
     }
-  }, [open, step, tab, openFilePicker]);
+  }, [open, step, tab, externalImport, openFilePicker]);
 
   const handlePreviewFromJson = useCallback(() => {
     goToPreview(trimmedPayload);
@@ -215,34 +232,64 @@ export function ImportFeedMessageDialog({
   }, [clearError]);
 
   const handleConfirmImport = useCallback(() => {
-    void confirmImport(payload);
-  }, [confirmImport, payload]);
+    void confirmImport(displayPayload);
+  }, [confirmImport, displayPayload]);
 
   const previewBusy = previewLoading || busy;
 
   return (
     <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        {step === 'input' ? 'Import message' : 'Preview import'}
+        {externalImport
+          ? 'Import message'
+          : step === 'input'
+            ? 'Import message'
+            : 'Preview import'}
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
           {step === 'input' ? (
             <>
-              <Typography variant="body2" color="text.secondary">
-                Add an encrypted feed message from a manifest JSON file or by
-                pasting the signed payload. Your public key must be listed as a
-                recipient.
-              </Typography>
+              {!externalImport ? (
+                <Typography variant="body2" color="text.secondary">
+                  Add an encrypted feed message from a manifest JSON file or by
+                  pasting the signed payload. Your public key must be listed as
+                  a recipient.
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {initialFileName ? (
+                    <>
+                      Review{' '}
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        sx={{ fontWeight: 600 }}
+                      >
+                        {initialFileName}
+                      </Typography>
+                      , then import it into your feed. Your public key must be
+                      listed as a recipient.
+                    </>
+                  ) : (
+                    <>
+                      Review the encrypted message below, then import it into
+                      your feed. Your public key must be listed as a recipient.
+                    </>
+                  )}
+                </Typography>
+              )}
 
-              <Tabs
-                value={tab}
-                onChange={handleTabChange}
-                aria-label="Import message method"
-              >
-                <Tab label="Paste JSON" value="json" />
-                <Tab label="From file" value="file" />
-              </Tabs>
+              {!externalImport ? (
+                <Tabs
+                  value={tab}
+                  onChange={handleTabChange}
+                  aria-label="Import message method"
+                >
+                  <Tab label="Paste JSON" value="json" />
+                  <Tab label="From file" value="file" />
+                </Tabs>
+              ) : null}
 
               <input
                 ref={fileInputRef}
@@ -252,7 +299,7 @@ export function ImportFeedMessageDialog({
                 onChange={handleFileChange}
               />
 
-              {tab === 'file' ? (
+              {tab === 'file' && !externalImport ? (
                 <Stack spacing={1.5}>
                   <Button
                     variant="outlined"
@@ -273,15 +320,18 @@ export function ImportFeedMessageDialog({
                 <TextField
                   autoFocus
                   label="Encrypted JSON"
-                  value={payload}
+                  value={displayPayload}
                   onChange={(event) => {
+                    if (externalImport) {
+                      return;
+                    }
                     setPayload(event.target.value);
                     clearError();
                   }}
                   fullWidth
                   multiline
-                  minRows={12}
-                  disabled={busy}
+                  rows={14}
+                  disabled={busy || externalImport}
                   placeholder="Paste signed manifest JSON…"
                   error={Boolean(payloadError)}
                   helperText={
@@ -346,7 +396,16 @@ export function ImportFeedMessageDialog({
             <Button onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            {tab === 'json' && (
+            {tab === 'json' && externalImport ? (
+              <Button
+                variant="contained"
+                disabled={!canImportFromExternal}
+                onClick={handleConfirmImport}
+              >
+                {busy ? 'Importing…' : 'Import message'}
+              </Button>
+            ) : null}
+            {tab === 'json' && !externalImport ? (
               <Button
                 variant="contained"
                 disabled={!canPreviewFromJson}
@@ -354,7 +413,7 @@ export function ImportFeedMessageDialog({
               >
                 Preview
               </Button>
-            )}
+            ) : null}
           </>
         ) : (
           <>

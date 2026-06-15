@@ -20,7 +20,8 @@ import { useInboxSenderLabels } from '@/hooks/useInboxSenderLabels.ts';
 import { MessageFeedCard } from '@/components/inbox/MessageFeedCard.tsx';
 import { ShareMessageDialog } from '@/components/inbox/ShareMessageDialog.tsx';
 import { ImportFeedMessageDialog } from '@/components/inbox/ImportFeedMessageDialog.tsx';
-import { useExternalFileContext } from '@/components/providers/ExternalFileProvider.tsx';
+import { useExternalImportDestination } from '@/hooks/useExternalImportDestination.ts';
+import type { PendingExternalImport } from '@/components/providers/ExternalFileProvider.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
@@ -112,28 +113,18 @@ export function MessageInbox({
   const [shareSourceMessage, setShareSourceMessage] =
     useState<StoredMessage | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [externalImportPayload, setExternalImportPayload] = useState<
-    string | null
-  >(null);
-  const [externalImportFileName, setExternalImportFileName] = useState<
-    string | null
-  >(null);
-  const { pendingImport, consumePendingImport } = useExternalFileContext();
+  const [externalImportSession, setExternalImportSession] =
+    useState<PendingExternalImport | null>(null);
 
-  useEffect(() => {
-    if (!pendingImport) {
-      return;
-    }
+  const handlePendingExternalImport = useCallback(
+    (consumed: PendingExternalImport) => {
+      setExternalImportSession(consumed);
+      setImportDialogOpen(true);
+    },
+    [],
+  );
 
-    const consumed = consumePendingImport();
-    if (!consumed) {
-      return;
-    }
-
-    setExternalImportPayload(consumed.text);
-    setExternalImportFileName(consumed.fileName);
-    setImportDialogOpen(true);
-  }, [pendingImport, consumePendingImport]);
+  useExternalImportDestination('feed', handlePendingExternalImport);
 
   if (loading !== prevLoading) {
     setPrevLoading(loading);
@@ -349,7 +340,10 @@ export function MessageInbox({
             <Button
               size="small"
               variant="outlined"
-              onClick={() => setImportDialogOpen(true)}
+              onClick={() => {
+                setExternalImportSession(null);
+                setImportDialogOpen(true);
+              }}
               startIcon={<FileUploadOutlinedIcon />}
             >
               Import message
@@ -448,12 +442,12 @@ export function MessageInbox({
         open={importDialogOpen}
         recipientKeyId={recipientKeyId}
         existingMessages={messages}
-        initialPayload={externalImportPayload}
-        initialFileName={externalImportFileName}
+        initialPayload={externalImportSession?.text ?? null}
+        initialFileName={externalImportSession?.fileName ?? null}
+        externalImport={externalImportSession !== null}
         onClose={() => {
           setImportDialogOpen(false);
-          setExternalImportPayload(null);
-          setExternalImportFileName(null);
+          setExternalImportSession(null);
         }}
         onImported={(message) => {
           onMessageImported?.(message);

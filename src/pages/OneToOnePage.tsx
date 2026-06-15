@@ -11,6 +11,8 @@ import { DecryptMessageDialog } from '@/components/one-to-one/DecryptMessageDial
 import { NameUnknownRecipientDialog } from '@/components/one-to-one/NameUnknownRecipientDialog.tsx';
 import { OneToOneConversationThread } from '@/components/one-to-one/OneToOneConversationThread.tsx';
 import { OneToOneEncryption } from '@/components/one-to-one/OneToOneEncryption.tsx';
+import { useExternalImportDestination } from '@/hooks/useExternalImportDestination.ts';
+import type { PendingExternalImport } from '@/components/providers/ExternalFileProvider.tsx';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useOneToOneThread } from '@/hooks/useOneToOneThread.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
@@ -109,6 +111,9 @@ export function OneToOnePage() {
     recipientKeyId: null,
   });
   const [decryptDialogOpen, setDecryptDialogOpen] = useState(false);
+  const [decryptInitialPayload, setDecryptInitialPayload] = useState<
+    string | null
+  >(null);
   const [decryptError, setDecryptError] = useState<string | null>(null);
   const [decryptBusy, setDecryptBusy] = useState(false);
   const [bulkDecryptBusy, setBulkDecryptBusy] = useState(false);
@@ -146,6 +151,17 @@ export function OneToOnePage() {
   const [pendingDuplicateResolution, setPendingDuplicateResolution] =
     useState<PendingDuplicateResolution | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+
+  const handlePendingExternalImport = useCallback(
+    (consumed: PendingExternalImport) => {
+      setDecryptInitialPayload(consumed.text);
+      setDecryptError(null);
+      setDecryptDialogOpen(true);
+    },
+    [],
+  );
+
+  useExternalImportDestination('oneToOne', handlePendingExternalImport);
 
   const viewerKeyId = partyKeyIds.senderKeyId;
 
@@ -444,6 +460,7 @@ export function OneToOnePage() {
 
   const handleOpenDecryptDialog = useCallback(() => {
     setDecryptError(null);
+    setDecryptInitialPayload(null);
     setDecryptDialogOpen(true);
   }, []);
 
@@ -453,6 +470,7 @@ export function OneToOnePage() {
     }
     setUnknownRecipientDialog(null);
     setUnknownRecipientError(null);
+    setDecryptInitialPayload(null);
     setDecryptDialogOpen(false);
   }, [decryptBusy, unknownRecipientSaving]);
 
@@ -748,6 +766,7 @@ export function OneToOnePage() {
         decrypting={decryptBusy}
         decryptDisabled={isImportMessageBlocked}
         error={decryptError}
+        initialPayload={decryptInitialPayload}
         onClose={handleCloseDecryptDialog}
         onPayloadChange={() => setDecryptError(null)}
         onDecrypt={(payload) => void handleDecryptFromDialog(payload)}

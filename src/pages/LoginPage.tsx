@@ -20,9 +20,12 @@ import {
 } from '@/crypto/loginFromPrivateKey.ts';
 import { readPrivateKeyJwkFromFile } from '@/crypto/privateKeyFile.ts';
 import { LAST_USERNAME_STORAGE_KEY } from '@/components/providers/AuthProvider.tsx';
+import { useExternalFileContext } from '@/components/providers/ExternalFileProvider.tsx';
 import { useAuth } from '@/hooks/useAuth.ts';
+import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
+import { getImportDestinationRoute } from '@/utils/importDestination.ts';
 import { usernameFromPrivateKeyFilename } from '@/utils/privateKeyFilename.ts';
 
 type LoginMode = 'type' | 'stored' | 'privateKey';
@@ -40,11 +43,13 @@ function readLastUsername(): string {
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  const { pendingImport } = useExternalFileContext();
+  const onboardingStatus = usePrivateKeyOnboardingGuard();
   const { allUsernames, loading: loadingUsers } = useStoredUsernames();
   const [loginMode, setLoginMode] = useState<LoginMode>('type');
+  const [storedLoginInitialized, setStoredLoginInitialized] = useState(false);
   const [username, setUsername] = useState(readLastUsername);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [storedLoginInitialized, setStoredLoginInitialized] = useState(false);
   const [privateKeyFile, setPrivateKeyFile] = useState<File | null>(null);
   const [privateKeyFileName, setPrivateKeyFileName] = useState<string | null>(
     null,
@@ -54,8 +59,24 @@ export function LoginPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) navigate('/', { replace: true });
-  }, [user, navigate]);
+    if (!user || onboardingStatus === 'loading') {
+      return;
+    }
+
+    if (onboardingStatus === 'required') {
+      navigate('/save-private-key', { replace: true });
+      return;
+    }
+
+    if (pendingImport) {
+      navigate(getImportDestinationRoute(pendingImport.destination), {
+        replace: true,
+      });
+      return;
+    }
+
+    navigate('/', { replace: true });
+  }, [user, pendingImport, onboardingStatus, navigate]);
 
   if (!storedLoginInitialized && !loadingUsers && allUsernames.length > 0) {
     const last = readLastUsername().trim();
@@ -124,7 +145,6 @@ export function LoginPage() {
       usernameHint,
     );
     login(result.username, { existingUser: result.existingUser });
-    navigate('/', { replace: true });
   };
 
   const handlePrivateKeyFileChange = (
@@ -217,7 +237,6 @@ export function LoginPage() {
     }
     setUsernameError(null);
     login(trimmed);
-    navigate('/', { replace: true });
   };
 
   const showSignInButton =
@@ -237,11 +256,13 @@ export function LoginPage() {
           Sign in
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {loginMode === 'privateKey'
-            ? privateKeyNeedsUsername
-              ? 'Enter the username for this private key on this device.'
-              : 'Choose your private key file to sign in.'
-            : 'Enter a username or pick one already created. The session is stored for the current tab.'}
+          {pendingImport
+            ? `Sign in to import ${pendingImport.fileName}.`
+            : loginMode === 'privateKey'
+              ? privateKeyNeedsUsername
+                ? 'Enter the username for this private key on this device.'
+                : 'Choose your private key file to sign in.'
+              : 'Enter a username or pick one already created. The session is stored for the current tab.'}
         </Typography>
         <Box
           component="form"

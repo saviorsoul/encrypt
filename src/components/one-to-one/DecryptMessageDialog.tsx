@@ -7,12 +7,14 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
+import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
 
 type DecryptMessageDialogProps = {
   open: boolean;
   decrypting: boolean;
   decryptDisabled?: boolean;
   error: string | null;
+  initialPayload?: string | null;
   onClose: () => void;
   onDecrypt: (encryptedPayload: string) => void;
   onPayloadChange?: () => void;
@@ -23,6 +25,7 @@ export function DecryptMessageDialog({
   decrypting,
   decryptDisabled = false,
   error,
+  initialPayload = null,
   onClose,
   onDecrypt,
   onPayloadChange,
@@ -32,12 +35,19 @@ export function DecryptMessageDialog({
 
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) {
+    if (open && !initialPayload) {
       setPayload('');
     }
   }
 
-  const trimmedPayload = payload.trim();
+  const displayPayload = useMemo(() => {
+    if (initialPayload) {
+      return prettifyJsonText(initialPayload);
+    }
+    return payload;
+  }, [initialPayload, payload]);
+
+  const trimmedPayload = displayPayload.trim();
   const parsed = useMemo(() => {
     if (!trimmedPayload) {
       return null;
@@ -57,8 +67,11 @@ export function DecryptMessageDialog({
         <TextField
           autoFocus
           label="Encrypted JSON"
-          value={payload}
+          value={displayPayload}
           onChange={(e) => {
+            if (initialPayload) {
+              return;
+            }
             setPayload(e.target.value);
             onPayloadChange?.();
           }}
@@ -66,7 +79,7 @@ export function DecryptMessageDialog({
           margin="dense"
           multiline
           rows={14}
-          disabled={decrypting}
+          disabled={decrypting || Boolean(initialPayload)}
           placeholder="Paste signed manifest JSON to decrypt…"
           error={Boolean(payloadError)}
           helperText={helperText}
@@ -91,7 +104,7 @@ export function DecryptMessageDialog({
           disabled={!canDecrypt}
           onClick={() => onDecrypt(trimmedPayload)}
         >
-          Decrypt
+          Decrypt message
         </Button>
       </DialogActions>
     </AppDialog>

@@ -1,5 +1,6 @@
 import { parsePrivateKeyJwkText } from '@/crypto/privateKeyFile.ts';
 import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';
+import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
 import {
   validateBaseJsonText,
   validateImportJsonText,
@@ -61,6 +62,11 @@ export function classifyExternalJsonText(text: string): ClassifiedExternalJson {
   const message = validateImportJsonText(base.text);
   if (message.ok) {
     return { kind: 'message', text: message.text };
+  }
+
+  const manifest = parseManifestPayloadText(base.text);
+  if (manifest.ok) {
+    return { kind: 'message', text: base.text };
   }
 
   if (message.ok === false) {

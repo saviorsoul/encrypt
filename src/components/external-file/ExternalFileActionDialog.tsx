@@ -1,6 +1,4 @@
-import type { PendingExternalImport } from '@/components/providers/ExternalFileProvider.tsx';
 import { ExternalAddRecipientDialog } from '@/components/external-file/ExternalAddRecipientDialog.tsx';
-import { ExternalImportMessageDialog } from '@/components/external-file/ExternalImportMessageDialog.tsx';
 import { ExternalInvalidFileDialog } from '@/components/external-file/ExternalInvalidFileDialog.tsx';
 import { ExternalPrivateKeySignInDialog } from '@/components/external-file/ExternalPrivateKeySignInDialog.tsx';
 import type { ClassifiedExternalJson } from '@/utils/classifyExternalJsonFile.ts';
@@ -10,7 +8,6 @@ type ExternalFileActionDialogProps = {
   file: ExternalFileMetadata;
   classified: ClassifiedExternalJson;
   onClose: () => void;
-  onImportRequested: (payload: PendingExternalImport) => void;
   onPrivateKeyLoginComplete: () => void;
   onPublicKeySaved: () => void;
 };
@@ -19,7 +16,6 @@ export function ExternalFileActionDialog({
   file,
   classified,
   onClose,
-  onImportRequested,
   onPrivateKeyLoginComplete,
   onPublicKeySaved,
 }: ExternalFileActionDialogProps) {
@@ -33,14 +29,7 @@ export function ExternalFileActionDialog({
         />
       );
     case 'message':
-      return (
-        <ExternalImportMessageDialog
-          fileName={file.name}
-          messageText={classified.text}
-          onClose={onClose}
-          onImportRequested={onImportRequested}
-        />
-      );
+      return null;
     case 'privateKey':
       return (
         <ExternalPrivateKeySignInDialog
