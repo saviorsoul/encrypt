@@ -1,4 +1,12 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ipcMain,
+  Menu,
+  nativeImage,
+  Tray,
+} from 'electron';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -13,6 +21,18 @@ const ALLOWED_EXTERNAL_EXTENSIONS = new Set(['.json', '.jwk']);
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
 
+/** @type {Tray | null} */
+let tray = null;
+
+/** @type {boolean} */
+let isQuitting = false;
+
+/** @type {boolean} */
+let trayCanExportPublicKey = false;
+
+/** @type {string | null} */
+let trayPublicKeyText = null;
+
 /** @type {string[]} */
 const externalFileQueue = [];
 
@@ -22,6 +42,7 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
+    showMainWindow();
     enqueueExternalFiles(parseFilePathsFromArgv(argv));
     flushExternalFileQueue();
   });
@@ -91,13 +112,26 @@ function getExternalFileMetadata(filePath) {
   };
 }
 
-function sendExternalFileOpened(filePath) {
+function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
     return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
   }
 
   mainWindow.show();
   mainWindow.focus();
+}
+
+function sendExternalFileOpened(filePath) {
+  showMainWindow();
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
 
   mainWindow.webContents.send(
     'external-file:opened',
@@ -117,15 +151,105 @@ function flushExternalFileQueue() {
   sendExternalFileOpened(externalFileQueue[0]);
 }
 
+function getTrayIconPath() {
+  if (process.platform === 'linux') {
+    return path.join(__dirname, 'tray-icon.png');
+  }
+
+  const distIcon = path.join(__dirname, '../dist/favicon.ico');
+  if (fs.existsSync(distIcon)) {
+    return distIcon;
+  }
+
+  return path.join(__dirname, '../public/favicon.ico');
+}
+
+function createTrayIcon() {
+  const iconPath = getTrayIconPath();
+
+  // Linux only supports PNG tray icons; .ico often fails and shows a placeholder.
+  if (process.platform === 'linux') {
+    return iconPath;
+  }
+
+  return nativeImage.createFromPath(iconPath);
+}
+
+function updateTrayMenu() {
+  if (!tray) {
+    return;
+  }
+
+  /** @type {Electron.MenuItemConstructorOptions[]} */
+  const template = [
+    {
+      label: 'Show Encrypt',
+      click: () => {
+        showMainWindow();
+      },
+    },
+  ];
+
+  if (trayCanExportPublicKey) {
+    template.push({
+      label: 'Copy public key',
+      click: () => {
+        if (trayPublicKeyText) {
+          clipboard.writeText(trayPublicKeyText);
+        }
+      },
+    });
+  }
+
+  template.push(
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  );
+
+  tray.setContextMenu(Menu.buildFromTemplate(template));
+}
+
+function createTray() {
+  tray = new Tray(createTrayIcon());
+  tray.setToolTip('Encrypt');
+  updateTrayMenu();
+  tray.on('double-click', () => {
+    showMainWindow();
+  });
+  tray.on('click', () => {
+    if (process.platform === 'linux') {
+      showMainWindow();
+    }
+  });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
+
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+    }
   });
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
@@ -187,21 +311,32 @@ ipcMain.handle('external-file:consume', (_event, filePath) => {
   flushExternalFileQueue();
 });
 
+ipcMain.on('tray:set-auth-state', (_event, state) => {
+  trayCanExportPublicKey = Boolean(state?.canExportPublicKey);
+  trayPublicKeyText =
+    typeof state?.publicKeyText === 'string' ? state.publicKeyText : null;
+  updateTrayMenu();
+});
+
 app.whenReady().then(() => {
   enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
+  createTray();
   createWindow();
 
   app.on('activate', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      showMainWindow();
+      return;
+    }
+
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 app.on('open-file', (event, filePath) => {

@@ -17,4 +17,7 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('external-file:read', filePath),
   dismissExternalFile: (filePath) =>
     ipcRenderer.invoke('external-file:consume', filePath),
+  setTrayAuthState: (state) => {
+    ipcRenderer.send('tray:set-auth-state', state);
+  },
 });

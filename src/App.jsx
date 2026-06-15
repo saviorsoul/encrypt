@@ -21,6 +21,7 @@ import { GlossaryPage } from '@/pages/GlossaryPage.tsx';
 import { PrivateKeyDownloadPage } from '@/pages/PrivateKeyDownloadPage.tsx';
 import { OnboardedRoute } from '@/components/routes/OnboardedRoute.tsx';
 import { ExternalFileProvider } from '@/components/providers/ExternalFileProvider.tsx';
+import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
 
 const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
 
@@ -35,6 +36,7 @@ function App() {
       <Router {...routerProps}>
         <AuthProvider>
           <KeysProvider>
+            {import.meta.env.VITE_ELECTRON ? <ElectronTraySync /> : null}
             <ExternalFileProvider>
               <Routes>
                 <Route element={<AppLayout />}>
