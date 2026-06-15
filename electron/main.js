@@ -5,8 +5,10 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  session,
   Tray,
 } from 'electron';
+import { getContentSecurityPolicy } from './csp.js';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -229,6 +231,21 @@ function createTray() {
   });
 }
 
+function configureContentSecurityPolicy() {
+  const policy = getContentSecurityPolicy(
+    process.env.VITE_DEV_SERVER_URL ? 'development' : 'production',
+  );
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [policy],
+      },
+    });
+  });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -319,6 +336,7 @@ ipcMain.on('tray:set-auth-state', (_event, state) => {
 });
 
 app.whenReady().then(() => {
+  configureContentSecurityPolicy();
   enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
   createTray();
   createWindow();
