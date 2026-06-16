@@ -13,6 +13,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import {
   Outlet,
   useNavigate,
@@ -25,7 +26,9 @@ import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import { CleanDataDialog } from '@/components/shared/CleanDataDialog.tsx';
 import { PublicKeyDialog } from '@/components/shared/PublicKeyDialog.tsx';
+import { ShortcutsSettingsDialog } from '@/components/shared/ShortcutsSettingsDialog.tsx';
 import { clearAppLocalData } from '@/utils/clearAppLocalData';
+import { isElectronShortcutsAvailable } from '@/utils/keyboardShortcuts.ts';
 import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 
@@ -45,6 +48,8 @@ export function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [publicKeyDialogOpen, setPublicKeyDialogOpen] = useState(false);
   const [cleanDataDialogOpen, setCleandataDialogOpen] = useState(false);
+  const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
+  const showShortcutsSettings = isElectronShortcutsAvailable();
 
   const publicKeyJwkText = useMemo(
     () =>
@@ -127,6 +132,20 @@ export function AppLayout() {
             )}
             {user ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {showShortcutsSettings ? (
+                  <Tooltip title="Keyboard shortcuts">
+                    <span>
+                      <IconButton
+                        color="inherit"
+                        aria-label="Keyboard shortcuts"
+                        onClick={() => setShortcutsDialogOpen(true)}
+                        size="small"
+                      >
+                        <VpnKeyIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                ) : null}
                 <Tooltip title="Clean local data">
                   <span>
                     <IconButton
@@ -194,6 +213,12 @@ export function AppLayout() {
             onClose={() => setCleandataDialogOpen(false)}
             onConfirm={handleCleandata}
           />
+          {showShortcutsSettings ? (
+            <ShortcutsSettingsDialog
+              open={shortcutsDialogOpen}
+              onClose={() => setShortcutsDialogOpen(false)}
+            />
+          ) : null}
         </>
       ) : null}
       <Box

@@ -31,4 +31,7 @@ contextBridge.exposeInMainWorld('electron', {
   setTrayAuthState: (state) => {
     ipcRenderer.send('tray:set-auth-state', state);
   },
+  getKeyboardShortcutsState: () => ipcRenderer.invoke('shortcuts:get'),
+  setKeyboardShortcut: (id, accelerator) =>
+    ipcRenderer.invoke('shortcuts:set', { id, accelerator }),
 });

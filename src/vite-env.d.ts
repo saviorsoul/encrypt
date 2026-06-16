@@ -27,6 +27,14 @@ export type TrayAuthState = {
   publicKeyText: string | null;
 };
 
+export type KeyboardShortcutsMap = Record<string, string>;
+
+export type KeyboardShortcutsState = {
+  shortcuts: KeyboardShortcutsMap;
+  registration: Record<string, boolean>;
+  sessionType: string;
+};
+
 interface ElectronBridge {
   platform: NodeJS.Platform;
   onExternalFileOpened: (
@@ -38,6 +46,11 @@ interface ElectronBridge {
   readExternalFile: (filePath: string) => Promise<ExternalFileContent>;
   dismissExternalFile: (filePath: string) => Promise<void>;
   setTrayAuthState: (state: TrayAuthState) => void;
+  getKeyboardShortcutsState: () => Promise<KeyboardShortcutsState>;
+  setKeyboardShortcut: (
+    id: string,
+    accelerator: string,
+  ) => Promise<KeyboardShortcutsState>;
 }
 
 declare global {

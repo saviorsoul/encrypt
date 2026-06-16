@@ -10,6 +10,13 @@ import {
 } from 'electron';
 import { getContentSecurityPolicy } from './csp.js';
 import {
+  initKeyboardShortcuts,
+  getKeyboardShortcutsState,
+  setKeyboardShortcut,
+  unregisterAllKeyboardShortcuts,
+  SHORTCUT_IDS,
+} from './keyboardShortcuts.js';
+import {
   MAX_IMPORT_JSON_FILE_BYTES,
   validateBaseJsonText,
 } from './validateBaseJsonText.js';
@@ -20,6 +27,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distIndexPath = path.join(__dirname, '../dist/index.html');
+
+// Required for globalShortcut to work on Wayland via xdg-desktop-portal.
+app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
 
 const ALLOWED_EXTERNAL_EXTENSIONS = new Set(['.json', '.jwk']);
 const CLIPBOARD_IMPORT_SOURCE_NAME = 'Clipboard';
@@ -407,12 +417,29 @@ ipcMain.on('tray:set-auth-state', (_event, state) => {
   updateTrayMenu();
 });
 
-app.whenReady().then(() => {
+ipcMain.handle('shortcuts:get', () => getKeyboardShortcutsState());
+
+ipcMain.handle('shortcuts:set', async (_event, payload) => {
+  const id = payload?.id;
+  const accelerator = payload?.accelerator;
+
+  if (typeof id !== 'string' || typeof accelerator !== 'string') {
+    throw new Error('Invalid shortcut payload.');
+  }
+
+  return setKeyboardShortcut(id, accelerator);
+});
+
+app.whenReady().then(async () => {
   configureContentSecurityPolicy();
   blockRemoteNetworkRequests();
   enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
   createTray();
   createWindow();
+
+  await initKeyboardShortcuts({
+    [SHORTCUT_IDS.IMPORT_ENCRYPTED_TEXT]: importTextFromClipboard,
+  });
 
   app.on('activate', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -428,6 +455,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  unregisterAllKeyboardShortcuts();
 });
 
 app.on('open-file', (event, filePath) => {
