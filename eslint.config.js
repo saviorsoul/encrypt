@@ -71,6 +71,13 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
     files: ['electron/**/*.cjs'],
     languageOptions: {
       globals: globals.node,
