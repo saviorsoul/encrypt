@@ -150,9 +150,7 @@ function ConversationBubble({
 
   const handleCopy = useCallback(async () => {
     try {
-      await copyTextToClipboard(
-        prettifyJsonText(item.encryptedPayload),
-      );
+      await copyTextToClipboard(prettifyJsonText(item.encryptedPayload));
       setCopyState('ok');
     } catch {
       setCopyState('err');
