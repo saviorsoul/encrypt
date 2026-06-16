@@ -13,6 +13,7 @@ import {
 } from '@/types/oneToOne.ts';
 import type { CopyState } from '@/types/copyState.ts';
 import { downloadTextFile } from '@/utils/downloadJson.ts';
+import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 import { oneToOneMessageExportFilename } from '@/utils/oneToOneMessageExportFilename.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
 
@@ -149,7 +150,7 @@ function ConversationBubble({
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(
+      await copyTextToClipboard(
         prettifyJsonText(item.encryptedPayload),
       );
       setCopyState('ok');

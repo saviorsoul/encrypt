@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  dialog,
   ipcMain,
   Menu,
   nativeImage,
@@ -36,14 +37,23 @@ let isQuitting = false;
 /** @type {boolean} */
 let trayCanExportPublicKey = false;
 
+/** @type {boolean} */
+let trayIsLoggedIn = false;
+
 /** @type {string | null} */
 let trayPublicKeyText = null;
+
+/** @type {string[]} */
+let trayRecipientUsernames = [];
 
 /** @type {string[]} */
 const externalFileQueue = [];
 
 /** @type {{ text: string; sourceName: string } | { error: string; sourceName: string } | null} */
 let pendingClipboardImport = null;
+
+/** @type {{ username: string; plaintext?: string; error?: string } | null} */
+let pendingTrayEncryptCopiedMessage = null;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -180,6 +190,114 @@ function flushPendingClipboardImport() {
   pendingClipboardImport = null;
 }
 
+function sendTrayEncryptCopiedMessage(payload) {
+  showMainWindow();
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingTrayEncryptCopiedMessage = payload;
+    return;
+  }
+
+  mainWindow.webContents.send('tray:encrypt-copied-message', payload);
+}
+
+function flushPendingTrayEncryptCopiedMessage() {
+  if (
+    !pendingTrayEncryptCopiedMessage ||
+    !mainWindow ||
+    mainWindow.isDestroyed()
+  ) {
+    return;
+  }
+
+  mainWindow.webContents.send(
+    'tray:encrypt-copied-message',
+    pendingTrayEncryptCopiedMessage,
+  );
+  pendingTrayEncryptCopiedMessage = null;
+}
+
+async function pickPrivateKeyJwkTextFromDialog() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { cancelled: true };
+  }
+
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select private key',
+    properties: ['openFile'],
+    filters: [{ name: 'Private key', extensions: ['jwk', 'json'] }],
+  });
+
+  if (canceled || filePaths.length === 0) {
+    return { cancelled: true };
+  }
+
+  let resolved;
+  try {
+    resolved = assertAllowedExternalFile(filePaths[0]);
+  } catch (error) {
+    return {
+      cancelled: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not open private key file.',
+    };
+  }
+
+  try {
+    const text = await fsPromises.readFile(resolved, 'utf8');
+    if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
+      return {
+        cancelled: false,
+        error: 'Private key file exceeds the maximum allowed size (2 MB).',
+      };
+    }
+    return { cancelled: false, text };
+  } catch {
+    return {
+      cancelled: false,
+      error: 'Could not read private key file.',
+    };
+  }
+}
+
+async function requestTrayEncryptCopiedMessage(username) {
+  if (!trayIsLoggedIn) {
+    return;
+  }
+
+  const plaintext = clipboard.readText();
+  showMainWindow();
+
+  if (!plaintext.trim()) {
+    sendTrayEncryptCopiedMessage({
+      username,
+      error: 'Clipboard is empty.',
+    });
+    return;
+  }
+
+  const keyResult = await pickPrivateKeyJwkTextFromDialog();
+  if (keyResult.cancelled) {
+    return;
+  }
+
+  if (keyResult.error) {
+    sendTrayEncryptCopiedMessage({
+      username,
+      error: keyResult.error,
+    });
+    return;
+  }
+
+  sendTrayEncryptCopiedMessage({
+    username,
+    plaintext,
+    privateKeyText: keyResult.text,
+  });
+}
+
 function importTextFromClipboard() {
   const validated = validateBaseJsonText(clipboard.readText());
   if (!validated.ok) {
@@ -252,6 +370,29 @@ function updateTrayMenu() {
       importTextFromClipboard();
     },
   });
+
+  if (trayIsLoggedIn) {
+    /** @type {Electron.MenuItemConstructorOptions[]} */
+    const encryptCopiedMessageSubmenu =
+      trayRecipientUsernames.length > 0
+        ? trayRecipientUsernames.map((username) => ({
+            label: username,
+            click: () => {
+              void requestTrayEncryptCopiedMessage(username);
+            },
+          }))
+        : [{ label: 'No recipients', enabled: false }];
+
+    template.push({
+      label: 'Encrypt copied message',
+      submenu: encryptCopiedMessageSubmenu,
+    });
+  } else {
+    template.push({
+      label: 'Encrypt copied message',
+      enabled: false,
+    });
+  }
 
   template.push(
     { type: 'separator' },
@@ -351,6 +492,7 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     flushExternalFileQueue();
     flushPendingClipboardImport();
+    flushPendingTrayEncryptCopiedMessage();
   });
 }
 
@@ -380,6 +522,14 @@ function assertAllowedExternalFile(filePath) {
   return resolved;
 }
 
+ipcMain.handle('clipboard:write-text', (_event, text) => {
+  if (typeof text !== 'string') {
+    throw new Error('Clipboard text must be a string.');
+  }
+
+  clipboard.writeText(text);
+});
+
 ipcMain.handle('external-file:read', async (_event, filePath) => {
   const resolved = assertAllowedExternalFile(filePath);
   const text = await fsPromises.readFile(resolved, 'utf8');
@@ -402,8 +552,18 @@ ipcMain.handle('external-file:consume', (_event, filePath) => {
 
 ipcMain.on('tray:set-auth-state', (_event, state) => {
   trayCanExportPublicKey = Boolean(state?.canExportPublicKey);
+  trayIsLoggedIn = Boolean(state?.isLoggedIn);
   trayPublicKeyText =
     typeof state?.publicKeyText === 'string' ? state.publicKeyText : null;
+  updateTrayMenu();
+});
+
+ipcMain.on('tray:set-recipients', (_event, state) => {
+  trayRecipientUsernames = Array.isArray(state?.usernames)
+    ? state.usernames.filter(
+        (username) => typeof username === 'string' && username.length > 0,
+      )
+    : [];
   updateTrayMenu();
 });
 

@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import { StepOutputTextField } from '@/components/manifest-steps/StepOutputTextField.tsx';
 import type { CopyState } from '@/types/copyState.ts';
+import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 
 type PublicKeyDialogProps = {
   open: boolean;
@@ -38,7 +39,7 @@ export function PublicKeyDialog({
 
   const handleCopyPublicKey = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(publicKeyJwkText);
+      await copyTextToClipboard(publicKeyJwkText);
       setCopyState('ok');
     } catch {
       setCopyState('err');

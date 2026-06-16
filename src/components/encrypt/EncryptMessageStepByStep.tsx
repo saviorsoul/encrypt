@@ -26,6 +26,7 @@ import {
   type EncryptDekExample,
 } from '@/hooks/useEncryptManifestSteps.ts';
 import type { CopyState } from '@/types/copyState.ts';
+import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 
 type EncryptMessageStepByStepProps = {
   onOutputChange?: (payload: string) => void;
@@ -754,7 +755,7 @@ export function EncryptMessageStepByStep({
   const handleCopyPayload = useCallback(async () => {
     if (!signedPayloadJson) return;
     try {
-      await navigator.clipboard.writeText(signedPayloadJson);
+      await copyTextToClipboard(signedPayloadJson);
       setCopyState('ok');
     } catch {
       setCopyState('err');

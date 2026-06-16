@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   loadOneToOneThread,
   messagePartyKeyIds,
@@ -6,6 +6,21 @@ import {
   threadItemToStoredMessage,
 } from '@/services/db/storedOneToOneMessages.ts';
 import type { OneToOneThreadItem, ThreadSide } from '@/types/oneToOne.ts';
+
+function applyPendingDecryptions(
+  items: OneToOneThreadItem[],
+  pending: Map<string, string>,
+): OneToOneThreadItem[] {
+  return items.map((item) => {
+    const plaintext = pending.get(item.id);
+    if (plaintext === undefined) {
+      return item;
+    }
+
+    pending.delete(item.id);
+    return { ...item, text: plaintext, decryptedAt: Date.now() };
+  });
+}
 
 type UseOneToOneThreadOptions = {
   viewerKeyId: string | null;
@@ -24,6 +39,18 @@ export function useOneToOneThread({
   const [loading, setLoading] = useState(false);
   const [loadedPairKey, setLoadedPairKey] = useState<string | null>(null);
   const [prevPairKey, setPrevPairKey] = useState<string | null>(null);
+  const pendingDecryptedTextRef = useRef(new Map<string, string>());
+
+  const mergePendingDecryptions = useCallback((items: OneToOneThreadItem[]) => {
+    return applyPendingDecryptions(items, pendingDecryptedTextRef.current);
+  }, []);
+
+  const queueThreadItemDecryption = useCallback(
+    (messageId: string, plaintext: string) => {
+      pendingDecryptedTextRef.current.set(messageId, plaintext);
+    },
+    [],
+  );
 
   const pairKey =
     viewerKeyId && peerKeyId ? `${viewerKeyId}:${peerKeyId}` : null;
@@ -53,7 +80,7 @@ export function useOneToOneThread({
           return;
         }
         setLoadedPairKey(pairKey);
-        setThread(items);
+        setThread(mergePendingDecryptions(items));
       })
       .finally(() => {
         if (!cancelled) {
@@ -64,7 +91,7 @@ export function useOneToOneThread({
     return () => {
       cancelled = true;
     };
-  }, [pairKey, loadedPairKey, viewerKeyId, peerKeyId]);
+  }, [pairKey, loadedPairKey, viewerKeyId, peerKeyId, mergePendingDecryptions]);
 
   const persistThreadItem = useCallback(
     async (
@@ -145,10 +172,20 @@ export function useOneToOneThread({
     [],
   );
 
+  const prependPersistedThreadItem = useCallback(
+    (item: OneToOneThreadItem) => {
+      const [displayItem] = mergePendingDecryptions([item]);
+      setThread((prev) => [displayItem, ...prev]);
+    },
+    [mergePendingDecryptions],
+  );
+
   return {
     thread,
     loading,
     appendThreadItem,
     markThreadItemDecrypted,
+    prependPersistedThreadItem,
+    queueThreadItemDecryption,
   };
 }

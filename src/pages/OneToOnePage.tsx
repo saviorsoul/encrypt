@@ -35,7 +35,11 @@ import {
 } from '@/services/db/storedPublicKeys.ts';
 import { loadOneToOneThread } from '@/services/db/storedOneToOneMessages.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
-import { resolveInitialOneToOneRecipientLabel } from '@/utils/lastOneToOneRecipient.ts';
+import {
+  resolveInitialOneToOneRecipientLabel,
+  saveLastOneToOneRecipientUsername,
+} from '@/utils/lastOneToOneRecipient.ts';
+import { onTrayOneToOneMessageSaved } from '@/utils/trayOneToOneMessageSavedEvent.ts';
 import type {
   EncryptedMessageFingerprint,
   PartyKeyIds,
@@ -170,6 +174,8 @@ export function OneToOnePage() {
     loading: threadLoading,
     appendThreadItem,
     markThreadItemDecrypted,
+    prependPersistedThreadItem,
+    queueThreadItemDecryption,
   } = useOneToOneThread({
     viewerKeyId,
     peerKeyId: partyKeyIds.recipientKeyId,
@@ -185,6 +191,37 @@ export function OneToOnePage() {
   }, []);
 
   useEffect(() => () => clearHighlightTimeout(), [clearHighlightTimeout]);
+
+  useEffect(() => {
+    return onTrayOneToOneMessageSaved(
+      ({ item, senderKeyId, recipientKeyId, recipientUsername, plaintext }) => {
+        queueThreadItemDecryption(item.id, plaintext);
+        setPeerKeyIdToSelect(recipientKeyId);
+
+        if (user?.username) {
+          saveLastOneToOneRecipientUsername(user.username, recipientUsername);
+        }
+
+        if (
+          !messageBelongsToConversation(
+            { senderKeyId, recipientKeyId },
+            partyKeyIds,
+          )
+        ) {
+          return;
+        }
+
+        const side =
+          senderKeyId === partyKeyIds.senderKeyId ? 'sender' : 'recipient';
+        prependPersistedThreadItem({ ...item, side });
+      },
+    );
+  }, [
+    partyKeyIds,
+    prependPersistedThreadItem,
+    queueThreadItemDecryption,
+    user?.username,
+  ]);
 
   useEffect(() => {
     if (!partyKeyIds.recipientKeyId) {

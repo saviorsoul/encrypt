@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
+import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
 
 export function ElectronTraySync() {
   const { user } = useAuth();
   const { publicKeyJwk, loading } = useKeysContext();
+  const { usernames, loading: loadingRecipients } = useStoredUsernames();
 
   const canExportPublicKey = Boolean(user && publicKeyJwk && !loading);
 
@@ -21,8 +23,15 @@ export function ElectronTraySync() {
     window.electron?.setTrayAuthState({
       canExportPublicKey,
       publicKeyText,
+      isLoggedIn: Boolean(user),
     });
-  }, [canExportPublicKey, publicKeyText]);
+  }, [canExportPublicKey, publicKeyText, user]);
+
+  useEffect(() => {
+    window.electron?.setTrayRecipients({
+      usernames: loadingRecipients ? [] : usernames,
+    });
+  }, [loadingRecipients, usernames]);
 
   return null;
 }

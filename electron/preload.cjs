@@ -26,9 +26,25 @@ contextBridge.exposeInMainWorld('electron', {
   },
   readExternalFile: (filePath) =>
     ipcRenderer.invoke('external-file:read', filePath),
+  writeTextToClipboard: (text) =>
+    ipcRenderer.invoke('clipboard:write-text', text),
   dismissExternalFile: (filePath) =>
     ipcRenderer.invoke('external-file:consume', filePath),
   setTrayAuthState: (state) => {
     ipcRenderer.send('tray:set-auth-state', state);
+  },
+  setTrayRecipients: (state) => {
+    ipcRenderer.send('tray:set-recipients', state);
+  },
+  onTrayEncryptCopiedMessage: (callback) => {
+    const listener = (_event, payload) => {
+      callback(payload);
+    };
+
+    ipcRenderer.on('tray:encrypt-copied-message', listener);
+
+    return () => {
+      ipcRenderer.removeListener('tray:encrypt-copied-message', listener);
+    };
   },
 });
