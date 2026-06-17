@@ -36,15 +36,18 @@ export type TrayEncryptCopiedMessagePayload =
   | {
       username: string;
       plaintext: string;
-      privateKeyText: string;
       error?: undefined;
     }
   | {
       username: string;
       error: string;
       plaintext?: undefined;
-      privateKeyText?: undefined;
     };
+
+export type PickPrivateKeyJwkTextResult =
+  | { cancelled: true; text?: undefined; error?: undefined }
+  | { cancelled: false; text: string; error?: undefined }
+  | { cancelled: false; error: string; text?: undefined };
 
 interface ElectronBridge {
   platform: NodeJS.Platform;
@@ -60,6 +63,9 @@ interface ElectronBridge {
   readExternalFile: (filePath: string) => Promise<ExternalFileContent>;
   writeTextToClipboard: (text: string) => Promise<void>;
   dismissExternalFile: (filePath: string) => Promise<void>;
+  pickPrivateKeyJwkText: () => Promise<PickPrivateKeyJwkTextResult>;
+  showMainWindow: () => Promise<void>;
+  flashTraySuccess: () => Promise<void>;
   setTrayAuthState: (state: TrayAuthState) => void;
   setTrayRecipients: (state: TrayRecipientsState) => void;
 }

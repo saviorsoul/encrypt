@@ -1,14 +1,6 @@
-import { importPrivateKeyForEcdsaSign } from '@/crypto/ecdsaKeys.ts';
 import { encryptWithManifest } from '@/crypto/manifestEncrypt.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
-import { readPrivateKeyJwkFromText } from '@/crypto/privateKeyFile.ts';
-import {
-  loadPublicKeyFromStored,
-  loadRecipientKeysForUsername,
-} from '@/services/db/storedPublicKeys.ts';
+import type { UploadedPrivateKeyMaterial } from '@/crypto/privateKeyMaterial.ts';
+import { loadRecipientKeysForUsername } from '@/services/db/storedPublicKeys.ts';
 import {
   oneToOneThreadKey,
   saveOneToOneMessage,
@@ -26,26 +18,21 @@ export type TrayEncryptCopiedMessageResult = {
 export async function encryptCopiedMessageForRecipient(
   plaintext: string,
   recipientUsername: string,
-  privateKeyText: string,
+  material: UploadedPrivateKeyMaterial,
+  senderPublicKey: CryptoKey,
 ): Promise<TrayEncryptCopiedMessageResult> {
   const recipient = await loadRecipientKeysForUsername(recipientUsername);
   if (!recipient) {
     throw new Error(`No public key found for ${recipientUsername}.`);
   }
 
-  const privateJwk = readPrivateKeyJwkFromText(privateKeyText);
-  const senderPublicJwk = slimEcPublicJwk(privateJwk);
-  const senderKeyId = await ecPublicJwkThumbprintSha256(senderPublicJwk);
-  const { publicKey: senderPublicKey } =
-    await loadPublicKeyFromStored(senderPublicJwk);
-  const senderSigningPrivateKey =
-    await importPrivateKeyForEcdsaSign(privateJwk);
+  const senderKeyId = material.keyId;
 
   const payload = await encryptWithManifest(
     plaintext,
     [recipient],
     senderPublicKey,
-    senderSigningPrivateKey,
+    material.ecdsaSignPrivateKey,
   );
 
   const encryptedAt = Date.now();

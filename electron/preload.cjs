@@ -36,6 +36,10 @@ contextBridge.exposeInMainWorld('electron', {
   setTrayRecipients: (state) => {
     ipcRenderer.send('tray:set-recipients', state);
   },
+  pickPrivateKeyJwkText: () =>
+    ipcRenderer.invoke('private-key:pick-from-dialog'),
+  showMainWindow: () => ipcRenderer.invoke('window:show'),
+  flashTraySuccess: () => ipcRenderer.invoke('tray:flash-success'),
   onTrayEncryptCopiedMessage: (callback) => {
     const listener = (_event, payload) => {
       callback(payload);

@@ -31,6 +31,13 @@ let mainWindow = null;
 /** @type {Tray | null} */
 let tray = null;
 
+/** @type {NodeJS.Timeout | null} */
+let traySuccessIconTimeout = null;
+
+const TRAY_TOOLTIP_DEFAULT = 'Encrypt';
+const TRAY_TOOLTIP_SUCCESS = 'Encrypted message copied to clipboard';
+const TRAY_SUCCESS_ICON_DURATION_MS = 5000;
+
 /** @type {boolean} */
 let isQuitting = false;
 
@@ -133,7 +140,7 @@ function getExternalFileMetadata(filePath) {
 
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    createWindow();
+    createWindow({ showOnReady: true });
     return;
   }
 
@@ -143,6 +150,12 @@ function showMainWindow() {
 
   mainWindow.show();
   mainWindow.focus();
+}
+
+function ensureMainWindowHidden() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow({ showOnReady: false });
+  }
 }
 
 function sendExternalFileOpened(filePath) {
@@ -191,7 +204,7 @@ function flushPendingClipboardImport() {
 }
 
 function sendTrayEncryptCopiedMessage(payload) {
-  showMainWindow();
+  ensureMainWindowHidden();
 
   if (!mainWindow || mainWindow.isDestroyed()) {
     pendingTrayEncryptCopiedMessage = payload;
@@ -217,58 +230,12 @@ function flushPendingTrayEncryptCopiedMessage() {
   pendingTrayEncryptCopiedMessage = null;
 }
 
-async function pickPrivateKeyJwkTextFromDialog() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return { cancelled: true };
-  }
-
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select private key',
-    properties: ['openFile'],
-    filters: [{ name: 'Private key', extensions: ['jwk', 'json'] }],
-  });
-
-  if (canceled || filePaths.length === 0) {
-    return { cancelled: true };
-  }
-
-  let resolved;
-  try {
-    resolved = assertAllowedExternalFile(filePaths[0]);
-  } catch (error) {
-    return {
-      cancelled: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Could not open private key file.',
-    };
-  }
-
-  try {
-    const text = await fsPromises.readFile(resolved, 'utf8');
-    if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
-      return {
-        cancelled: false,
-        error: 'Private key file exceeds the maximum allowed size (2 MB).',
-      };
-    }
-    return { cancelled: false, text };
-  } catch {
-    return {
-      cancelled: false,
-      error: 'Could not read private key file.',
-    };
-  }
-}
-
-async function requestTrayEncryptCopiedMessage(username) {
+function requestTrayEncryptCopiedMessage(username) {
   if (!trayIsLoggedIn) {
     return;
   }
 
   const plaintext = clipboard.readText();
-  showMainWindow();
 
   if (!plaintext.trim()) {
     sendTrayEncryptCopiedMessage({
@@ -278,23 +245,9 @@ async function requestTrayEncryptCopiedMessage(username) {
     return;
   }
 
-  const keyResult = await pickPrivateKeyJwkTextFromDialog();
-  if (keyResult.cancelled) {
-    return;
-  }
-
-  if (keyResult.error) {
-    sendTrayEncryptCopiedMessage({
-      username,
-      error: keyResult.error,
-    });
-    return;
-  }
-
   sendTrayEncryptCopiedMessage({
     username,
     plaintext,
-    privateKeyText: keyResult.text,
   });
 }
 
@@ -327,15 +280,49 @@ function getTrayIconPath() {
   return path.join(__dirname, '../public/favicon.ico');
 }
 
-function createTrayIcon() {
-  const iconPath = getTrayIconPath();
+function createTrayImage(iconPath) {
+  let image = nativeImage.createFromPath(iconPath);
 
-  // Linux only supports PNG tray icons; .ico often fails and shows a placeholder.
   if (process.platform === 'linux') {
-    return iconPath;
+    const { width, height } = image.getSize();
+    if (width !== 24 || height !== 24) {
+      image = image.resize({ width: 24, height: 24, quality: 'best' });
+    }
   }
 
-  return nativeImage.createFromPath(iconPath);
+  return image;
+}
+
+function createTrayIcon() {
+  return createTrayImage(getTrayIconPath());
+}
+
+function createTraySuccessIcon() {
+  return createTrayImage(path.join(__dirname, 'tray-icon-success.png'));
+}
+
+function flashTraySuccessIcon(durationMs = TRAY_SUCCESS_ICON_DURATION_MS) {
+  if (!tray) {
+    return;
+  }
+
+  if (traySuccessIconTimeout) {
+    clearTimeout(traySuccessIconTimeout);
+    traySuccessIconTimeout = null;
+  }
+
+  tray.setImage(createTraySuccessIcon());
+  tray.setToolTip(TRAY_TOOLTIP_SUCCESS);
+
+  traySuccessIconTimeout = setTimeout(() => {
+    traySuccessIconTimeout = null;
+    if (!tray) {
+      return;
+    }
+
+    tray.setImage(createTrayIcon());
+    tray.setToolTip(TRAY_TOOLTIP_DEFAULT);
+  }, durationMs);
 }
 
 function updateTrayMenu() {
@@ -410,7 +397,7 @@ function updateTrayMenu() {
 
 function createTray() {
   tray = new Tray(createTrayIcon());
-  tray.setToolTip('Encrypt');
+  tray.setToolTip(TRAY_TOOLTIP_DEFAULT);
   updateTrayMenu();
   tray.on('double-click', () => {
     showMainWindow();
@@ -456,7 +443,7 @@ function blockRemoteNetworkRequests() {
   );
 }
 
-function createWindow() {
+function createWindow({ showOnReady = true } = {}) {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -468,9 +455,11 @@ function createWindow() {
     },
   });
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-  });
+  if (showOnReady) {
+    mainWindow.once('ready-to-show', () => {
+      mainWindow?.show();
+    });
+  }
 
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
@@ -522,12 +511,69 @@ function assertAllowedExternalFile(filePath) {
   return resolved;
 }
 
+async function pickPrivateKeyJwkTextFromDialog() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { cancelled: true };
+  }
+
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select private key',
+    properties: ['openFile'],
+    filters: [{ name: 'Private key', extensions: ['jwk', 'json'] }],
+  });
+
+  if (canceled || filePaths.length === 0) {
+    return { cancelled: true };
+  }
+
+  let resolved;
+  try {
+    resolved = assertAllowedExternalFile(filePaths[0]);
+  } catch (error) {
+    return {
+      cancelled: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not open private key file.',
+    };
+  }
+
+  try {
+    const text = await fsPromises.readFile(resolved, 'utf8');
+    if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
+      return {
+        cancelled: false,
+        error: 'Private key file exceeds the maximum allowed size (2 MB).',
+      };
+    }
+    return { cancelled: false, text };
+  } catch {
+    return {
+      cancelled: false,
+      error: 'Could not read private key file.',
+    };
+  }
+}
+
 ipcMain.handle('clipboard:write-text', (_event, text) => {
   if (typeof text !== 'string') {
     throw new Error('Clipboard text must be a string.');
   }
 
   clipboard.writeText(text);
+});
+
+ipcMain.handle('private-key:pick-from-dialog', async () => {
+  return pickPrivateKeyJwkTextFromDialog();
+});
+
+ipcMain.handle('window:show', () => {
+  showMainWindow();
+});
+
+ipcMain.handle('tray:flash-success', () => {
+  flashTraySuccessIcon();
 });
 
 ipcMain.handle('external-file:read', async (_event, filePath) => {

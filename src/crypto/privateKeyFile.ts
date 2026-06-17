@@ -122,6 +122,22 @@ export function isPrivateKeyFileSelectionCancelled(error: unknown): boolean {
   return error instanceof Error && error.message === FILE_SELECTION_CANCELLED;
 }
 
+/** Open Electron's native private-key file dialog (works without renderer user activation). */
+export async function pickPrivateKeyJwkInElectronNativeDialog(): Promise<JsonWebKey> {
+  if (!window.electron?.pickPrivateKeyJwkText) {
+    throw new Error('Native private key picker is not available.');
+  }
+
+  const result = await window.electron.pickPrivateKeyJwkText();
+  if (result.cancelled) {
+    throw new Error(FILE_SELECTION_CANCELLED);
+  }
+  if (result.error) {
+    throw new Error(result.error);
+  }
+  return readPrivateKeyJwkFromText(result.text);
+}
+
 /**
  * Prompt for a private-key JWK file, import non-extractable CryptoKeys, run `fn`.
  * When caching is enabled, imported keys are kept in memory only for reuse in this tab.
@@ -129,13 +145,16 @@ export function isPrivateKeyFileSelectionCancelled(error: unknown): boolean {
  */
 export async function withUploadedPrivateKey<T>(
   fn: (material: UploadedPrivateKeyMaterial) => Promise<T>,
+  options?: { pickJwk?: () => Promise<JsonWebKey> },
 ): Promise<T> {
   const cached = getCachedPrivateKeyMaterial();
   if (cached) {
     return fn(cached);
   }
 
-  const jwk = await pickPrivateKeyJwkFile();
+  const jwk = options?.pickJwk
+    ? await options.pickJwk()
+    : await pickPrivateKeyJwkFile();
   const material = await importUploadedPrivateKeyMaterial(jwk);
   cachePrivateKeyMaterial(material);
   return fn(material);
