@@ -12,10 +12,7 @@ import {
   getStoredMessageById,
   type StoredMessage,
 } from '@/services/db/storedMessages.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import { withUploadedPrivateKey } from '@/crypto/privateKeyFile.ts';
 import { logError } from '@/utils/logError.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
@@ -33,25 +30,17 @@ export type DecryptableComment = {
   payload: string;
 };
 
-export async function verifyUploadedPrivateKey(
-  jwk: JsonWebKey,
-  recipientKeyId: string,
-): Promise<void> {
-  const uploadedKeyId = await ecPublicJwkThumbprintSha256(slimEcPublicJwk(jwk));
-  if (uploadedKeyId !== recipientKeyId) {
-    throw new Error(
-      'Uploaded private key does not match the publicKeyJwk for this side.',
-    );
-  }
-}
-
 export async function decryptMessageWithUploadedPrivateKey(
   payload: string,
   recipientKeyId: string,
 ): Promise<string> {
-  return withUploadedPrivateKey(async (privateKey, jwk) => {
-    await verifyUploadedPrivateKey(jwk, recipientKeyId);
-    return decryptWithManifest(payload, privateKey, recipientKeyId);
+  return withUploadedPrivateKey(async (material) => {
+    assertUploadedPrivateKeyMatchesKeyId(material, recipientKeyId);
+    return decryptWithManifest(
+      payload,
+      material.ecdhPrivateKey,
+      recipientKeyId,
+    );
   });
 }
 
@@ -132,15 +121,15 @@ export async function decryptStoredMessageAndCommentsWithUploadedPrivateKey(
   message: MessageDecryptionResult;
   comments: Record<string, MessageDecryptionResult>;
 }> {
-  return withUploadedPrivateKey(async (privateKey, jwk) => {
-    await verifyUploadedPrivateKey(jwk, recipientKeyId);
+  return withUploadedPrivateKey(async (material) => {
+    assertUploadedPrivateKeyMatchesKeyId(material, recipientKeyId);
 
     let messageResult: MessageDecryptionResult;
     try {
       const text = await decryptStoredDeliveryWithPrivateKey(
         message,
         recipientKeyId,
-        privateKey,
+        material.ecdhPrivateKey,
       );
       messageResult = { text, error: null };
     } catch (e) {
@@ -168,7 +157,7 @@ export async function decryptStoredMessageAndCommentsWithUploadedPrivateKey(
     const commentResults = await decryptCommentsWithPrivateKey(
       comments,
       recipientKeyId,
-      privateKey,
+      material.ecdhPrivateKey,
       messageCoreById,
     );
 
@@ -215,9 +204,13 @@ export async function decryptMessagesWithUploadedPrivateKey(
   messages: DecryptableMessage[],
   recipientKeyId: string,
 ): Promise<Record<string, MessageDecryptionResult>> {
-  return withUploadedPrivateKey(async (privateKey, jwk) => {
-    await verifyUploadedPrivateKey(jwk, recipientKeyId);
-    return decryptMessagesWithPrivateKey(messages, recipientKeyId, privateKey);
+  return withUploadedPrivateKey(async (material) => {
+    assertUploadedPrivateKeyMatchesKeyId(material, recipientKeyId);
+    return decryptMessagesWithPrivateKey(
+      messages,
+      recipientKeyId,
+      material.ecdhPrivateKey,
+    );
   });
 }
 
@@ -225,13 +218,13 @@ export async function decryptMessagesAndCommentsWithUploadedPrivateKey(
   messages: DecryptableMessage[],
   recipientKeyId: string,
 ): Promise<InboxDecryptionResults> {
-  return withUploadedPrivateKey(async (privateKey, jwk) => {
-    await verifyUploadedPrivateKey(jwk, recipientKeyId);
+  return withUploadedPrivateKey(async (material) => {
+    assertUploadedPrivateKeyMatchesKeyId(material, recipientKeyId);
 
     const messageResults = await decryptMessagesWithPrivateKey(
       messages,
       recipientKeyId,
-      privateKey,
+      material.ecdhPrivateKey,
     );
     const commentsByMessageId: Record<
       string,
@@ -253,7 +246,7 @@ export async function decryptMessagesAndCommentsWithUploadedPrivateKey(
       commentsByMessageId[message.id] = await decryptCommentsWithPrivateKey(
         comments,
         recipientKeyId,
-        privateKey,
+        material.ecdhPrivateKey,
         messageCoreById,
       );
     }
@@ -270,8 +263,12 @@ export async function decryptCommentsWithUploadedPrivateKey(
     return {};
   }
 
-  return withUploadedPrivateKey(async (privateKey, jwk) => {
-    await verifyUploadedPrivateKey(jwk, recipientKeyId);
-    return decryptCommentsWithPrivateKey(comments, recipientKeyId, privateKey);
+  return withUploadedPrivateKey(async (material) => {
+    assertUploadedPrivateKeyMatchesKeyId(material, recipientKeyId);
+    return decryptCommentsWithPrivateKey(
+      comments,
+      recipientKeyId,
+      material.ecdhPrivateKey,
+    );
   });
 }

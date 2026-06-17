@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
-import { importPrivateKeyForEcdsaSign } from '@/crypto/ecdsaKeys.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
+import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
   withUploadedPrivateKey,
@@ -91,18 +88,13 @@ export function useShareMessage({
         return null;
       }
 
-      return withUploadedPrivateKey(async (ecdhPrivateKey, privateJwk) => {
-        const sharerKeyId = await ecPublicJwkThumbprintSha256(
-          slimEcPublicJwk(privateJwk),
+      return withUploadedPrivateKey(async (material) => {
+        assertUploadedPrivateKeyMatchesKeyId(
+          material,
+          await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!),
+          'Uploaded private key does not match your stored public key.',
         );
-        if (
-          sharerKeyId !==
-          (await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!))
-        ) {
-          throw new Error(
-            'Uploaded private key does not match your stored public key.',
-          );
-        }
+        const sharerKeyId = material.keyId;
 
         const parentMessage = await getStoredMessageById(parentMessageId);
         if (!parentMessage) {
@@ -131,17 +123,15 @@ export function useShareMessage({
           );
         }
 
-        const sharerSigningPrivateKey =
-          await importPrivateKeyForEcdsaSign(privateJwk);
         const { shareCoreJson, keyManifest } = await buildManifestShare(
           parentMessageId,
           parentMessage.payload,
           sourceMessage.id,
           sourceMessage.payload,
           sharerKeyId,
-          ecdhPrivateKey,
+          material.ecdhPrivateKey,
           keys.publicKey!,
-          sharerSigningPrivateKey,
+          material.ecdsaSignPrivateKey,
           filteredRecipients,
         );
 

@@ -1,7 +1,7 @@
 import { resolveMessageSideFromManifestSender } from '@/crypto/oneToOneManifest.ts';
 import {
-  slimEcPublicJwk,
   ecPublicJwkThumbprintSha256,
+  slimEcPublicJwk,
 } from '@/crypto/jwkThumbprint.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
@@ -72,15 +72,12 @@ export async function decryptOneToOnePayload(
   encryptedPayload: string,
   partyKeyIds: PartyKeyIds,
 ): Promise<DecryptedOneToOnePayload> {
-  return withUploadedPrivateKey(async (privateKey, privateJwk) => {
-    const uploadedKeyId = await ecPublicJwkThumbprintSha256(
-      slimEcPublicJwk(privateJwk),
-    );
+  return withUploadedPrivateKey(async (material) => {
     return decryptOneToOnePayloadWithPrivateKey(
       encryptedPayload,
       partyKeyIds,
-      privateKey,
-      uploadedKeyId,
+      material.ecdhPrivateKey,
+      material.keyId,
     );
   });
 }
@@ -89,11 +86,7 @@ export async function decryptOneToOneThreadItemsWithUploadedPrivateKey(
   items: OneToOneThreadItem[],
   partyKeyIds: PartyKeyIds,
 ): Promise<Record<string, OneToOneDecryptionResult>> {
-  return withUploadedPrivateKey(async (privateKey, privateJwk) => {
-    const uploadedKeyId = await ecPublicJwkThumbprintSha256(
-      slimEcPublicJwk(privateJwk),
-    );
-
+  return withUploadedPrivateKey(async (material) => {
     const results: Record<string, OneToOneDecryptionResult> = {};
 
     for (const item of items) {
@@ -101,8 +94,8 @@ export async function decryptOneToOneThreadItemsWithUploadedPrivateKey(
         const { text } = await decryptOneToOnePayloadWithPrivateKey(
           item.encryptedPayload,
           partyKeyIds,
-          privateKey,
-          uploadedKeyId,
+          material.ecdhPrivateKey,
+          material.keyId,
         );
         results[item.id] = { text, error: null };
       } catch (e) {

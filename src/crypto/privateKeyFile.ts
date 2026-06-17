@@ -1,5 +1,12 @@
 import { slimEcPrivateJwk } from '@/crypto/jwkThumbprint.ts';
-import { importPrivateKeyNonExtractable } from '@/crypto/ecdhKeys.ts';
+import {
+  cachePrivateKeyMaterial,
+  getCachedPrivateKeyMaterial,
+} from '@/crypto/sessionPrivateKeyStorage.ts';
+import {
+  importUploadedPrivateKeyMaterial,
+  type UploadedPrivateKeyMaterial,
+} from '@/crypto/privateKeyMaterial.ts';
 
 const FILE_SELECTION_CANCELLED = 'No private key file selected.';
 
@@ -116,13 +123,20 @@ export function isPrivateKeyFileSelectionCancelled(error: unknown): boolean {
 }
 
 /**
- * Prompt for a private-key JWK file, import it, run `fn`, then drop the key reference.
- * The private key is never stored in app state or IndexedDB.
+ * Prompt for a private-key JWK file, import non-extractable CryptoKeys, run `fn`.
+ * When caching is enabled, imported keys are kept in memory only for reuse in this tab.
+ * Raw JWK material is not persisted.
  */
 export async function withUploadedPrivateKey<T>(
-  fn: (privateKey: CryptoKey, jwk: JsonWebKey) => Promise<T>,
+  fn: (material: UploadedPrivateKeyMaterial) => Promise<T>,
 ): Promise<T> {
+  const cached = getCachedPrivateKeyMaterial();
+  if (cached) {
+    return fn(cached);
+  }
+
   const jwk = await pickPrivateKeyJwkFile();
-  const privateKey = await importPrivateKeyNonExtractable(jwk);
-  return fn(privateKey, jwk);
+  const material = await importUploadedPrivateKeyMaterial(jwk);
+  cachePrivateKeyMaterial(material);
+  return fn(material);
 }

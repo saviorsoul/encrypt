@@ -1,11 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { encryptCommentWithMessageKey } from '@/crypto/commentCrypto.ts';
-import { importPrivateKeyForEcdsaSign } from '@/crypto/ecdsaKeys.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
+import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
   withUploadedPrivateKey,
@@ -49,18 +46,13 @@ export function useEncryptComment({
 
     setBusy(true);
     try {
-      await withUploadedPrivateKey(async (ecdhPrivateKey, privateJwk) => {
-        const recipientKeyId = await ecPublicJwkThumbprintSha256(
-          slimEcPublicJwk(privateJwk),
+      await withUploadedPrivateKey(async (material) => {
+        assertUploadedPrivateKeyMatchesKeyId(
+          material,
+          await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!),
+          'Uploaded private key does not match your stored public key.',
         );
-        if (
-          recipientKeyId !==
-          (await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!))
-        ) {
-          throw new Error(
-            'Uploaded private key does not match your stored public key.',
-          );
-        }
+        const recipientKeyId = material.keyId;
 
         const parentMessage = await getStoredMessageById(messageId);
         if (!parentMessage) {
@@ -77,16 +69,14 @@ export function useEncryptComment({
           );
         }
 
-        const senderSigningPrivateKey =
-          await importPrivateKeyForEcdsaSign(privateJwk);
         const payload = await encryptCommentWithMessageKey(
           trimmed,
           messageId,
           parentMessage.payload,
           recipientKeyId,
-          ecdhPrivateKey,
+          material.ecdhPrivateKey,
           keys.publicKey!,
-          senderSigningPrivateKey,
+          material.ecdsaSignPrivateKey,
         );
         const savedComment = await saveStoredComment(messageId, payload);
         setCommentText('');

@@ -23,6 +23,7 @@ import { OnboardedRoute } from '@/components/routes/OnboardedRoute.tsx';
 import { ExternalFileProvider } from '@/components/providers/ExternalFileProvider.tsx';
 import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
 import { ElectronTrayEncryptHandler } from '@/components/providers/ElectronTrayEncryptHandler.tsx';
+import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivateKeyProvider.tsx';
 
 const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
 
@@ -36,52 +37,57 @@ function App() {
       <CssBaseline />
       <Router {...routerProps}>
         <AuthProvider>
-          <KeysProvider>
-            {import.meta.env.VITE_ELECTRON ? (
-              <>
-                <ElectronTraySync />
-                <ElectronTrayEncryptHandler />
-              </>
-            ) : null}
-            <ExternalFileProvider>
-              <Routes>
-                <Route element={<AppLayout />}>
-                  <Route path="login" element={<LoginPage />} />
-                  <Route element={<ProtectedRoute />}>
-                    <Route
-                      path="save-private-key"
-                      element={<PrivateKeyDownloadPage />}
-                    />
-                    <Route element={<OnboardedRoute />}>
-                      <Route index element={<OneToOnePage />} />
-                      <Route path="feed" element={<FeedPage />} />
+          <SessionPrivateKeyProvider>
+            <KeysProvider>
+              {import.meta.env.VITE_ELECTRON ? (
+                <>
+                  <ElectronTraySync />
+                  <ElectronTrayEncryptHandler />
+                </>
+              ) : null}
+              <ExternalFileProvider>
+                <Routes>
+                  <Route element={<AppLayout />}>
+                    <Route path="login" element={<LoginPage />} />
+                    <Route element={<ProtectedRoute />}>
                       <Route
-                        path="proof-of-concept"
-                        element={
-                          <Navigate to="/proof-of-concepts/feed" replace />
-                        }
+                        path="save-private-key"
+                        element={<PrivateKeyDownloadPage />}
                       />
-                      <Route
-                        path="proof-of-concepts/feed"
-                        element={<ProofOfConceptPage />}
-                      />
-                      <Route
-                        path="proof-of-concepts/feed-comment"
-                        element={<ProofOfConceptFeedCommentPage />}
-                      />
-                      <Route
-                        path="proof-of-concepts/1-1"
-                        element={<Navigate to="/" replace />}
-                      />
-                      <Route path="1-1" element={<Navigate to="/" replace />} />
-                      <Route path="glossary" element={<GlossaryPage />} />
+                      <Route element={<OnboardedRoute />}>
+                        <Route index element={<OneToOnePage />} />
+                        <Route path="feed" element={<FeedPage />} />
+                        <Route
+                          path="proof-of-concept"
+                          element={
+                            <Navigate to="/proof-of-concepts/feed" replace />
+                          }
+                        />
+                        <Route
+                          path="proof-of-concepts/feed"
+                          element={<ProofOfConceptPage />}
+                        />
+                        <Route
+                          path="proof-of-concepts/feed-comment"
+                          element={<ProofOfConceptFeedCommentPage />}
+                        />
+                        <Route
+                          path="proof-of-concepts/1-1"
+                          element={<Navigate to="/" replace />}
+                        />
+                        <Route
+                          path="1-1"
+                          element={<Navigate to="/" replace />}
+                        />
+                        <Route path="glossary" element={<GlossaryPage />} />
+                      </Route>
                     </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </ExternalFileProvider>
-          </KeysProvider>
+                </Routes>
+              </ExternalFileProvider>
+            </KeysProvider>
+          </SessionPrivateKeyProvider>
         </AuthProvider>
       </Router>
     </ThemeProvider>

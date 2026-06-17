@@ -23,7 +23,7 @@ import {
   encryptWithManifest,
   type ManifestRecipientKeys,
 } from '@/crypto/manifestEncrypt.ts';
-import { importPrivateKeyForEcdsaSign } from '@/crypto/ecdsaKeys.ts';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -482,23 +482,18 @@ export function OneToOneEncryption({
 
       setBusy(true);
       try {
-        await withUploadedPrivateKey(async (_ecdhPrivateKey, privateJwk) => {
-          const uploadedKeyId = await ecPublicJwkThumbprintSha256(
-            slimEcPublicJwk(privateJwk),
+        await withUploadedPrivateKey(async (material) => {
+          assertUploadedPrivateKeyMatchesKeyId(
+            material,
+            encryptorKeys.keyId,
+            `Uploaded private key does not match the ${roleLabel} publicKeyJwk.`,
           );
-          if (uploadedKeyId !== encryptorKeys.keyId) {
-            throw new Error(
-              `Uploaded private key does not match the ${roleLabel} publicKeyJwk.`,
-            );
-          }
 
-          const signingPrivateKey =
-            await importPrivateKeyForEcdsaSign(privateJwk);
           const payload = await encryptWithManifest(
             plaintext,
             recipients,
             encryptorKeys.publicKey!,
-            signingPrivateKey,
+            material.ecdsaSignPrivateKey,
           );
           if (peerKeys.jwk && peerKeys.keyId) {
             await saveStoredPublicKey(

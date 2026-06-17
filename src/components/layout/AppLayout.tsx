@@ -28,6 +28,7 @@ import { PublicKeyDialog } from '@/components/shared/PublicKeyDialog.tsx';
 import { clearAppLocalData } from '@/utils/clearAppLocalData';
 import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
+import { SessionPrivateKeyNavSwitch } from '@/components/layout/SessionPrivateKeyNavSwitch.tsx';
 
 const NAV_ITEMS = [
   { label: '1:1', to: '/' },
@@ -127,6 +128,7 @@ export function AppLayout() {
             )}
             {user ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SessionPrivateKeyNavSwitch />
                 <Tooltip title="Clean local data">
                   <span>
                     <IconButton

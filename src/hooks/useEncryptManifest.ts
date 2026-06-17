@@ -4,11 +4,8 @@ import {
   encryptWithManifest,
   type ManifestRecipientKeys,
 } from '@/crypto/manifestEncrypt.ts';
-import { importPrivateKeyForEcdsaSign } from '@/crypto/ecdsaKeys.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
+import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
   withUploadedPrivateKey,
@@ -66,26 +63,18 @@ export function useEncryptManifest({
 
     setBusy(true);
     try {
-      await withUploadedPrivateKey(async (_ecdhPrivateKey, privateJwk) => {
-        const uploadedKeyId = await ecPublicJwkThumbprintSha256(
-          slimEcPublicJwk(privateJwk),
+      await withUploadedPrivateKey(async (material) => {
+        assertUploadedPrivateKeyMatchesKeyId(
+          material,
+          await ecPublicJwkThumbprintSha256(senderPublicKeyJwk),
+          'Uploaded private key does not match your stored public key.',
         );
-        if (
-          uploadedKeyId !==
-          (await ecPublicJwkThumbprintSha256(senderPublicKeyJwk))
-        ) {
-          throw new Error(
-            'Uploaded private key does not match your stored public key.',
-          );
-        }
 
-        const senderSigningPrivateKey =
-          await importPrivateKeyForEcdsaSign(privateJwk);
         const payload = await encryptWithManifest(
           message,
           recipients,
           senderPublicKey,
-          senderSigningPrivateKey,
+          material.ecdsaSignPrivateKey,
         );
         const savedMessage = await saveStoredMessage(payload);
         setMessage('');
