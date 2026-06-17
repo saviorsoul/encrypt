@@ -52,13 +52,13 @@ export function PublicKeyDialog({
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <StepOutputTextField
-          label="JSON public JWK with kty, crv, x, and y"
+          label="Public key (x;y)"
           value={publicKeyJwkText}
           slotProps={{
             input: { readOnly: true },
           }}
           multiline
-          rows={6}
+          rows={2}
           fullWidth
           error={Boolean(jwkError)}
           sx={{ mt: 1 }}

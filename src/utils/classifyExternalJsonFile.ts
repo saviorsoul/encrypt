@@ -1,5 +1,5 @@
 import { parsePrivateKeyJwkText } from '@/crypto/privateKeyFile.ts';
-import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';
+import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
 import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
 import {
   validateBaseJsonText,
@@ -13,7 +13,10 @@ export type ClassifiedExternalJson =
   | { kind: 'invalid'; error: string };
 
 function isEcJwkRoot(parsed: Record<string, unknown>): boolean {
-  return parsed.kty === 'EC';
+  return (
+    parsed.kty === 'EC' ||
+    (typeof parsed.x === 'string' && typeof parsed.y === 'string')
+  );
 }
 
 function hasPrivateComponent(parsed: Record<string, unknown>): boolean {
@@ -46,7 +49,7 @@ export function classifyExternalJsonText(text: string): ClassifiedExternalJson {
       }
     }
 
-    const publicKey = parsePublicKeyJwkText(base.text);
+    const publicKey = parsePublicKeyText(base.text);
     if (publicKey.ok) {
       return {
         kind: 'publicKey',

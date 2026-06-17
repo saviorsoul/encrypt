@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { importPublicKeyExtractable } from '@/crypto/ecdhKeys.ts';
 import { ecPublicJwkThumbprintFromCryptoKey } from '@/crypto/jwkThumbprint.ts';
 import {
-  parsePublicKeyJwkText,
-  type ParsePublicKeyJwkResult,
-} from '@/utils/parsePublicKeyJwkText.ts';
+  parsePublicKeyText,
+  type ParsePublicKeyResult,
+} from '@/utils/parsePublicKeyText.ts';
 
-export function usePublicKeyJwkInput(jwkText: string) {
+export function usePublicKeyJwkInput(publicKeyText: string) {
   const [publicKey, setPublicKey] = useState<CryptoKey | null>(null);
   const [keyId, setKeyId] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [prevParsed, setPrevParsed] = useState<ParsePublicKeyJwkResult | null>(
+  const [prevParsed, setPrevParsed] = useState<ParsePublicKeyResult | null>(
     null,
   );
 
-  const parsed = useMemo<ParsePublicKeyJwkResult>(
-    () => parsePublicKeyJwkText(jwkText),
-    [jwkText],
+  const parsed = useMemo<ParsePublicKeyResult>(
+    () => parsePublicKeyText(publicKeyText),
+    [publicKeyText],
   );
 
   if (parsed !== prevParsed) {
@@ -54,7 +54,7 @@ export function usePublicKeyJwkInput(jwkText: string) {
           setPublicKey(null);
           setKeyId(null);
           setImportError(
-            e instanceof Error ? e.message : 'Could not import public key JWK.',
+            e instanceof Error ? e.message : 'Could not import public key.',
           );
         }
       } finally {

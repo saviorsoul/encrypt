@@ -21,7 +21,7 @@ import {
 } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
-import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
+import { formatEcPublicKeyText } from '@/crypto/ecPublicKey.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import { CleanDataDialog } from '@/components/shared/CleanDataDialog.tsx';
 import { PublicKeyDialog } from '@/components/shared/PublicKeyDialog.tsx';
@@ -48,10 +48,7 @@ export function AppLayout() {
   const [cleanDataDialogOpen, setCleandataDialogOpen] = useState(false);
 
   const publicKeyJwkText = useMemo(
-    () =>
-      publicKeyJwk
-        ? JSON.stringify(slimEcPublicJwk(publicKeyJwk), null, 2)
-        : '',
+    () => (publicKeyJwk ? formatEcPublicKeyText(publicKeyJwk) : ''),
     [publicKeyJwk],
   );
 

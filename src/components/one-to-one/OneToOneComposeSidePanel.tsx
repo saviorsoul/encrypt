@@ -146,13 +146,13 @@ export function OneToOneComposeSidePanel({
           }}
         >
           <StepOutputTextField
-            label="JSON public JWK with kty, crv, x, and y"
+            label="Public key (x;y)"
             value={publicKeyJwkText}
             slotProps={{
               input: { readOnly: true },
             }}
             multiline
-            rows={6}
+            rows={2}
             fullWidth
             error={Boolean(jwkError)}
             sx={{ ml: 0, pl: 0, mt: 1 }}

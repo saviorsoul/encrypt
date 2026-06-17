@@ -24,6 +24,7 @@ import {
   type ManifestRecipientKeys,
 } from '@/crypto/manifestEncrypt.ts';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
+import { formatEcPublicKeyText } from '@/crypto/ecPublicKey.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -46,7 +47,7 @@ import {
   resolveInitialOneToOneRecipientUsername,
   saveLastOneToOneRecipientUsername,
 } from '@/utils/lastOneToOneRecipient.ts';
-import { parsePublicKeyJwkText } from '@/utils/parsePublicKeyJwkText.ts';
+import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
@@ -148,9 +149,7 @@ export function OneToOneEncryption({
     bothKeysValid;
 
   if (keys?.publicKeyJwk && !senderJwkPrefilled) {
-    setSenderJwkText(
-      JSON.stringify(slimEcPublicJwk(keys.publicKeyJwk), null, 2),
-    );
+    setSenderJwkText(formatEcPublicKeyText(keys.publicKeyJwk));
     setSenderJwkPrefilled(true);
   }
 
@@ -208,9 +207,7 @@ export function OneToOneEncryption({
         const username = material.username;
         setSelectedStoredUsername(username);
         onPeerLabelChange?.(username);
-        setRecipientJwkText(
-          JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
-        );
+        setRecipientJwkText(formatEcPublicKeyText(material.publicJwk));
         onPeerKeyIdSelected?.();
       } catch (e) {
         if (!cancelled) {
@@ -253,9 +250,7 @@ export function OneToOneEncryption({
           throw new Error(`No public key found for ${username}.`);
         }
 
-        setRecipientJwkText(
-          JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
-        );
+        setRecipientJwkText(formatEcPublicKeyText(material.publicJwk));
       } catch (e) {
         setRecipientPanelError(
           errorMessage(e, 'Failed to load stored user public key.'),
@@ -306,9 +301,7 @@ export function OneToOneEncryption({
         }
 
         setSelectedStoredUsername(savedRecipientUsername);
-        setRecipientJwkText(
-          JSON.stringify(slimEcPublicJwk(material.publicJwk), null, 2),
-        );
+        setRecipientJwkText(formatEcPublicKeyText(material.publicJwk));
       } catch (e) {
         if (!cancelled) {
           setRecipientPanelError(
@@ -364,7 +357,7 @@ export function OneToOneEncryption({
 
         setSelectedStoredUsername(username);
         onPeerLabelChange?.(username);
-        setRecipientJwkText(JSON.stringify(slimPublicJwk, null, 2));
+        setRecipientJwkText(formatEcPublicKeyText(slimPublicJwk));
         setGenerateRecipientDialogOpen(false);
       } catch (e) {
         setGenerateRecipientError(
@@ -384,7 +377,7 @@ export function OneToOneEncryption({
 
   const handleSaveRecipient = useCallback(
     async (username: string, publicKeyJwkText: string) => {
-      const parsed = parsePublicKeyJwkText(publicKeyJwkText);
+      const parsed = parsePublicKeyText(publicKeyJwkText);
       if (parsed.ok === false) {
         setSaveRecipientError(parsed.error);
         return;
@@ -455,7 +448,7 @@ export function OneToOneEncryption({
       setError(null);
 
       if (!bothKeysValid) {
-        setError('Both sender and recipient need valid public key JWKs.');
+        setError('Both sender and recipient need valid public keys.');
         return false;
       }
       if (!encryptorKeys.publicKey || !encryptorKeys.keyId) {

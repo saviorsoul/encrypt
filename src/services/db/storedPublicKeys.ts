@@ -31,10 +31,17 @@ function ecPublicJwkFromStored(
   stored: Record<string, unknown>,
 ): JsonWebKey | null {
   const publicJwk = stored.publicJwk;
-  if (!isRecord(publicJwk) || publicJwk.kty !== 'EC') {
+  if (!isRecord(publicJwk)) {
     return null;
   }
-  return publicJwk as JsonWebKey;
+  if (typeof publicJwk.x !== 'string' || typeof publicJwk.y !== 'string') {
+    return null;
+  }
+  try {
+    return slimEcPublicJwk(publicJwk as JsonWebKey);
+  } catch {
+    return null;
+  }
 }
 
 function parseStoredKeyRecord(value: unknown): StoredPublicKeyRecord | null {

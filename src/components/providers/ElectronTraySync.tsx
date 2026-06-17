@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
-import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
+import { formatEcPublicKeyText } from '@/crypto/ecPublicKey.ts';
 
 export function ElectronTraySync() {
   const { user } = useAuth();
@@ -16,7 +16,7 @@ export function ElectronTraySync() {
       return null;
     }
 
-    return JSON.stringify(slimEcPublicJwk(publicKeyJwk), null, 2);
+    return formatEcPublicKeyText(publicKeyJwk);
   }, [canExportPublicKey, publicKeyJwk]);
 
   useEffect(() => {

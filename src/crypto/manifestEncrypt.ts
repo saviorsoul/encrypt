@@ -1,5 +1,8 @@
 import { bytesToBase64 } from '@/utils/bytes.ts';
-import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
+import {
+  ecPublicJwkThumbprintSha256,
+  slimEcPublicJwk,
+} from '@/crypto/jwkThumbprint.ts';
 import {
   HKDF_INFO,
   HKDF_SALT_LENGTH,
@@ -135,24 +138,12 @@ export async function deriveKekFromSharedSecret(
   return deriveAesGcmKekFromHkdfMaterial(hkdfKeyMaterial, options);
 }
 
-/**
- * Web Crypto `exportKey('jwk')` adds `ext` and `key_ops`, which are not needed on the wire and
- * are not part of the minimal JWK material RFC 7517 describes for EC public keys (`kty`, `crv`, `x`, `y`).
- */
-function slimEcPublicJwkForWire(jwk: JsonWebKey): JsonWebKey {
-  const { kty, crv, x, y } = jwk;
-  if (kty !== 'EC' || !crv || !x || !y) {
-    throw new Error('Expected EC public JWK with kty, crv, x, y');
-  }
-  return { kty, crv, x, y };
-}
-
 /** Serialize a `CryptoKey` for JSON (EC public key: minimal JWK for transfer). */
 export async function exportCryptoKeyAsJwk(
   key: CryptoKey,
 ): Promise<JsonWebKey> {
   const jwk = await crypto.subtle.exportKey('jwk', key);
-  return slimEcPublicJwkForWire(jwk);
+  return slimEcPublicJwk(jwk);
 }
 
 export function encryptedContentToSignableBody({

@@ -12,10 +12,10 @@ export type InboxMessage = StoredMessage;
 function ecPublicJwkIdentity(
   jwk: JsonWebKey | null | undefined,
 ): string | null {
-  if (!jwk?.kty || !jwk.crv || !jwk.x || !jwk.y) {
+  if (!jwk?.x || !jwk?.y) {
     return null;
   }
-  return `${jwk.kty}\0${jwk.crv}\0${jwk.x}\0${jwk.y}`;
+  return `${jwk.x}\0${jwk.y}`;
 }
 
 export function useInboxMessages() {
@@ -57,7 +57,7 @@ export function useInboxMessages() {
     return () => {
       cancelled = true;
     };
-    // Intentionally omit keys?.publicKeyJwk: object identity can change each render while kty/crv/x/y do not.
+    // Intentionally omit keys?.publicKeyJwk: object identity can change each render while x/y do not.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- publicKeyJwkIdentity is the stable semantic dependency
   }, [publicKeyJwkIdentity]);
 
