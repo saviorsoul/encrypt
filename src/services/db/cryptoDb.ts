@@ -1,3 +1,5 @@
+import { runDbMigrations } from './migrations/index.ts';
+
 export const DB_NAME = 'crypto-db';
 export const DB_VERSION = 7;
 export const USERS_STORE = 'users';
@@ -28,8 +30,10 @@ export function openCryptoDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const tx = request.transaction!;
+      const oldVersion = event.oldVersion;
 
       if (!db.objectStoreNames.contains(USERS_STORE)) {
         const usersStore = db.createObjectStore(USERS_STORE, {
@@ -92,6 +96,13 @@ export function openCryptoDb(): Promise<IDBDatabase> {
           unique: false,
         });
       }
+
+      runDbMigrations({
+        db,
+        tx,
+        oldVersion,
+        newVersion: DB_VERSION,
+      });
     };
 
     request.onsuccess = () => resolve(request.result);
