@@ -12,7 +12,7 @@ import type { DbMigration, DbMigrationContext } from './types.ts';
  * Data transforms belong here so existing rows survive app updates.
  */
 export const DB_MIGRATIONS: readonly DbMigration[] = [
-  // entries
+  // vXTestMigration,
 ];
 
 export function runDbMigrations(ctx: DbMigrationContext): void {
