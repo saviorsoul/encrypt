@@ -114,7 +114,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     title: 'ECDHE',
     parentId: 'asymmetric-key',
     summary:
-      'Ephemeral ECDH: at least one party uses a short-lived (one-time) key pair for the agreement. Discarding the ephemeral private key after use limits how much past traffic can be decrypted if long-term keys are later compromised.',
+      'ECDH Ephemeral: the sender uses a one-time agreement key pair per message and discards the private key after wrapping. Unlike in TLS, this is not mainly for forward secrecy - here ECDHE separates signing from agreement and ensures each recipient’s server-delivered shard opens only with that recipient’s long-term key.',
     seeAlso: ['ecdh', 'key-manifest', 'hkdf'],
   },
   {
