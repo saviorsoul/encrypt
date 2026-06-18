@@ -10,7 +10,11 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
-import { stepContentSx } from '@/components/manifest-steps/stepLayout.ts';
+import {
+  manifestFlowSectionId,
+  manifestStepScrollMarginSx,
+} from '@/components/manifest-steps/stepLayout.ts';
+import { ManifestStepSection } from '@/components/manifest-steps/ManifestStepSection.tsx';
 import { StepActionRow } from '@/components/manifest-steps/StepActionRow.tsx';
 import { StepInfoAlert } from '@/components/manifest-steps/StepInfoAlert.tsx';
 import { StepExampleGrid } from '@/components/manifest-steps/StepExampleGrid.tsx';
@@ -410,7 +414,15 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
   copyState: CopyState;
 }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box
+      id={manifestFlowSectionId('encrypt')}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        ...manifestStepScrollMarginSx,
+      }}
+    >
       <Box
         sx={{
           display: 'flex',
@@ -461,7 +473,7 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
         </Box>
       </Box>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={1}>
         <StepActionRow
           content={
             <StepInfoAlert number={1} flow="encrypt">
@@ -483,9 +495,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           example={steps.encryptContentExample}
           getPlaintextRef={getPlaintextRef}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={2}>
         <StepActionRow
           content={
             <StepInfoAlert number={2} flow="encrypt">
@@ -526,9 +538,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           fullWidth
           slotProps={{ input: { readOnly: true } }}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={3}>
         <StepActionRow
           content={
             <StepInfoAlert number={3} flow="encrypt">
@@ -563,9 +575,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           fullWidth
           slotProps={{ input: { readOnly: true } }}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={4}>
         <StepActionRow
           content={
             <StepInfoAlert number={4} flow="encrypt">
@@ -605,9 +617,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           fullWidth
           slotProps={{ input: { readOnly: true } }}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={5}>
         <StepActionRow
           content={
             <StepInfoAlert number={5} flow="encrypt">
@@ -649,9 +661,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           fullWidth
           slotProps={{ input: { readOnly: true } }}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={6}>
         <StepActionRow
           content={
             <StepInfoAlert number={6} flow="encrypt">
@@ -691,9 +703,9 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           fullWidth
           slotProps={{ input: { readOnly: true } }}
         />
-      </Box>
+      </ManifestStepSection>
 
-      <Box sx={stepContentSx}>
+      <ManifestStepSection flow="encrypt" step={7}>
         <StepActionRow
           content={
             <StepInfoAlert number={7} flow="encrypt">
@@ -763,7 +775,7 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
                 : 'Copy JSON payload'}
           </Button>
         </Box>
-      </Box>
+      </ManifestStepSection>
     </Box>
   );
 });
