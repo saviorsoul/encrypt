@@ -708,63 +708,86 @@ export function OneToOnePage() {
     decryptBusy || bulkDecryptBusy || decryptingMessageId !== null;
 
   return (
-    <Box>
-      <Box sx={{ mx: 'auto', maxWidth: 1400, px: 2, py: 2 }}>
-        <OneToOneEncryption
-          thread={thread}
-          threadLoading={threadLoading}
-          peerKeyIdToSelect={peerKeyIdToSelect}
-          onPeerKeyIdSelected={() => setPeerKeyIdToSelect(null)}
-          onPeerNeedsName={handlePeerNeedsName}
-          onEncryptedMessage={(item, side, decryptedText) =>
-            appendThreadItem(item, side, { decryptedText })
-          }
-          onImportMessage={handleOpenDecryptDialog}
-          importBusy={isDecryptBusy}
-          onPartyKeyIdsChange={setPartyKeyIds}
-          onPeerLabelChange={setPeerLabel}
-          threadActions={
-            <Tooltip
-              title={
-                bulkDecryptBusy
-                  ? 'Decrypting…'
-                  : hasUndecryptedMessages
-                    ? 'Decrypt all messages'
-                    : 'All messages decrypted'
-              }
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  aria-label="Decrypt all messages"
-                  disabled={
-                    isDecryptBusy || threadLoading || !hasUndecryptedMessages
-                  }
-                  onClick={handleDecryptAllMessages}
-                >
-                  <LockOpenIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          }
-        />
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
+      <Box
+        sx={{
+          mx: 'auto',
+          maxWidth: 1400,
+          px: 2,
+          py: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          width: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ flexShrink: 0 }}>
+          <OneToOneEncryption
+            thread={thread}
+            threadLoading={threadLoading}
+            peerKeyIdToSelect={peerKeyIdToSelect}
+            onPeerKeyIdSelected={() => setPeerKeyIdToSelect(null)}
+            onPeerNeedsName={handlePeerNeedsName}
+            onEncryptedMessage={(item, side, decryptedText) =>
+              appendThreadItem(item, side, { decryptedText })
+            }
+            onImportMessage={handleOpenDecryptDialog}
+            importBusy={isDecryptBusy}
+            onPartyKeyIdsChange={setPartyKeyIds}
+            onPeerLabelChange={setPeerLabel}
+            threadActions={
+              <Tooltip
+                title={
+                  bulkDecryptBusy
+                    ? 'Decrypting…'
+                    : hasUndecryptedMessages
+                      ? 'Decrypt all messages'
+                      : 'All messages decrypted'
+                }
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Decrypt all messages"
+                    disabled={
+                      isDecryptBusy || threadLoading || !hasUndecryptedMessages
+                    }
+                    onClick={handleDecryptAllMessages}
+                  >
+                    <LockOpenIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            }
+          />
 
-        {bulkDecryptError && (
-          <Typography
-            color="error"
-            variant="body2"
-            sx={{ px: { xs: 1, sm: 2 }, pb: 1, textAlign: 'center' }}
-          >
-            {bulkDecryptError}
-          </Typography>
-        )}
+          {bulkDecryptError && (
+            <Typography
+              color="error"
+              variant="body2"
+              sx={{ px: { xs: 1, sm: 2 }, pb: 1, textAlign: 'center' }}
+            >
+              {bulkDecryptError}
+            </Typography>
+          )}
+        </Box>
 
         <Box
           sx={{
+            flex: 1,
+            minHeight: 0,
             px: { xs: 1, sm: 2 },
             py: 2,
             overflowY: 'auto',
-            maxHeight: { xs: 360, md: 480 },
           }}
         >
           {threadLoading ? (

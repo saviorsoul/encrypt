@@ -309,7 +309,7 @@ export function OneToOneMessageBubblePopover({
         slotProps={{
           root: {
             sx: {
-              zIndex: (theme) => theme.zIndex.tooltip,
+              zIndex: (theme) => theme.zIndex.appBar - 1,
               pointerEvents: 'none',
             },
           },

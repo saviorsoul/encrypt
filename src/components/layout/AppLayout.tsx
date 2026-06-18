@@ -199,6 +199,9 @@ export function AppLayout() {
         component="main"
         sx={{
           flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
           ...(isFullscreenAuthPage ? {} : { px: { xs: 1, sm: 2 }, py: 2 }),
         }}
       >
