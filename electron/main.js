@@ -21,6 +21,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distIndexPath = path.join(__dirname, '../dist/index.html');
+const LINUX_WM_CLASS = 'encrypt';
+
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('class', LINUX_WM_CLASS);
+}
 
 const ALLOWED_EXTERNAL_EXTENSIONS = new Set(['.json', '.jwk']);
 const CLIPBOARD_IMPORT_SOURCE_NAME = 'Clipboard';
@@ -267,9 +272,10 @@ function importTextFromClipboard() {
   });
 }
 
-function getTrayIconPath() {
-  if (process.platform === 'linux') {
-    return path.join(__dirname, 'tray-icon.png');
+function getAppIconPath() {
+  const electronIcon = path.join(__dirname, 'icon.png');
+  if (fs.existsSync(electronIcon)) {
+    return electronIcon;
   }
 
   const distIcon = path.join(__dirname, '../dist/favicon.ico');
@@ -278,6 +284,17 @@ function getTrayIconPath() {
   }
 
   return path.join(__dirname, '../public/favicon.ico');
+}
+
+function getAppIconImage() {
+  const iconPath = getAppIconPath();
+  let image = nativeImage.createFromPath(iconPath);
+
+  if (image.isEmpty()) {
+    image = nativeImage.createFromBuffer(fs.readFileSync(iconPath));
+  }
+
+  return image;
 }
 
 function createTrayImage(iconPath) {
@@ -294,7 +311,11 @@ function createTrayImage(iconPath) {
 }
 
 function createTrayIcon() {
-  return createTrayImage(getTrayIconPath());
+  if (process.platform === 'linux') {
+    return createTrayImage(path.join(__dirname, 'tray-icon.png'));
+  }
+
+  return createTrayImage(getAppIconPath());
 }
 
 function createTraySuccessIcon() {
@@ -444,10 +465,14 @@ function blockRemoteNetworkRequests() {
 }
 
 function createWindow({ showOnReady = true } = {}) {
+  const windowIcon =
+    process.platform === 'linux' ? getAppIconImage() : getAppIconPath();
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
+    icon: windowIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -457,6 +482,13 @@ function createWindow({ showOnReady = true } = {}) {
 
   if (showOnReady) {
     mainWindow.once('ready-to-show', () => {
+      if (process.platform === 'linux') {
+        const icon = getAppIconImage();
+        if (!icon.isEmpty()) {
+          mainWindow?.setIcon(icon);
+        }
+      }
+
       mainWindow?.show();
     });
   }

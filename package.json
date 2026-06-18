@@ -54,6 +54,7 @@
   "build": {
     "appId": "com.encrypt.app",
     "productName": "Encrypt",
+    "icon": "electron/icons",
     "fileAssociations": [
       {
         "ext": ["json", "jwk"],
@@ -72,7 +73,12 @@
     "linux": {
       "target": ["deb"],
       "category": "Utility",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "encrypt"
+        }
+      }
     },
     "win": {
       "target": [
