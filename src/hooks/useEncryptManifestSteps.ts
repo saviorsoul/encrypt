@@ -133,6 +133,16 @@ export function useEncryptManifestSteps(
   const [aesOutput, setAesOutput] = useState('');
   const [signedPayloadJson, setSignedPayloadJson] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorStep, setErrorStep] = useState<
+    | 'ecdhe'
+    | 'hkdfImport'
+    | 'aesKek'
+    | 'aesContent'
+    | 'encryptDek'
+    | 'manifest'
+    | 'signManifest'
+    | null
+  >(null);
   const [busyStep, setBusyStep] = useState<
     | 'ecdhe'
     | 'hkdfImport'
@@ -144,6 +154,11 @@ export function useEncryptManifestSteps(
     | null
   >(null);
   const [runAllBusy, setRunAllBusy] = useState(false);
+
+  const clearError = useCallback(() => {
+    setError(null);
+    setErrorStep(null);
+  }, []);
 
   const mockRecipients = useMemo(
     () => mockExternal?.recipients ?? [],
@@ -216,11 +231,11 @@ export function useEncryptManifestSteps(
     setEncryptedDekIvOutput('');
     setEncryptedDekOutput('');
     setEncryptDekExample(null);
-    setError(null);
-  }, [clearManifestOutputs]);
+    clearError();
+  }, [clearManifestOutputs, clearError]);
 
   const runEcdhe = useCallback(async () => {
-    setError(null);
+    clearError();
     setHkdfMaterialOutput('');
     setHkdfSaltOutput('');
     setAesKekOutput('');
@@ -303,10 +318,10 @@ export function useEncryptManifestSteps(
     } finally {
       setBusyStep(null);
     }
-  }, [keys, mockRecipients, clearEncryptedDekOutputs]);
+  }, [keys, mockRecipients, clearEncryptedDekOutputs, clearError]);
 
   const runImportHkdfMaterial = useCallback(async () => {
-    setError(null);
+    clearError();
     setHkdfMaterialOutput('');
     setImportHkdfMaterialExample(null);
     clearKekOutputs();
@@ -354,10 +369,10 @@ export function useEncryptManifestSteps(
     } finally {
       setBusyStep(null);
     }
-  }, [mockRecipients, clearKekOutputs]);
+  }, [mockRecipients, clearKekOutputs, clearError]);
 
   const runDeriveAesKeks = useCallback(async () => {
-    setError(null);
+    clearError();
     setHkdfSaltOutput('');
     setAesKekOutput('');
     setDeriveKekExample(null);
@@ -420,10 +435,10 @@ export function useEncryptManifestSteps(
     } finally {
       setBusyStep(null);
     }
-  }, [mockRecipients, clearEncryptedDekOutputs, clearKekOutputs]);
+  }, [mockRecipients, clearEncryptedDekOutputs, clearKekOutputs, clearError]);
 
   const runGenerateDekAndEncrypt = useCallback(async () => {
-    setError(null);
+    clearError();
     setAesDekOutput('');
     setAesContentIvOutput('');
     setAesContentCiphertextOutput('');
@@ -477,10 +492,10 @@ export function useEncryptManifestSteps(
     } finally {
       setBusyStep(null);
     }
-  }, [getPlaintextRef, clearEncryptedDekOutputs]);
+  }, [getPlaintextRef, clearEncryptedDekOutputs, clearError]);
 
   const runEncryptDekPerRecipient = useCallback(async () => {
-    setError(null);
+    clearError();
     clearEncryptedDekOutputs();
 
     const setups = kekSetupsRef.current;
@@ -528,10 +543,10 @@ export function useEncryptManifestSteps(
     } finally {
       setBusyStep(null);
     }
-  }, [clearEncryptedDekOutputs]);
+  }, [clearEncryptedDekOutputs, clearError]);
 
   const runBuildManifest = useCallback(async () => {
-    setError(null);
+    clearError();
     clearSignedPayloadDisplay();
     assemblyRef.current = null;
     setAssemblyOutput('');
@@ -540,24 +555,28 @@ export function useEncryptManifestSteps(
     const ephemeralAgreement = ephemeralAgreementRef.current;
     if (!senderPublicKey) {
       setError('Keys are not ready.');
+      setErrorStep('manifest');
       return;
     }
     if (!ephemeralAgreement?.publicKey) {
       setError(
         'Run the ECDHE step first (step 2; manifest ephemeral agreement key missing).',
       );
+      setErrorStep('manifest');
       return;
     }
 
     const encryptedContent = encryptedContentRef.current;
     if (!encryptedContent) {
       setError('Generate DEK and encrypt the message first (step 1).');
+      setErrorStep('manifest');
       return;
     }
 
     const keyManifest = keyManifestRef.current;
     if (!keyManifest) {
       setError('Encrypt the DEK per recipient first (step 5).');
+      setErrorStep('manifest');
       return;
     }
 
@@ -575,23 +594,26 @@ export function useEncryptManifestSteps(
       assemblyRef.current = null;
       setAssemblyOutput('');
       setError(e instanceof Error ? e.message : 'Manifest assembly failed.');
+      setErrorStep('manifest');
     } finally {
       setBusyStep(null);
     }
-  }, [keys?.publicKey, clearSignedPayloadDisplay]);
+  }, [keys?.publicKey, clearSignedPayloadDisplay, clearError]);
 
   const runSignManifest = useCallback(async () => {
-    setError(null);
+    clearError();
     clearSignedPayloadDisplay();
 
     const senderPublicKeyJwk = keys?.publicKeyJwk;
     const signableBody = assemblyRef.current;
     if (!senderPublicKeyJwk) {
       setError('Keys are not ready.');
+      setErrorStep('signManifest');
       return;
     }
     if (!signableBody) {
       setError('Assemble the manifest JSON first (step 6).');
+      setErrorStep('signManifest');
       return;
     }
 
@@ -623,16 +645,17 @@ export function useEncryptManifestSteps(
       }
       signedPayloadReadyRef.current = false;
       setError(e instanceof Error ? e.message : 'Manifest signing failed.');
+      setErrorStep('signManifest');
       setSignedPayloadJson('');
       setAesOutput('');
       setSenderSignatureOutput('');
     } finally {
       setBusyStep(null);
     }
-  }, [keys?.publicKeyJwk, clearSignedPayloadDisplay]);
+  }, [keys?.publicKeyJwk, clearSignedPayloadDisplay, clearError]);
 
   const runAllSteps = useCallback(async () => {
-    setError(null);
+    clearError();
     await runGenerateDekAndEncrypt();
     if (!encryptedContentRef.current) return;
 
@@ -651,6 +674,7 @@ export function useEncryptManifestSteps(
     await runBuildManifest();
     if (!assemblyRef.current) return;
   }, [
+    clearError,
     runGenerateDekAndEncrypt,
     runEcdhe,
     runImportHkdfMaterial,
@@ -693,6 +717,7 @@ export function useEncryptManifestSteps(
     aesOutput,
     signedPayloadJson,
     error,
+    errorStep,
     busyStep,
     runAllBusy,
     resetSteps,

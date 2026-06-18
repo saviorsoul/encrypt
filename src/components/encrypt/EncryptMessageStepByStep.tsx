@@ -378,19 +378,19 @@ function EncryptDekExampleCaption({
 }
 
 const ENCRYPT_CONTENT_STEP_DESCRIPTION =
-  'Generate a random symetric AES-256 DEK (Data Encryption Key) and encrypt the message with AES-GCM. The DEK will be used with KEK (Key Encryption Key) in step 5 to create Encrypted DEK which can be shared in JSON payload.';
+  'The app creates a fresh random key for this message only - the DEK (data encryption key) - and uses it to encrypt what you wrote with AES-GCM. Think of the DEK as a one-time lock on the message itself. You are not sending that key in plain text - in step 5, the same DEK is encrypted separately for each recipient with their KEK (key encryption key). This helps to send symmetric key generated in this step in a secure way.';
 
 const ECDHE_STEP_DESCRIPTION =
-  'The app creates a one-time private/public key pair for this message only. Private key is not saved anywhere. After you send, only the matching public half is included in the manifest. For each recipient, that private key and their public key are combined to produce a shared secret. Only you, while encrypting, and that recipient later - using their private key plus public half from the manifest - can compute the same secret. The message is not encrypted with it directly. Later steps turn it into a key used to encrypt the small random message key into a package only that recipient can decrypt.';
+  'The app creates a one-time private/public key pair for this message only. Private key is not saved anywhere. After you send, only the matching public half is included in the manifest. For each recipient, that private key and their public key are combined to produce a shared secret. Only you, while encrypting, and that recipient later - using their private key plus public half from the manifest - can compute the same secret. The message is not encrypted with it directly.';
 
 const IMPORT_HKDF_MATERIAL_STEP_DESCRIPTION =
-  'The ECDH shared secret from step 2 is not used directly as an encryption key. For each recipient, its raw bytes are imported into the Web Crypto API as HKDF key material—the input HKDF needs before it can derive a proper AES key in the next step. ECDH output is not guaranteed to be uniformly random, so we do not treat it as a finished KEK.';
+  'Step 2 gives each recipient a shared secret, but that secret cannot lock anything by itself. Here, the app keeps it ready for the next step, which will turn it into a real encryption key. Think of it as an unfinished key: step 4 adds a random salt and shapes it into the proper KEK (Key Encryption Key) each recipient needs.';
 
 const HKDF_STEP_DESCRIPTION =
-  "For each recipient, HKDF expands the imported key material from step 3 with a random salt (nonce) and a fixed info string into a separate AES-256-GCM KEK (key encryption key). That KEK encrypts the DEK in step 5 into a package only that recipient can open. Your message body was encrypted in step 1 with the DEK. Each recipient's salt (nonce) is stored in the manifest so they can re-derive the same KEK.";
+  'For each recipient, the app finishes the unfinished secret from step 3 and turns it into a real encryption key - the KEK (Key Encryption Key). Recipients already started with different shared secrets in step 2, so each one gets their own KEK. A random salt is also mixed in and saved in the payload so the recipient can rebuild that exact key later. In step 5, that KEK locks the DEK into a package only recipients can open.';
 
 const ENCRYPT_DEK_STEP_DESCRIPTION =
-  'For each recipient, the KEK from step 4 encrypts the same DEK from step 1 with AES-GCM. Each recipient gets their own IV (nonce) and encrypted DEK in the key manifest. Only recipient can decrypt that package after re-deriving their KEK and recover the DEK needed to decrypt the message from step 1.';
+  'For each recipient, the KEK from step 4 locks the DEK from step 1 into a package only recipient can open. Everyone shares the same message key, but each person gets their own locked copy saved in the payload. When they decrypt that package later, they recover the DEK and can read the message from step 1.';
 
 const MANIFEST_STEP_DESCRIPTION =
   'Combine everything a recipient needs to decrypt into one JSON object: your long-term public key, the ephemeral agreement public key from step 2, the encrypted message body from step 1 (ciphertext + message IV), and the per-recipient key manifest from step 5 (encrypted DEKs, KEK encryption IVs, and HKDF salts).';
@@ -674,7 +674,7 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           </Button>
         </StepActionRow>
 
-        {steps.error && steps.busyStep !== 'signManifest' && (
+        {steps.error && steps.errorStep !== 'signManifest' && (
           <Typography color="error" variant="body2">
             {steps.error}
           </Typography>
@@ -716,7 +716,7 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
           </Button>
         </StepActionRow>
 
-        {steps.error && steps.busyStep === 'signManifest' && (
+        {steps.error && steps.errorStep === 'signManifest' && (
           <Typography color="error" variant="body2">
             {steps.error}
           </Typography>
