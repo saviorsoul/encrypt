@@ -367,21 +367,50 @@ const DecryptStepsPanel = memo(function DecryptStepsPanel({
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 1,
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 2,
+          width: '100%',
         }}
       >
-        <Button
-          variant="outlined"
-          color="info"
-          loading={steps.runAllBusy}
-          onClick={steps.startRunAllSteps}
-          disabled={!steps.canRunAllSteps}
+        <Typography
+          variant="h4"
+          color="text.info"
+          sx={{
+            textTransform: 'uppercase',
+            flexShrink: 0,
+            pr: 4,
+            minWidth: 0,
+            borderLeft: '4px solid',
+            borderColor: 'info.main',
+            pl: 2,
+          }}
         >
-          Run all decryption steps
-        </Button>
+          Decrypt
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'inline-flex',
+            flexDirection: 'column',
+            gap: 2,
+            minWidth: 0,
+            flexShrink: 1,
+          }}
+        >
+          <Button
+            variant="outlined"
+            color="info"
+            loading={steps.runAllBusy}
+            onClick={steps.startRunAllSteps}
+            disabled={!steps.canRunAllSteps}
+            sx={{ width: 'fit-content', minWidth: 200 }}
+          >
+            Run all decryption steps
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={stepContentSx}>

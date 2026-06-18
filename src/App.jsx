@@ -14,7 +14,7 @@ import { AppLayout } from '@/components/layout/AppLayout.tsx';
 import { ProtectedRoute } from '@/components/routes/ProtectedRoute.tsx';
 import { LoginPage } from '@/pages/LoginPage.tsx';
 import { FeedPage } from '@/pages/FeedPage.tsx';
-import { ProofOfConceptPage } from '@/pages/ProofOfConceptPage.tsx';
+import { ProofOfConceptEncryptDecryptPage } from '@/pages/ProofOfConceptEncryptDecryptPage';
 import { ProofOfConceptFeedCommentPage } from '@/pages/ProofOfConceptFeedCommentPage.tsx';
 import { OneToOnePage } from '@/pages/OneToOnePage.tsx';
 import { GlossaryPage } from '@/pages/GlossaryPage.tsx';
@@ -60,12 +60,15 @@ function App() {
                         <Route
                           path="proof-of-concept"
                           element={
-                            <Navigate to="/proof-of-concepts/feed" replace />
+                            <Navigate
+                              to="/proof-of-concepts/encrypt-decrypt"
+                              replace
+                            />
                           }
                         />
                         <Route
-                          path="proof-of-concepts/feed"
-                          element={<ProofOfConceptPage />}
+                          path="proof-of-concepts/encrypt-decrypt"
+                          element={<ProofOfConceptEncryptDecryptPage />}
                         />
                         <Route
                           path="proof-of-concepts/feed-comment"

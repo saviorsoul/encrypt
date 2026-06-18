@@ -414,23 +414,51 @@ const EncryptStepsPanel = memo(function EncryptStepsPanel({
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'row',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 4,
+          gap: 2,
+          width: '100%',
         }}
       >
-        <MockRecipientsChip />
-        <Button
-          variant="outlined"
-          color="success"
-          loading={steps.runAllBusy}
-          onClick={steps.startRunAllSteps}
-          disabled={!steps.canRunAllSteps}
-          sx={{ width: 'fit-content' }}
+        <Typography
+          variant="h4"
+          color="text.success"
+          sx={{
+            textTransform: 'uppercase',
+            flexShrink: 0,
+            pr: 4,
+            minWidth: 0,
+            borderLeft: '4px solid',
+            borderColor: 'success.main',
+            pl: 2,
+          }}
         >
-          Run all encryption steps (without signing)
-        </Button>
+          Encrypt
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'inline-flex',
+            flexDirection: 'column',
+            gap: 2,
+            minWidth: 0,
+            flexShrink: 1,
+          }}
+        >
+          <MockRecipientsChip />
+          <Button
+            variant="outlined"
+            color="success"
+            loading={steps.runAllBusy}
+            onClick={steps.startRunAllSteps}
+            disabled={!steps.canRunAllSteps}
+            sx={{ width: 'fit-content', minWidth: 200 }}
+          >
+            Run all encryption steps (without signing)
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={stepContentSx}>

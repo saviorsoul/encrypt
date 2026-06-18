@@ -6,7 +6,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 export const PROOF_OF_CONCEPT_ITEMS = [
-  { label: 'Feed', to: '/proof-of-concepts/feed' },
+  { label: 'Encrypt / Decrypt', to: '/proof-of-concepts/encrypt-decrypt' },
   { label: 'Feed Comment', to: '/proof-of-concepts/feed-comment' },
 ] as const;
 

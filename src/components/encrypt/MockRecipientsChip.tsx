@@ -112,7 +112,7 @@ export function MockRecipientsChip() {
       placement="bottom"
       slotProps={{
         tooltip: {
-          sx: { maxWidth: 520, maxHeight: 420, overflow: 'auto' },
+          sx: { maxWidth: 500, maxHeight: 420, overflow: 'auto' },
         },
       }}
     >

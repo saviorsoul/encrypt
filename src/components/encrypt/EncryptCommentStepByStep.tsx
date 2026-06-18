@@ -46,7 +46,7 @@ export function EncryptCommentStepByStep() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
         Parent feed encryption is covered on the{' '}
-        <Link component={RouterLink} to="/proof-of-concepts/feed">
+        <Link component={RouterLink} to="/proof-of-concepts/encrypt-decrypt">
           Feed
         </Link>{' '}
         walkthrough. The steps below assume that manifest already exists and you

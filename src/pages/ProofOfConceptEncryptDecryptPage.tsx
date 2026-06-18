@@ -4,7 +4,7 @@ import Stack from '@mui/material/Stack';
 import { EncryptMessageStepByStep } from '@/components/encrypt/EncryptMessageStepByStep.tsx';
 import { DecryptMessageStepByStep } from '@/components/decrypt/DecryptMessageStepByStep.tsx';
 import { MockExternalRecipientProvider } from '@/components/providers/MockExternalRecipientProvider.tsx';
-export function ProofOfConceptPage() {
+export function ProofOfConceptEncryptDecryptPage() {
   const [manifestPayload, setManifestPayload] = useState('');
 
   return (
