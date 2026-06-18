@@ -1,0 +1,129 @@
+name: Release Electron
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            builder_args: --linux deb
+            artifact: electron-linux
+          - os: windows-latest
+            platform: win
+            builder_args: --win nsis
+            artifact: electron-windows
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: node -v && npm -v
+      - run: npm ci
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          npm pkg set "version=${TAG#v}"
+
+      - name: Build Vite bundle
+        run: npx vite build --mode electron
+
+      - name: Package installer
+        run: npx electron-builder ${{ matrix.builder_args }} --publish never
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: release-artifacts/**/*
+          draft: false
+          prerelease: ${{ contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') }}
+
+  notify:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: always() && !cancelled()
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Notify Discord — release result
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
+            title="Electron release published"
+            color=5763719
+            status="Linux (.deb) and Windows (.exe) installers are available on GitHub Releases."
+            status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
+          elif [[ "$BUILD_RESULT" != "success" ]]; then
+            title="Electron release build failed"
+            color=15548997
+            status="One or both platform builds did not complete successfully."
+          else
+            title="Electron release publish failed"
+            color=15548997
+            status="Builds succeeded, but uploading to GitHub Releases failed."
+          fi
+
+          description=$(printf '**Tag:** `%s`\n**Workflow:** [View run](%s)\n\n%s' \
+            "$TAG" "$RUN_URL" "$status")
+
+          bash .github/scripts/discord-notify.sh \
+            "$title · ${REPO}" \
+            "$description" \
+            "$color" \
+            "GitHub Actions · Electron release"
