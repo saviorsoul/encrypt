@@ -62,7 +62,7 @@ jobs:
       - name: Package installer
         run: npx electron-builder ${{ matrix.builder_args }} --publish never
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact_path }}
@@ -73,12 +73,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: release-artifacts
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -87,7 +87,6 @@ jobs:
             release-artifacts/**/*.deb
             release-artifacts/**/*.exe
           fail_on_unmatched_files: false
-          overwrite: true
           draft: false
           prerelease: ${{ contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-') }}
 
