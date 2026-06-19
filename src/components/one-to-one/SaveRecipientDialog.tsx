@@ -63,7 +63,7 @@ export function SaveRecipientDialog({
     duplicateKeyError ??
     (publicKeyInput.importing
       ? 'Validating public key…'
-      : 'Paste the recipient public key as x;y.');
+      : 'Paste x;y coordinates or a JSON object with x and y.');
 
   const canSave =
     trimmedName.length > 0 &&
@@ -96,13 +96,15 @@ export function SaveRecipientDialog({
           }}
         />
         <TextField
-          label="Public key (x;y)"
+          label="Public key"
           value={publicKeyJwkText}
           onChange={(e) => {
             setPublicKeyJwkText(e.target.value);
             onFieldChange?.();
           }}
           fullWidth
+          multiline
+          rows={6}
           margin="dense"
           disabled={saving}
           error={Boolean(publicKeyInput.jwkError || duplicateKeyError)}

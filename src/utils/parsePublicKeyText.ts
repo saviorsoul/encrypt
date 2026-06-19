@@ -10,13 +10,21 @@ export type ParsePublicKeyResult =
 function parseEcPublicKeyCoords(text: string): EcPublicKeyCoordsParseResult {
   const semicolon = text.indexOf(';');
   if (semicolon <= 0) {
-    return { ok: false, error: 'Public key must be x;y coordinates.' };
+    return {
+      ok: false,
+      error:
+        'Expected x;y coordinates (two base64url values separated by ;), or a JSON object with x and y.',
+    };
   }
 
   const x = text.slice(0, semicolon).trim();
   const y = text.slice(semicolon + 1).trim();
   if (!x || !y) {
-    return { ok: false, error: 'Public key must be x;y coordinates.' };
+    return {
+      ok: false,
+      error:
+        'Expected x;y coordinates (two base64url values separated by ;), or a JSON object with x and y.',
+    };
   }
 
   return { ok: true, coords: { x, y } };
@@ -31,19 +39,27 @@ function parseLegacyPublicKeyJwk(text: string): ParsePublicKeyResult {
   try {
     parsed = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'Invalid public key text.' };
+    return {
+      ok: false,
+      error:
+        'Invalid JSON. Paste x;y coordinates or a JSON object with x and y.',
+    };
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {
       ok: false,
-      error: 'Public key must be x;y or a JSON object with x and y.',
+      error:
+        'Expected a JSON object with x and y, or x;y coordinates.',
     };
   }
 
   const jwk = parsed as JsonWebKey;
   if (typeof jwk.x !== 'string' || typeof jwk.y !== 'string') {
-    return { ok: false, error: 'Missing or invalid x / y coordinates.' };
+    return {
+      ok: false,
+      error: 'JSON object must include x and y as base64url strings.',
+    };
   }
   if (jwk.d != null && jwk.d !== '') {
     return {
@@ -55,7 +71,8 @@ function parseLegacyPublicKeyJwk(text: string): ParsePublicKeyResult {
   try {
     return { ok: true, jwk: slimEcPublicJwk(jwk) };
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'Invalid public key.';
+    const message =
+      e instanceof Error ? e.message : 'Invalid public key coordinates.';
     return { ok: false, error: message };
   }
 }
@@ -79,7 +96,8 @@ export function parsePublicKeyText(text: string): ParsePublicKeyResult {
         jwk: ecPublicJwkFromCoords(coordsResult.coords),
       };
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Invalid public key.';
+      const message =
+        e instanceof Error ? e.message : 'Invalid public key coordinates.';
       return { ok: false, error: message };
     }
   }
