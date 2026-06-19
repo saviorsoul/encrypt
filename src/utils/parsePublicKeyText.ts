@@ -49,8 +49,7 @@ function parseLegacyPublicKeyJwk(text: string): ParsePublicKeyResult {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {
       ok: false,
-      error:
-        'Expected a JSON object with x and y, or x;y coordinates.',
+      error: 'Expected a JSON object with x and y, or x;y coordinates.',
     };
   }
 

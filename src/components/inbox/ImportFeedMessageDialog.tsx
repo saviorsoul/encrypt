@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -14,18 +8,12 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Stack from '@mui/material/Stack';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { MessageFeedCard } from '@/components/inbox/MessageFeedCard.tsx';
+import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
 import { useImportFeedMessage } from '@/hooks/useImportFeedMessage.ts';
 import { useImportMessagePreview } from '@/hooks/useImportMessagePreview.ts';
-import {
-  readValidatedImportJsonFromFile,
-  validateImportJsonText,
-} from '@/utils/readImportJsonFile.ts';
+import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
@@ -40,7 +28,6 @@ type ImportFeedMessageDialogProps = {
   externalImport?: boolean;
 };
 
-type ImportTab = 'json' | 'file';
 type ImportStep = 'input' | 'preview';
 
 export function ImportFeedMessageDialog({
@@ -53,13 +40,9 @@ export function ImportFeedMessageDialog({
   initialFileName = null,
   externalImport = false,
 }: ImportFeedMessageDialogProps) {
-  const [tab, setTab] = useState<ImportTab>('json');
   const [step, setStep] = useState<ImportStep>('input');
   const [payload, setPayload] = useState('');
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const externalPayload = useMemo(() => {
     if (!externalImport || !initialPayload) {
@@ -106,34 +89,30 @@ export function ImportFeedMessageDialog({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open && !externalImport) {
-      setTab('json');
-      setFileError(null);
       clearError();
       setStep('input');
       setPayload('');
-      setSelectedFileName(null);
     }
   }
 
   const trimmedPayload = displayPayload.trim();
   const payloadError = useMemo(() => {
-    if (step !== 'input' || tab !== 'json' || !trimmedPayload) {
+    if (step !== 'input' || !trimmedPayload) {
       return null;
     }
     return validatePayloadText(trimmedPayload);
-  }, [step, tab, trimmedPayload, validatePayloadText]);
+  }, [step, trimmedPayload, validatePayloadText]);
 
   const importValidationError = useMemo(() => {
-    if (step !== 'input' || tab !== 'json' || !trimmedPayload || payloadError) {
+    if (step !== 'input' || !trimmedPayload || payloadError) {
       return null;
     }
     return validateForImport(trimmedPayload);
-  }, [step, tab, trimmedPayload, payloadError, validateForImport]);
+  }, [step, trimmedPayload, payloadError, validateForImport]);
 
   const canImportFromExternal =
     externalImport &&
     step === 'input' &&
-    tab === 'json' &&
     trimmedPayload.length > 0 &&
     payloadError === null &&
     importValidationError === null &&
@@ -141,90 +120,57 @@ export function ImportFeedMessageDialog({
 
   const canPreviewFromJson =
     step === 'input' &&
-    tab === 'json' &&
     trimmedPayload.length > 0 &&
     payloadError === null &&
     importValidationError === null;
 
-  const openFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const goToPreview = useCallback(
-    (manifestText: string) => {
-      const validated = validateImportJsonText(manifestText);
+  const validateFeedFileContent = useCallback(
+    (text: string) => {
+      const validated = validateImportJsonText(text);
       if (validated.ok === false) {
-        if (tab === 'file') {
-          setFileError(validated.error);
-        }
-        return;
+        return validated;
       }
 
       const importValidationError = validateForImport(validated.text);
       if (importValidationError) {
-        if (tab === 'file') {
-          setFileError(importValidationError);
-        } else {
-          clearError();
-        }
-        return;
+        return { ok: false as const, error: importValidationError };
       }
 
-      setPayload(prettifyJsonText(validated.text));
-      setFileError(null);
+      return validated;
+    },
+    [validateForImport],
+  );
+
+  const goToPreview = useCallback(
+    (manifestText: string) => {
+      setPayload(prettifyJsonText(manifestText));
       clearError();
       setStep('preview');
-    },
-    [tab, validateForImport, clearError],
-  );
-
-  const handleFileChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0] ?? null;
-      event.target.value = '';
-
-      setFileError(null);
-      clearError();
-
-      if (!file) {
-        setSelectedFileName(null);
-        return;
-      }
-
-      setSelectedFileName(file.name);
-
-      void (async () => {
-        const result = await readValidatedImportJsonFromFile(file);
-        if (result.ok === false) {
-          setSelectedFileName(null);
-          setFileError(result.error);
-          return;
-        }
-
-        goToPreview(result.text);
-      })();
-    },
-    [clearError, goToPreview],
-  );
-
-  const handleTabChange = useCallback(
-    (_event: React.SyntheticEvent, value: ImportTab) => {
-      setTab(value);
-      setFileError(null);
-      clearError();
     },
     [clearError],
   );
 
-  useEffect(() => {
-    if (open && step === 'input' && tab === 'file' && !externalImport) {
-      openFilePicker();
-    }
-  }, [open, step, tab, externalImport, openFilePicker]);
+  const handleFileContentLoaded = useCallback(
+    (text: string) => {
+      goToPreview(text);
+    },
+    [goToPreview],
+  );
 
   const handlePreviewFromJson = useCallback(() => {
-    goToPreview(trimmedPayload);
-  }, [goToPreview, trimmedPayload]);
+    const validated = validateImportJsonText(trimmedPayload);
+    if (validated.ok === false) {
+      return;
+    }
+
+    const importValidationError = validateForImport(validated.text);
+    if (importValidationError) {
+      clearError();
+      return;
+    }
+
+    goToPreview(validated.text);
+  }, [goToPreview, trimmedPayload, validateForImport, clearError]);
 
   const handleBack = useCallback(() => {
     setStep('input');
@@ -250,109 +196,59 @@ export function ImportFeedMessageDialog({
         <Stack spacing={2} sx={{ pt: 0.5 }}>
           {step === 'input' ? (
             <>
-              {!externalImport ? (
-                <Typography variant="body2" color="text.secondary">
-                  Add an encrypted feed message from a manifest JSON file or by
-                  pasting the signed payload. Your public key must be listed as
-                  a recipient.
-                </Typography>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {initialFileName ? (
-                    <>
-                      Review{' '}
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        sx={{ fontWeight: 600 }}
-                      >
-                        {initialFileName}
-                      </Typography>
-                      , then import it into your feed. Your public key must be
-                      listed as a recipient.
-                    </>
-                  ) : (
-                    <>
-                      Review the encrypted message below, then import it into
-                      your feed. Your public key must be listed as a recipient.
-                    </>
-                  )}
-                </Typography>
-              )}
-
-              {!externalImport ? (
-                <Tabs
-                  value={tab}
-                  onChange={handleTabChange}
-                  aria-label="Import message method"
-                >
-                  <Tab label="Paste JSON" value="json" />
-                  <Tab label="From file" value="file" />
-                </Tabs>
-              ) : null}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={handleFileChange}
+              <ImportJsonPayloadInput
+                payload={displayPayload}
+                onPayloadChange={setPayload}
+                disabled={busy}
+                readOnly={externalImport}
+                readOnlyFileName={initialFileName}
+                description={
+                  <Typography variant="body2" color="text.secondary">
+                    Add an encrypted feed message from a manifest JSON file or
+                    by pasting the signed payload. Your public key must be
+                    listed as a recipient.
+                  </Typography>
+                }
+                readOnlyDescription={
+                  <Typography variant="body2" color="text.secondary">
+                    {initialFileName ? (
+                      <>
+                        Review{' '}
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{ fontWeight: 600 }}
+                        >
+                          {initialFileName}
+                        </Typography>
+                        , then import it into your feed. Your public key must be
+                        listed as a recipient.
+                      </>
+                    ) : (
+                      <>
+                        Review the encrypted message below, then import it into
+                        your feed. Your public key must be listed as a
+                        recipient.
+                      </>
+                    )}
+                  </Typography>
+                }
+                getPayloadError={(text) => {
+                  if (!text) {
+                    return null;
+                  }
+                  return validatePayloadText(text);
+                }}
+                validateFileContent={validateFeedFileContent}
+                onFileContentLoaded={handleFileContentLoaded}
+                onClearErrors={clearError}
               />
 
-              {tab === 'file' && !externalImport ? (
-                <Stack spacing={1.5}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<UploadFileOutlinedIcon />}
-                    onClick={openFilePicker}
-                    disabled={busy}
-                  >
-                    Choose JSON file
-                  </Button>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedFileName
-                      ? `Selected: ${selectedFileName}`
-                      : 'Select a signed manifest JSON file.'}
-                  </Typography>
-                  {fileError && <Alert severity="error">{fileError}</Alert>}
-                </Stack>
-              ) : (
-                <TextField
-                  autoFocus
-                  label="Encrypted JSON"
-                  value={displayPayload}
-                  onChange={(event) => {
-                    if (externalImport) {
-                      return;
-                    }
-                    setPayload(event.target.value);
-                    clearError();
-                  }}
-                  fullWidth
-                  multiline
-                  rows={14}
-                  disabled={busy || externalImport}
-                  placeholder="Paste signed manifest JSON…"
-                  error={Boolean(payloadError)}
-                  helperText={
-                    payloadError ??
-                    'Paste the full signed manifest JSON exported from encryption.'
-                  }
-                  slotProps={{
-                    input: {
-                      sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
-                    },
-                  }}
-                />
-              )}
-
-              {importValidationError && tab === 'json' && (
+              {importValidationError && (
                 <Alert severity="error">{importValidationError}</Alert>
               )}
 
-              {importError && tab === 'json' && (
-                <Alert severity="error">{importError}</Alert>
-              )}
+              {importError && <Alert severity="error">{importError}</Alert>}
             </>
           ) : (
             <>
@@ -396,7 +292,7 @@ export function ImportFeedMessageDialog({
             <Button onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            {tab === 'json' && externalImport ? (
+            {externalImport ? (
               <Button
                 variant="contained"
                 disabled={!canImportFromExternal}
@@ -404,8 +300,7 @@ export function ImportFeedMessageDialog({
               >
                 {busy ? 'Importing…' : 'Import message'}
               </Button>
-            ) : null}
-            {tab === 'json' && !externalImport ? (
+            ) : (
               <Button
                 variant="contained"
                 disabled={!canPreviewFromJson}
@@ -413,7 +308,7 @@ export function ImportFeedMessageDialog({
               >
                 Preview
               </Button>
-            ) : null}
+            )}
           </>
         ) : (
           <>

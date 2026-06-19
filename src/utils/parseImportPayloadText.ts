@@ -5,12 +5,15 @@ import {
 import { validateManifestPayload } from '@/crypto/manifestDecrypt.ts';
 import { validateManifestShareWirePayload } from '@/crypto/manifestShare.ts';
 import type { KeyManifestMap, ManifestCorePayload } from '@/types/manifest.ts';
-import type { ManifestPayload } from '@/types/manifest.ts';
 import type { ManifestShareWirePayload } from '@/types/manifestShare.ts';
 import {
   encryptedMessageFingerprintFromPayloadJson,
   type EncryptedMessageFingerprint,
 } from '@/types/oneToOne.ts';
+import {
+  parseJsonObjectText,
+  parseManifestPayloadText,
+} from '@/utils/parseManifestPayloadText.ts';
 
 export type ParsedOriginalImportPayload = {
   kind: 'original';
@@ -97,9 +100,7 @@ function parseShareImportPayload(
     };
   }
 
-  const parentValidationError = validateManifestPayload(
-    wire.originalMessage as ManifestPayload,
-  );
+  const parentValidationError = validateManifestPayload(wire.originalMessage);
   if (parentValidationError) {
     return {
       ok: false,
@@ -118,19 +119,13 @@ function parseShareImportPayload(
   };
 }
 
-function parseOriginalImportPayload(
-  parsed: Record<string, unknown>,
-  text: string,
-): ParseImportPayloadResult {
-  const validationError = validateManifestPayload(
-    parsed as unknown as ManifestPayload,
-  );
-  if (validationError) {
-    return { ok: false, error: validationError };
+function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
+  const manifestResult = parseManifestPayloadText(text);
+  if (manifestResult.ok === false) {
+    return manifestResult;
   }
 
-  const payload = parsed as unknown as ManifestPayload;
-  const keyManifest = payload.keyManifest;
+  const keyManifest = manifestResult.payload.keyManifest;
   if (!keyManifest || Object.keys(keyManifest).length === 0) {
     return {
       ok: false,
@@ -150,23 +145,17 @@ function parseOriginalImportPayload(
 
 /** Parse and validate feed import JSON (original manifest or shared export). */
 export function parseImportPayloadText(text: string): ParseImportPayloadResult {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return { ok: false, error: 'Invalid JSON.' };
+  const json = parseJsonObjectText(text);
+  if (json.ok === false) {
+    return json;
   }
 
-  if (!isRecord(parsed)) {
-    return { ok: false, error: 'Payload must be a JSON object.' };
-  }
-
-  const shareWire = normalizeShareImportWire(parsed);
+  const shareWire = normalizeShareImportWire(json.parsed);
   if (shareWire) {
     return parseShareImportPayload(shareWire);
   }
 
-  return parseOriginalImportPayload(parsed, text);
+  return parseOriginalImportPayload(text);
 }
 
 export function recipientKeyInImportPayload(

@@ -118,6 +118,9 @@ export function OneToOnePage() {
   const [decryptInitialPayload, setDecryptInitialPayload] = useState<
     string | null
   >(null);
+  const [decryptInitialFileName, setDecryptInitialFileName] = useState<
+    string | null
+  >(null);
   const [decryptError, setDecryptError] = useState<string | null>(null);
   const [decryptBusy, setDecryptBusy] = useState(false);
   const [bulkDecryptBusy, setBulkDecryptBusy] = useState(false);
@@ -159,6 +162,7 @@ export function OneToOnePage() {
   const handlePendingExternalImport = useCallback(
     (consumed: PendingExternalImport) => {
       setDecryptInitialPayload(consumed.text);
+      setDecryptInitialFileName(consumed.fileName);
       setDecryptError(null);
       setDecryptDialogOpen(true);
     },
@@ -498,6 +502,7 @@ export function OneToOnePage() {
   const handleOpenDecryptDialog = useCallback(() => {
     setDecryptError(null);
     setDecryptInitialPayload(null);
+    setDecryptInitialFileName(null);
     setDecryptDialogOpen(true);
   }, []);
 
@@ -508,6 +513,7 @@ export function OneToOnePage() {
     setUnknownRecipientDialog(null);
     setUnknownRecipientError(null);
     setDecryptInitialPayload(null);
+    setDecryptInitialFileName(null);
     setDecryptDialogOpen(false);
   }, [decryptBusy, unknownRecipientSaving]);
 
@@ -827,6 +833,7 @@ export function OneToOnePage() {
         decryptDisabled={isImportMessageBlocked}
         error={decryptError}
         initialPayload={decryptInitialPayload}
+        initialFileName={decryptInitialFileName}
         onClose={handleCloseDecryptDialog}
         onPayloadChange={() => setDecryptError(null)}
         onDecrypt={(payload) => void handleDecryptFromDialog(payload)}

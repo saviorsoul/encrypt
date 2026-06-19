@@ -33,7 +33,7 @@ export function parseManifestCorePayload(
   } catch {
     throw new Error('Invalid JSON.');
   }
-  const validationError = validateManifestPayload(payload as ManifestPayload);
+  const validationError = validateManifestPayload(payload);
   if (validationError) {
     throw new Error(validationError);
   }

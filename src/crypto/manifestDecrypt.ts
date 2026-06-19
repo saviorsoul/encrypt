@@ -35,22 +35,31 @@ export function parseManifestPayload(payloadJson: string): ManifestPayload {
 }
 
 /** Returns an error message when unsupported; `null` when the payload is acceptable. */
-export function validateManifestPayload(
-  payload: ManifestPayload,
-): string | null {
-  if (payload.version !== MANIFEST_VERSION || payload.wrap !== MANIFEST_WRAP) {
+export function validateManifestPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return 'Payload must be a JSON object.';
+  }
+
+  const manifest = payload as ManifestPayload;
+  if (manifest.version !== MANIFEST_VERSION || manifest.wrap !== MANIFEST_WRAP) {
     return `Only supported version is ${MANIFEST_VERSION}, wrap: ${MANIFEST_WRAP}.`;
   }
 
-  if (!payload.senderPublicJwk) {
+  if (!manifest.senderPublicJwk) {
     return 'Missing senderPublicJwk in payload (invalid manifest).';
   }
 
-  if (!payload.encryptedContent?.iv || !payload.encryptedContent?.ciphertext) {
+  if (!manifest.encryptedContent?.iv || !manifest.encryptedContent?.ciphertext) {
     return 'Missing encryptedContent iv or ciphertext in payload (invalid manifest).';
   }
 
   return null;
+}
+
+export function isManifestPayload(
+  payload: unknown,
+): payload is ManifestPayload {
+  return validateManifestPayload(payload) === null;
 }
 
 /** Full manifest signable body (everything except the top-level `senderSignature`). */

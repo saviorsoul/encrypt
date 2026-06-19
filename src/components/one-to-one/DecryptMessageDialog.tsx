@@ -5,9 +5,12 @@ import { AppDialog } from '@/components/shared/AppDialog.tsx';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import TextField from '@mui/material/TextField';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
 import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
+import { validateManifestJsonText } from '@/utils/readImportJsonFile.ts';
 
 type DecryptMessageDialogProps = {
   open: boolean;
@@ -15,6 +18,7 @@ type DecryptMessageDialogProps = {
   decryptDisabled?: boolean;
   error: string | null;
   initialPayload?: string | null;
+  initialFileName?: string | null;
   onClose: () => void;
   onDecrypt: (encryptedPayload: string) => void;
   onPayloadChange?: () => void;
@@ -26,6 +30,7 @@ export function DecryptMessageDialog({
   decryptDisabled = false,
   error,
   initialPayload = null,
+  initialFileName = null,
   onClose,
   onDecrypt,
   onPayloadChange,
@@ -40,6 +45,7 @@ export function DecryptMessageDialog({
     }
   }
 
+  const readOnly = Boolean(initialPayload);
   const displayPayload = useMemo(() => {
     if (initialPayload) {
       return prettifyJsonText(initialPayload);
@@ -56,7 +62,7 @@ export function DecryptMessageDialog({
   }, [trimmedPayload]);
   const payloadError = parsed?.ok === false ? parsed.error : null;
   const canDecrypt = parsed?.ok === true && !decrypting && !decryptDisabled;
-  const helperText =
+  const pasteHelperText =
     payloadError ??
     'You will be prompted to upload a private key that matches the sender or recipient public key.';
 
@@ -64,36 +70,36 @@ export function DecryptMessageDialog({
     <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Import message</DialogTitle>
       <DialogContent>
-        <TextField
-          autoFocus
-          label="Encrypted JSON"
-          value={displayPayload}
-          onChange={(e) => {
-            if (initialPayload) {
-              return;
-            }
-            setPayload(e.target.value);
-            onPayloadChange?.();
-          }}
-          fullWidth
-          margin="dense"
-          multiline
-          rows={14}
-          disabled={decrypting || Boolean(initialPayload)}
-          placeholder="Paste signed manifest JSON to decrypt…"
-          error={Boolean(payloadError)}
-          helperText={helperText}
-          slotProps={{
-            input: {
-              sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
-            },
-          }}
-        />
-        {error && (
-          <Alert severity="error" sx={{ mt: 1 }}>
-            {error}
-          </Alert>
-        )}
+        <Stack spacing={2} sx={{ pt: 0.5 }}>
+          {!readOnly ? (
+            <Typography variant="body2" color="text.secondary">
+              Add an encrypted one-to-one message from a manifest JSON file or
+              by pasting the signed payload. You will be prompted to upload a
+              private key that matches the sender or recipient public key.
+            </Typography>
+          ) : null}
+
+          <ImportJsonPayloadInput
+            payload={displayPayload}
+            onPayloadChange={setPayload}
+            disabled={decrypting}
+            readOnly={readOnly}
+            readOnlyFileName={initialFileName}
+            placeholder="Paste signed manifest JSON to decrypt…"
+            pasteHelperText={pasteHelperText}
+            getPayloadError={(text) => {
+              if (!text) {
+                return null;
+              }
+              const result = parseManifestPayloadText(text);
+              return result.ok === false ? result.error : null;
+            }}
+            validateFileContent={validateManifestJsonText}
+            onClearErrors={onPayloadChange}
+          />
+
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={decrypting}>

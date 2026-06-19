@@ -1,4 +1,5 @@
 import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
+import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
 
 export const MAX_IMPORT_JSON_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -99,7 +100,7 @@ export function validateBaseJsonText(text: string): ValidatedBaseJsonResult {
   return { ok: true, text: JSON.stringify(parsed), parsed };
 }
 
-/** File metadata checks only — content is validated by {@link validateImportJsonText}. */
+/** File metadata checks only — content is validated by the supplied text validator. */
 function assertSafeJsonFileMetadata(file: File): string | null {
   if (file.size > MAX_IMPORT_JSON_FILE_BYTES) {
     return SIZE_LIMIT_ERROR;
@@ -120,29 +121,49 @@ function assertSafeJsonFileMetadata(file: File): string | null {
   return null;
 }
 
-/**
- * Parse import text as JSON, reject unsafe shapes, validate manifest schema,
- * and return canonical JSON text safe to pass into import logic.
- */
-export function validateImportJsonText(
+type ParsePayloadTextResult = { ok: true } | { ok: false; error: string };
+
+function validateJsonText(
   text: string,
+  parsePayload: (text: string) => ParsePayloadTextResult,
 ): ValidatedImportJsonResult {
   const base = validateBaseJsonText(text);
   if (base.ok === false) {
     return base;
   }
 
-  const importResult = parseImportPayloadText(base.text);
-  if (importResult.ok === false) {
-    return fail(importResult.error);
+  const parsed = parsePayload(base.text);
+  if (parsed.ok === false) {
+    return fail(parsed.error);
   }
 
   return { ok: true, text: base.text };
 }
 
-/** Read a .json file, validate contents, and return canonical import JSON text. */
-export async function readValidatedImportJsonFromFile(
+/**
+ * Parse import text as JSON, reject unsafe shapes, validate feed import schema,
+ * and return canonical JSON text safe to pass into import logic.
+ */
+export function validateImportJsonText(
+  text: string,
+): ValidatedImportJsonResult {
+  return validateJsonText(text, parseImportPayloadText);
+}
+
+/**
+ * Parse import text as JSON, reject unsafe shapes, validate manifest schema,
+ * and return canonical JSON text safe to pass into one-to-one decrypt logic.
+ */
+export function validateManifestJsonText(
+  text: string,
+): ValidatedImportJsonResult {
+  return validateJsonText(text, parseManifestPayloadText);
+}
+
+/** Read a .json file and validate contents with the given text validator. */
+export async function readValidatedJsonFromFile(
   file: File,
+  validateText: (text: string) => ValidatedImportJsonResult,
 ): Promise<ValidatedImportJsonResult> {
   const metadataError = assertSafeJsonFileMetadata(file);
   if (metadataError) {
@@ -156,5 +177,5 @@ export async function readValidatedImportJsonFromFile(
     return fail('Failed to read file.');
   }
 
-  return validateImportJsonText(text);
+  return validateText(text);
 }
