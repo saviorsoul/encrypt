@@ -2,6 +2,13 @@
 
 Encryption app run locally. Build with React and Electron.
 
+## Download
+
+Pre-built desktop installers are published on [GitHub Releases](https://github.com/saviorsoul/encrypt/releases/latest):
+
+- **Windows** — download the `.exe` installer
+- **Linux** — download the `.deb` package (Ubuntu / Debian)
+
 ## Prerequisites
 
 You need **Node.js 24 or newer** and **npm** (included with Node.js).
@@ -98,7 +105,7 @@ On Linux, the dev and preview scripts pass `--no-sandbox` to Electron to avoid s
 
 The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message** or **sign in with a private key**.
 
-After installing the `.deb` package from `release/`, right-click a `.json` or `.jwk` file and choose **Open With → Encrypt**. If Encrypt is not listed, use **Open With Other Application** once; later opens will show it in the menu.
+After installing the `.deb` package (from [GitHub Releases](https://github.com/saviorsoul/encrypt/releases/latest) or a local `release/` build), right-click a `.json` or `.jwk` file and choose **Open With → Encrypt**. If Encrypt is not listed, use **Open With Other Application** once; later opens will show it in the menu.
 
 The installed binary is at `/opt/Encrypt/encrypt`. File associations are registered automatically by the `.deb` installer.
 
