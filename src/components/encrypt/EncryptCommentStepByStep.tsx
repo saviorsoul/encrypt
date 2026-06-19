@@ -105,7 +105,6 @@ function ParentFeedMessagePanel({ demo }: ParentFeedMessagePanelProps) {
       <StepOutputTextField
         label="Message ID"
         value={demo.parentMessageId}
-        multiline
         fullWidth
         slotProps={{ input: { readOnly: true } }}
       />
@@ -141,9 +140,6 @@ const PlaintextCommentInput = memo(function PlaintextCommentInput({
       multiline
       rows={3}
       fullWidth
-      onClick={() => {
-        /* editable field */
-      }}
     />
   );
 });
@@ -281,7 +277,6 @@ function EncryptCommentBodyExampleCaption({
           tooltipMessage="Included in payload"
           label="Random comment IV (nonce)"
           value={contentIvBase64}
-          multiline
           rows={1}
           fullWidth
           slotProps={{ input: { readOnly: true } }}
