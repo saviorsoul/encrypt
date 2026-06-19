@@ -9,12 +9,18 @@ import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackb
 
 const monospaceFieldSx = {
   fontFamily: 'monospace',
-  '& textarea': { fontSize: '0.75rem' },
+  '& .MuiInputBase-input': {
+    fontSize: '0.75rem',
+  },
 } as const;
 
 export type StepOutputTextFieldPaletteColor = keyof Theme['palette'];
 
-function coloredFieldSx(color: StepOutputTextFieldPaletteColor) {
+function stepOutputFieldSx(color?: StepOutputTextFieldPaletteColor) {
+  if (color == null) {
+    return monospaceFieldSx;
+  }
+
   return {
     ...monospaceFieldSx,
     '& .MuiInputLabel-root': {
@@ -130,7 +136,7 @@ export function StepOutputTextField({
         } as React.ComponentProps<typeof TextField>['slotProps']
       }
       sx={{
-        ...(color != null ? coloredFieldSx(color) : monospaceFieldSx),
+        ...stepOutputFieldSx(color),
         ...sx,
       }}
     />
