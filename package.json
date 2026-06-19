@@ -1,6 +1,6 @@
 {
   "name": "encrypt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "homepage": "https://saviorsoul.github.io/encrypt",
   "bugs": "https://github.com/saviorsoul/encrypt/issues",
@@ -57,7 +57,10 @@
     "icon": "electron/icons",
     "fileAssociations": [
       {
-        "ext": ["json", "jwk"],
+        "ext": [
+          "json",
+          "jwk"
+        ],
         "mimeType": "application/json",
         "name": "JSON",
         "description": "Encrypt message or key file"
@@ -71,7 +74,9 @@
       "electron/**/*"
     ],
     "linux": {
-      "target": ["deb"],
+      "target": [
+        "deb"
+      ],
       "category": "Utility",
       "syncDesktopName": true,
       "desktop": {
