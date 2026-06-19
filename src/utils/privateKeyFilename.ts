@@ -1,7 +1,15 @@
+function safeKeyDownloadStem(username: string): string {
+  return username.trim().replace(/[^a-zA-Z0-9._-]+/g, '_') || 'user';
+}
+
 /** Safe filename for a user's ECDH private key download. */
 export function privateKeyDownloadFilename(username: string): string {
-  const safe = username.trim().replace(/[^a-zA-Z0-9._-]+/g, '_') || 'user';
-  return `${safe}-ecdh-private-key.json`;
+  return `${safeKeyDownloadStem(username)}-ecdh-private-key.json`;
+}
+
+/** Safe filename for a user's ECDH public key download. */
+export function publicKeyDownloadFilename(username: string): string {
+  return `${safeKeyDownloadStem(username)}-ecdh-public-key.json`;
 }
 
 const PRIVATE_KEY_DOWNLOAD_SUFFIX = '-ecdh-private-key';
