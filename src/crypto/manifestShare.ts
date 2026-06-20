@@ -42,6 +42,7 @@ import {
   getStoredMessageById,
   listShareDeliveriesForParentMessage,
 } from '@/services/db/storedMessages.ts';
+import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function isShareDelivery(
   message: Pick<StoredMessage, 'parentMessageId'>,
@@ -58,12 +59,9 @@ export function getCommentThreadMessageId(
 export function parseManifestShareCorePayload(
   payloadJson: string,
 ): ManifestShareCorePayload {
-  let payload: ManifestShareCorePayload;
-  try {
-    payload = JSON.parse(payloadJson) as ManifestShareCorePayload;
-  } catch {
-    throw new Error('Invalid JSON.');
-  }
+  const payload = parseBaseJsonObjectOrThrow(
+    payloadJson,
+  ) as unknown as ManifestShareCorePayload;
   const validationError = validateManifestShareCorePayload(payload);
   if (validationError) {
     throw new Error(validationError);

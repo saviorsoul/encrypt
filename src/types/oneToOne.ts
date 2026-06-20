@@ -1,3 +1,5 @@
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
+
 export type ThreadSide = 'sender' | 'recipient';
 
 export type PartyKeyIds = {
@@ -29,19 +31,20 @@ export type EncryptedMessageFingerprint = {
 export function encryptedMessageFingerprintFromPayloadJson(
   payloadJson: string,
 ): EncryptedMessageFingerprint | null {
-  try {
-    const parsed = JSON.parse(payloadJson) as {
-      encryptedContent?: { iv?: string; ciphertext?: string };
-    };
-    const iv = parsed.encryptedContent?.iv;
-    const ciphertext = parsed.encryptedContent?.ciphertext;
-    if (!iv || !ciphertext) {
-      return null;
-    }
-    return { contentIv: iv, contentCiphertext: ciphertext };
-  } catch {
+  const base = validateBaseJsonText(payloadJson);
+  if (base.ok === false) {
     return null;
   }
+
+  const parsed = base.parsed as {
+    encryptedContent?: { iv?: string; ciphertext?: string };
+  };
+  const iv = parsed.encryptedContent?.iv;
+  const ciphertext = parsed.encryptedContent?.ciphertext;
+  if (!iv || !ciphertext) {
+    return null;
+  }
+  return { contentIv: iv, contentCiphertext: ciphertext };
 }
 
 export function encryptedMessageFingerprintsMatch(

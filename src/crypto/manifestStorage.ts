@@ -5,9 +5,11 @@ import type {
   ManifestPayload,
 } from '@/types/manifest.ts';
 import {
+  isManifestCorePayload,
   parseManifestPayload,
   validateManifestPayload,
 } from '@/crypto/manifestDecrypt.ts';
+import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function splitManifestForStorage(fullPayloadJson: string): {
   corePayloadJson: string;
@@ -27,17 +29,13 @@ export function splitManifestForStorage(fullPayloadJson: string): {
 export function parseManifestCorePayload(
   payloadJson: string,
 ): ManifestCorePayload {
-  let payload: ManifestCorePayload;
-  try {
-    payload = JSON.parse(payloadJson) as ManifestCorePayload;
-  } catch {
-    throw new Error('Invalid JSON.');
+  const parsed = parseBaseJsonObjectOrThrow(payloadJson);
+  if (!isManifestCorePayload(parsed)) {
+    throw new Error(
+      validateManifestPayload(parsed) ?? 'Invalid manifest core payload.',
+    );
   }
-  const validationError = validateManifestPayload(payload);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-  return payload;
+  return parsed;
 }
 
 export function assembleManifestForRecipient(

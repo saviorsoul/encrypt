@@ -1,6 +1,7 @@
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
 import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
 
 export const UNKNOWN_SENDER_LABEL = 'Not known';
 
@@ -25,27 +26,25 @@ export async function resolveSenderLabelFromImportText(
   }
 
   if (parsed.payload.kind === 'share') {
-    const parent = JSON.parse(parsed.payload.parentCorePayloadJson) as {
-      senderPublicJwk?: JsonWebKey;
-    };
-    if (!parent.senderPublicJwk) {
+    const parentBase = validateBaseJsonText(
+      parsed.payload.parentCorePayloadJson,
+    );
+    if (parentBase.ok === false || !parentBase.parsed.senderPublicJwk) {
       return UNKNOWN_SENDER_LABEL;
     }
     const senderKeyId = await ecPublicJwkThumbprintSha256(
-      parent.senderPublicJwk,
+      parentBase.parsed.senderPublicJwk as JsonWebKey,
     );
     return resolveUsernameForKeyId(senderKeyId);
   }
 
-  const manifest = JSON.parse(parsed.payload.fullPayloadJson) as {
-    senderPublicJwk?: JsonWebKey;
-  };
-  if (!manifest.senderPublicJwk) {
+  const manifestBase = validateBaseJsonText(parsed.payload.fullPayloadJson);
+  if (manifestBase.ok === false || !manifestBase.parsed.senderPublicJwk) {
     return UNKNOWN_SENDER_LABEL;
   }
 
   const senderKeyId = await ecPublicJwkThumbprintSha256(
-    manifest.senderPublicJwk,
+    manifestBase.parsed.senderPublicJwk as JsonWebKey,
   );
   return resolveUsernameForKeyId(senderKeyId);
 }

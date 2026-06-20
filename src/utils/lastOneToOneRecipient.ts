@@ -1,3 +1,5 @@
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
+
 export const ONE_TO_ONE_LAST_RECIPIENT_STORAGE_KEY =
   'social-fe-one-to-one-last-recipient';
 
@@ -9,17 +11,13 @@ function readLastRecipientByUser(): LastRecipientByUser {
     if (!raw) {
       return {};
     }
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      Array.isArray(parsed)
-    ) {
+    const base = validateBaseJsonText(raw);
+    if (base.ok === false) {
       return {};
     }
     const result: LastRecipientByUser = {};
     for (const [loggedInUsername, recipientUsername] of Object.entries(
-      parsed,
+      base.parsed,
     )) {
       if (
         typeof loggedInUsername === 'string' &&

@@ -2,6 +2,7 @@ import {
   ecPublicJwkFromCoords,
   slimEcPublicJwk,
 } from '@/crypto/ecPublicKey.ts';
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
 
 export type ParsePublicKeyResult =
   | { ok: true; jwk: JsonWebKey }
@@ -35,25 +36,12 @@ type EcPublicKeyCoordsParseResult =
   | { ok: false; error: string };
 
 function parseLegacyPublicKeyJwk(text: string): ParsePublicKeyResult {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return {
-      ok: false,
-      error:
-        'Invalid JSON. Paste x;y coordinates or a JSON object with x and y.',
-    };
+  const base = validateBaseJsonText(text);
+  if (base.ok === false) {
+    return { ok: false, error: base.error };
   }
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return {
-      ok: false,
-      error: 'Expected a JSON object with x and y, or x;y coordinates.',
-    };
-  }
-
-  const jwk = parsed as JsonWebKey;
+  const jwk = base.parsed as JsonWebKey;
   if (typeof jwk.x !== 'string' || typeof jwk.y !== 'string') {
     return {
       ok: false,

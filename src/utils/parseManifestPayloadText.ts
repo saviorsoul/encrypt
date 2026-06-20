@@ -3,6 +3,7 @@ import {
   validateManifestPayload,
 } from '@/crypto/manifestDecrypt.ts';
 import type { ManifestPayload } from '@/types/manifest.ts';
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
 
 export type ParseJsonObjectResult =
   | { ok: true; parsed: Record<string, unknown> }
@@ -12,20 +13,14 @@ export type ParseManifestPayloadResult =
   | { ok: true; payload: ManifestPayload }
   | { ok: false; error: string };
 
-/** Parse JSON text and require a plain object root. */
+/** Parse JSON text and require a plain object root with safe key shapes. */
 export function parseJsonObjectText(text: string): ParseJsonObjectResult {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return { ok: false, error: 'Invalid JSON.' };
+  const base = validateBaseJsonText(text);
+  if (base.ok === false) {
+    return { ok: false, error: base.error };
   }
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { ok: false, error: 'Payload must be a JSON object.' };
-  }
-
-  return { ok: true, parsed: parsed as Record<string, unknown> };
+  return { ok: true, parsed: base.parsed };
 }
 
 /** Parse and validate signed manifest JSON text without throwing. */

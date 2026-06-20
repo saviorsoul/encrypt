@@ -1,10 +1,8 @@
 import { parsePrivateKeyJwkText } from '@/crypto/privateKeyFile.ts';
 import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
 import { parseManifestPayloadText } from '@/utils/parseManifestPayloadText.ts';
-import {
-  validateBaseJsonText,
-  validateImportJsonText,
-} from '@/utils/readImportJsonFile.ts';
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
+import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 
 export type ClassifiedExternalJson =
   | { kind: 'message'; text: string }

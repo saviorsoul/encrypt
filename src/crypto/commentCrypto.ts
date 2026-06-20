@@ -23,9 +23,10 @@ import {
   verifyCanonicalSignature,
 } from '@/crypto/manifestSign.ts';
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
+import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function parseCommentPayload(payloadJson: string): CommentPayload {
-  return JSON.parse(payloadJson) as CommentPayload;
+  return parseBaseJsonObjectOrThrow(payloadJson) as unknown as CommentPayload;
 }
 
 function parseCommentHkdfSalt(saltBase64: string): Uint8Array<ArrayBuffer> {

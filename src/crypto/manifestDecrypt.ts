@@ -3,6 +3,7 @@ import { base64ToBytes } from '@/utils/bytes.ts';
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import type {
   KeyManifestRecipientPayload,
+  ManifestCorePayload,
   ManifestEncryptedContentSignableBody,
   ManifestPayload,
   ManifestSignableBody,
@@ -19,19 +20,14 @@ import {
   parseManifestCorePayload,
 } from '@/crypto/manifestStorage.ts';
 import { getMessageKeyManifestEntry } from '@/services/db/storedMessageKeyManifest.ts';
+import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function parseManifestPayload(payloadJson: string): ManifestPayload {
-  let payload: ManifestPayload;
-  try {
-    payload = JSON.parse(payloadJson) as ManifestPayload;
-  } catch {
-    throw new Error('Invalid JSON.');
+  const parsed = parseBaseJsonObjectOrThrow(payloadJson);
+  if (!isManifestPayload(parsed)) {
+    throw new Error(validateManifestPayload(parsed) ?? 'Invalid manifest.');
   }
-  const validationError = validateManifestPayload(payload);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-  return payload;
+  return parsed;
 }
 
 /** Returns an error message when unsupported; `null` when the payload is acceptable. */
@@ -41,7 +37,10 @@ export function validateManifestPayload(payload: unknown): string | null {
   }
 
   const manifest = payload as ManifestPayload;
-  if (manifest.version !== MANIFEST_VERSION || manifest.wrap !== MANIFEST_WRAP) {
+  if (
+    manifest.version !== MANIFEST_VERSION ||
+    manifest.wrap !== MANIFEST_WRAP
+  ) {
     return `Only supported version is ${MANIFEST_VERSION}, wrap: ${MANIFEST_WRAP}.`;
   }
 
@@ -49,7 +48,10 @@ export function validateManifestPayload(payload: unknown): string | null {
     return 'Missing senderPublicJwk in payload (invalid manifest).';
   }
 
-  if (!manifest.encryptedContent?.iv || !manifest.encryptedContent?.ciphertext) {
+  if (
+    !manifest.encryptedContent?.iv ||
+    !manifest.encryptedContent?.ciphertext
+  ) {
     return 'Missing encryptedContent iv or ciphertext in payload (invalid manifest).';
   }
 
@@ -60,6 +62,21 @@ export function isManifestPayload(
   payload: unknown,
 ): payload is ManifestPayload {
   return validateManifestPayload(payload) === null;
+}
+
+/** Stored manifest core: signable body + signature, without inline keyManifest shards. */
+export function isManifestCorePayload(
+  payload: unknown,
+): payload is ManifestCorePayload {
+  if (validateManifestPayload(payload) !== null) {
+    return false;
+  }
+
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    !('keyManifest' in payload)
+  );
 }
 
 /** Full manifest signable body (everything except the top-level `senderSignature`). */

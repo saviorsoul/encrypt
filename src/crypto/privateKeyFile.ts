@@ -7,6 +7,7 @@ import {
   importUploadedPrivateKeyMaterial,
   type UploadedPrivateKeyMaterial,
 } from '@/crypto/privateKeyMaterial.ts';
+import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
 
 const FILE_SELECTION_CANCELLED = 'No private key file selected.';
 
@@ -24,24 +25,13 @@ function parsePrivateKeyJwk(text: string): JsonWebKey {
 
 /** Parse and syntactically validate an EC P-256 private JWK from JSON text. */
 export function parsePrivateKeyJwkText(text: string): ParsePrivateKeyJwkResult {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return { ok: false, error: 'Private key file is empty.' };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return { ok: false, error: 'Private key file is not valid JSON.' };
-  }
-
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return { ok: false, error: 'Private key file must contain a JWK object.' };
+  const base = validateBaseJsonText(text);
+  if (base.ok === false) {
+    return { ok: false, error: base.error };
   }
 
   try {
-    return { ok: true, jwk: slimEcPrivateJwk(parsed as JsonWebKey) };
+    return { ok: true, jwk: slimEcPrivateJwk(base.parsed as JsonWebKey) };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Invalid private key JWK.';
