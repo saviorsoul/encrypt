@@ -117,16 +117,34 @@ function parseFilePathsFromArgv(argv) {
   return paths;
 }
 
+function resolveExternalFilePath(filePath) {
+  return path.resolve(filePath);
+}
+
 function enqueueExternalFiles(filePaths) {
   for (const filePath of filePaths) {
-    if (!externalFileQueue.includes(filePath)) {
-      externalFileQueue.push(filePath);
+    let resolved;
+    try {
+      resolved = resolveExternalFilePath(filePath);
+    } catch {
+      continue;
+    }
+
+    if (!externalFileQueue.includes(resolved)) {
+      externalFileQueue.push(resolved);
     }
   }
 }
 
+function assertExternalFileInQueue(resolved) {
+  if (!externalFileQueue.includes(resolved)) {
+    throw new Error('External file is not pending.');
+  }
+}
+
 function dequeueExternalFile(filePath) {
-  const index = externalFileQueue.indexOf(filePath);
+  const resolved = resolveExternalFilePath(filePath);
+  const index = externalFileQueue.indexOf(resolved);
   if (index >= 0) {
     externalFileQueue.splice(index, 1);
   }
@@ -163,17 +181,52 @@ function ensureMainWindowHidden() {
   }
 }
 
-function sendExternalFileOpened(filePath) {
+async function readExternalFileText(resolved) {
+  assertAllowedExternalFile(resolved);
+  const text = await fsPromises.readFile(resolved, 'utf8');
+
+  if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
+    throw new Error(
+      `File exceeds the maximum allowed size (${Math.floor(MAX_IMPORT_JSON_FILE_BYTES / (1024 * 1024))} MB).`,
+    );
+  }
+
+  return text;
+}
+
+async function sendExternalFileOpened(filePath) {
   showMainWindow();
 
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
   }
 
-  mainWindow.webContents.send(
-    'external-file:opened',
-    getExternalFileMetadata(filePath),
-  );
+  const resolved = resolveExternalFilePath(filePath);
+  /** @type {Record<string, unknown>} */
+  let payload;
+
+  try {
+    assertExternalFileInQueue(resolved);
+    const metadata = getExternalFileMetadata(resolved);
+    const text = await readExternalFileText(resolved);
+    payload = { ...metadata, text };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to read file.';
+    let metadata;
+    try {
+      metadata = getExternalFileMetadata(resolved);
+    } catch {
+      metadata = {
+        path: resolved,
+        name: path.basename(resolved),
+        size: 0,
+      };
+    }
+    payload = { ...metadata, error: message };
+  }
+
+  mainWindow.webContents.send('external-file:opened', payload);
 }
 
 function flushExternalFileQueue() {
@@ -537,7 +590,9 @@ function assertAllowedExternalFile(filePath) {
   }
 
   if (stats.size > MAX_IMPORT_JSON_FILE_BYTES) {
-    throw new Error('File exceeds the maximum allowed size (2 MB).');
+    throw new Error(
+      `File exceeds the maximum allowed size (${Math.floor(MAX_IMPORT_JSON_FILE_BYTES / (1024 * 1024))} MB).`,
+    );
   }
 
   return resolved;
@@ -576,7 +631,7 @@ async function pickPrivateKeyJwkTextFromDialog() {
     if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
       return {
         cancelled: false,
-        error: 'Private key file exceeds the maximum allowed size (2 MB).',
+        error: `Private key file exceeds the maximum allowed size (${Math.floor(MAX_IMPORT_JSON_FILE_BYTES / (1024 * 1024))} MB).`,
       };
     }
     return { cancelled: false, text };
@@ -608,23 +663,14 @@ ipcMain.handle('tray:flash-success', () => {
   flashTraySuccessIcon();
 });
 
-ipcMain.handle('external-file:read', async (_event, filePath) => {
-  const resolved = assertAllowedExternalFile(filePath);
-  const text = await fsPromises.readFile(resolved, 'utf8');
-
-  if (Buffer.byteLength(text, 'utf8') > MAX_IMPORT_JSON_FILE_BYTES) {
-    throw new Error('File exceeds the maximum allowed size (2 MB).');
+ipcMain.handle('external-file:consume', (_event, filePath) => {
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    throw new Error('External file path must be a non-empty string.');
   }
 
-  return {
-    path: resolved,
-    name: path.basename(resolved),
-    text,
-  };
-});
-
-ipcMain.handle('external-file:consume', (_event, filePath) => {
-  dequeueExternalFile(filePath);
+  const resolved = resolveExternalFilePath(filePath);
+  assertExternalFileInQueue(resolved);
+  dequeueExternalFile(resolved);
   flushExternalFileQueue();
 });
 

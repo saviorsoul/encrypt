@@ -14,9 +14,9 @@ export type ExternalFileMetadata = {
   size: number;
 };
 
-export type ExternalFileContent = ExternalFileMetadata & {
-  text: string;
-};
+export type ExternalFileOpenedPayload =
+  | (ExternalFileMetadata & { text: string })
+  | (ExternalFileMetadata & { error: string });
 
 export type ExternalTextImportPayload =
   | { sourceName: string; text: string; error?: undefined }
@@ -52,7 +52,7 @@ export type PickPrivateKeyJwkTextResult =
 interface ElectronBridge {
   platform: NodeJS.Platform;
   onExternalFileOpened: (
-    callback: (metadata: ExternalFileMetadata) => void,
+    callback: (payload: ExternalFileOpenedPayload) => void,
   ) => () => void;
   onExternalTextImported: (
     callback: (payload: ExternalTextImportPayload) => void,
@@ -60,7 +60,6 @@ interface ElectronBridge {
   onTrayEncryptCopiedMessage: (
     callback: (payload: TrayEncryptCopiedMessagePayload) => void,
   ) => () => void;
-  readExternalFile: (filePath: string) => Promise<ExternalFileContent>;
   writeTextToClipboard: (text: string) => Promise<void>;
   dismissExternalFile: (filePath: string) => Promise<void>;
   pickPrivateKeyJwkText: () => Promise<PickPrivateKeyJwkTextResult>;

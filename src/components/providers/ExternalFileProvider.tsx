@@ -210,13 +210,27 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    return window.electron.onExternalFileOpened((metadata) => {
+    return window.electron.onExternalFileOpened((payload) => {
       void (async () => {
+        const metadata: ExternalFileMetadata = {
+          path: payload.path,
+          name: payload.name,
+          size: payload.size,
+        };
+
+        if ('error' in payload) {
+          setOpenExternalFile({
+            file: metadata,
+            classified: {
+              kind: 'invalid',
+              error: payload.error,
+            },
+          });
+          return;
+        }
+
         try {
-          const content = await window.electron!.readExternalFile(
-            metadata.path,
-          );
-          await handleExternalJsonContent(metadata, content.text);
+          await handleExternalJsonContent(metadata, payload.text);
         } catch (caught) {
           setOpenExternalFile({
             file: metadata,

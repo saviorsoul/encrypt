@@ -24,8 +24,6 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('external-text:imported', listener);
     };
   },
-  readExternalFile: (filePath) =>
-    ipcRenderer.invoke('external-file:read', filePath),
   writeTextToClipboard: (text) =>
     ipcRenderer.invoke('clipboard:write-text', text),
   dismissExternalFile: (filePath) =>
