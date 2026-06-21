@@ -1,6 +1,8 @@
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
 import { verifyManifestShareSignature } from '@/crypto/manifestShare.ts';
+import { parseManifestPayload } from '@/crypto/manifestDecrypt.ts';
 import { parseManifestCorePayload } from '@/crypto/manifestStorage.ts';
+import { verifyManifestSignature } from '@/crypto/manifestSign.ts';
 import type { ParsedImportPayload } from '@/utils/parseImportPayloadText.ts';
 import {
   encryptedMessageFingerprintFromPayloadJson,
@@ -20,6 +22,8 @@ export async function importParsedFeedMessage(
   recipientKeyId: string,
 ): Promise<StoredMessage> {
   if (payload.kind === 'original') {
+    const manifest = parseManifestPayload(payload.fullPayloadJson);
+    await verifyManifestSignature(manifest);
     return saveStoredMessage(payload.fullPayloadJson);
   }
 
@@ -34,13 +38,15 @@ export async function importParsedFeedMessage(
 
   await verifyManifestShareSignature(payload.shareWire);
 
+  const parentCore = parseManifestCorePayload(payload.parentCorePayloadJson);
+  await verifyManifestSignature(parentCore);
+
   const parentMessageId = crypto.randomUUID();
   const shareCoreJson = JSON.stringify({
     ...payload.shareWire,
     parentMessageId,
   });
 
-  parseManifestCorePayload(payload.parentCorePayloadJson);
   await saveStoredMessageCoreWithId(
     parentMessageId,
     payload.parentCorePayloadJson,

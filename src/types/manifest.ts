@@ -28,7 +28,7 @@ export type ManifestEncryptedContentSignableBody = {
   ciphertext: string;
 };
 
-/** Manifest body covered by the top-level {@link ManifestPayload.senderSignature}. */
+/** Fields covered by the top-level {@link ManifestPayload.senderSignature}. */
 export type ManifestSignableBody = {
   version: number;
   wrap: typeof MANIFEST_WRAP;
@@ -36,16 +36,19 @@ export type ManifestSignableBody = {
   /** Per-manifest ECDHE public JWK paired with ephemeral private discarded after encrypt — agreement only. */
   ephemeralPublicKey: JsonWebKey;
   encryptedContent: ManifestEncryptedContentSignableBody;
+};
+
+/** Signable body plus per-recipient key manifest, assembled before signing. */
+export type ManifestAssembly = ManifestSignableBody & {
   keyManifest: KeyManifestMap;
 };
 
-/** Manifest fields assembled before signing. */
-export type ManifestAssembly = ManifestSignableBody;
-
-export interface ManifestPayload extends ManifestSignableBody {
-  /** ECDSA P-256 / SHA-256 (ES256) over the signable body (excluding keyManifest). */
+export interface ManifestPayload extends ManifestAssembly {
+  /** ECDSA P-256 / SHA-256 (ES256) over {@link ManifestSignableBody}. */
   senderSignature: string;
 }
 
 /** Manifest stored in IndexedDB without per-recipient keyManifest shards. */
-export type ManifestCorePayload = Omit<ManifestPayload, 'keyManifest'>;
+export type ManifestCorePayload = ManifestSignableBody & {
+  senderSignature: string;
+};

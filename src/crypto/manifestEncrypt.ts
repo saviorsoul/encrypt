@@ -304,7 +304,7 @@ export async function buildManifestPayload(
   { plaintextIv, ciphertext }: ManifestEncryptedContent,
   keyManifest: KeyManifestMap,
 ): Promise<string> {
-  const signableBody = await buildManifestAssembly(
+  const assembly = await buildManifestAssembly(
     senderPublicKey,
     senderAgreementEphemeralPublicKey,
     { plaintextIv, ciphertext },
@@ -313,10 +313,10 @@ export async function buildManifestPayload(
 
   const senderSignature = await signManifestBody(
     senderSigningPrivateKey,
-    signableBody,
+    assembly,
   );
 
-  return JSON.stringify({ senderSignature, ...signableBody }, null, 2);
+  return JSON.stringify({ senderSignature, ...assembly }, null, 2);
 }
 
 export async function recipientsIncludingSender(

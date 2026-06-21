@@ -79,7 +79,7 @@ export function isManifestCorePayload(
   );
 }
 
-/** Full manifest signable body (everything except the top-level `senderSignature`). */
+/** ECDSA-signed manifest fields (excludes keyManifest and senderSignature). */
 export function getManifestSignableBody(
   payload: ManifestPayload,
 ): ManifestSignableBody {
@@ -89,7 +89,6 @@ export function getManifestSignableBody(
     senderPublicJwk: payload.senderPublicJwk,
     ephemeralPublicKey: payload.ephemeralPublicKey,
     encryptedContent: payload.encryptedContent,
-    keyManifest: payload.keyManifest,
   };
 }
 

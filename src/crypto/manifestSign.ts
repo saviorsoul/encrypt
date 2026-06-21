@@ -1,7 +1,9 @@
 import { base64ToBytes, bytesToBase64 } from '@/utils/bytes.ts';
 import { importPublicKeyForEcdsaVerify } from '@/crypto/ecdsaKeys.ts';
 import type {
+  ManifestCorePayload,
   ManifestPayload,
+  ManifestAssembly,
   ManifestSignableBody,
 } from '@/types/manifest.ts';
 
@@ -71,7 +73,7 @@ export function manifestSignableBodyForSigning(
 
 export async function signManifestBody(
   senderSigningPrivateKey: CryptoKey,
-  body: ManifestSignableBody,
+  body: ManifestSignableBody | ManifestAssembly,
 ): Promise<string> {
   return signCanonicalBody(
     senderSigningPrivateKey,
@@ -79,7 +81,7 @@ export async function signManifestBody(
   );
 }
 export async function verifyManifestSignature(
-  payload: ManifestPayload,
+  payload: ManifestPayload | ManifestCorePayload,
 ): Promise<void> {
   const { senderSignature, ...signableBody } = payload;
   await verifyCanonicalSignature(

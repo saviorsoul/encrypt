@@ -234,10 +234,7 @@ export async function buildManifestShare(
   }
 
   const parentCore = parseManifestCorePayload(parentCorePayloadJson);
-  await verifyManifestSignature({
-    ...parentCore,
-    keyManifest: {},
-  } as ManifestPayload);
+  await verifyManifestSignature(parentCore);
 
   const rawDek = await decryptParentMessageDekFromDelivery(
     parentMessageId,
@@ -301,10 +298,7 @@ export async function decryptShareImportPayload(
 
   const parentCore = parseManifestCorePayload(parentCorePayloadJson);
 
-  await verifyManifestSignature({
-    ...parentCore,
-    keyManifest: {},
-  } as ManifestPayload);
+  await verifyManifestSignature(parentCore);
 
   const entry = keyManifest[recipientKeyId];
   if (!entry) {
@@ -341,10 +335,7 @@ export async function decryptSharedStoredMessage(
   }
 
   const parentCore = parseManifestCorePayload(parentCorePayloadJson);
-  await verifyManifestSignature({
-    ...parentCore,
-    keyManifest: {},
-  } as ManifestPayload);
+  await verifyManifestSignature(parentCore);
 
   const rawDek = await decryptParentMessageDekFromDelivery(
     parentMessageId,
