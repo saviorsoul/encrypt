@@ -350,6 +350,16 @@ function getAppIconImage() {
   return image;
 }
 
+function getTrayIconPath(variant = 'default') {
+  const baseName = variant === 'success' ? 'tray-icon-success' : 'tray-icon';
+
+  if (process.platform === 'win32') {
+    return path.join(__dirname, `${baseName}.ico`);
+  }
+
+  return path.join(__dirname, `${baseName}.png`);
+}
+
 function createTrayImage(iconPath) {
   let image = nativeImage.createFromPath(iconPath);
 
@@ -364,15 +374,11 @@ function createTrayImage(iconPath) {
 }
 
 function createTrayIcon() {
-  if (process.platform === 'linux') {
-    return createTrayImage(path.join(__dirname, 'tray-icon.png'));
-  }
-
-  return createTrayImage(getAppIconPath());
+  return createTrayImage(getTrayIconPath());
 }
 
 function createTraySuccessIcon() {
-  return createTrayImage(path.join(__dirname, 'tray-icon-success.png'));
+  return createTrayImage(getTrayIconPath('success'));
 }
 
 function flashTraySuccessIcon(durationMs = TRAY_SUCCESS_ICON_DURATION_MS) {
