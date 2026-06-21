@@ -48,6 +48,10 @@ export function validateManifestPayload(payload: unknown): string | null {
     return 'Missing senderPublicJwk in payload (invalid manifest).';
   }
 
+  if (!manifest.ephemeralPublicKey) {
+    return 'Missing ephemeralPublicKey in payload (invalid manifest).';
+  }
+
   if (
     !manifest.encryptedContent?.iv ||
     !manifest.encryptedContent?.ciphertext
@@ -115,6 +119,22 @@ export function getKeyManifestEntryForRecipient(
     );
   }
   return entry;
+}
+
+/** Recover the message DEK from an inline manifest payload (PoC / import flows). */
+export async function decryptDekFromManifestPayload(
+  manifestPayloadJson: string,
+  recipientKeyId: string,
+  recipientPrivateKey: CryptoKey,
+): Promise<ArrayBuffer> {
+  const payload = parseManifestPayload(manifestPayloadJson);
+  const entry = getKeyManifestEntryForRecipient(payload, recipientKeyId);
+  const { rawDek } = await decryptDekFromManifestEntry(
+    entry,
+    recipientPrivateKey,
+    payload.ephemeralPublicKey,
+  );
+  return rawDek;
 }
 
 /** AES-GCM: decrypt encrypted DEK bytes with the per-recipient KEK. */
@@ -235,11 +255,6 @@ export async function decryptStoredMessageDek(
   }
 
   const core = parseManifestCorePayload(messageCorePayload);
-  if (!core.ephemeralPublicKey) {
-    throw new Error(
-      'Missing ephemeralPublicKey in parent message (invalid manifest).',
-    );
-  }
 
   const { rawDek } = await decryptDekFromManifestEntry(
     entry,
@@ -281,12 +296,6 @@ export async function decryptWithManifest(
   recipientKeyId: string,
 ): Promise<string> {
   const payload = parseManifestPayload(payloadJson);
-
-  if (!payload.ephemeralPublicKey) {
-    throw new Error(
-      'Missing ephemeralPublicKey in payload (invalid manifest).',
-    );
-  }
 
   await verifyManifestSignature(payload);
 

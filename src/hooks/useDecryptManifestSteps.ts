@@ -212,12 +212,6 @@ export function useDecryptManifestSteps(encryptedPayload: string) {
       const payload = parseManifestPayload(trimmed);
       recipientKeyIdRef.current = mockRecipientKeyId;
 
-      if (!payload.ephemeralPublicKey) {
-        throw new Error(
-          'Missing ephemeralPublicKey in payload (invalid manifest).',
-        );
-      }
-
       const entry = getKeyManifestEntryForRecipient(
         payload,
         mockRecipientKeyId,

@@ -2,24 +2,15 @@ import { useCallback, useRef, useState, type RefObject } from 'react';
 import type { CommentSignableBody } from '@/types/comment.ts';
 import type { DemoParentFeedMessage } from '@/crypto/demoFeedCommentPoC.ts';
 import {
-  COMMENT_HKDF_INFO,
-  COMMENT_VERSION,
-  COMMENT_WRAP,
-} from '@/crypto/commentConstants.ts';
-import { HKDF_SALT_LENGTH } from '@/crypto/manifestConstants.ts';
-import {
-  decryptDekFromManifestEntry,
-  getKeyManifestEntryForRecipient,
-  parseManifestPayload,
-} from '@/crypto/manifestDecrypt.ts';
-import {
-  aesGcmEncryptManifestBody,
-  deriveAesGcmKeyFromHkdfMaterial,
-  encryptedContentToSignableBody,
-  exportCryptoKeyAsJwk,
-  importSharedSecretAsHkdfKeyMaterial,
-  type ManifestEncryptedContent,
-} from '@/crypto/manifestEncrypt.ts';
+  buildCommentSignableBody,
+  deriveCommentKeyFromHkdfMaterial,
+  encryptCommentBody,
+  generateCommentHkdfSalt,
+  importCommentHkdfKeyMaterialFromDek,
+  signCommentPayload,
+} from '@/crypto/commentCrypto.ts';
+import { decryptDekFromManifestPayload } from '@/crypto/manifestDecrypt.ts';
+import { type ManifestEncryptedContent } from '@/crypto/manifestEncrypt.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -29,7 +20,6 @@ import {
   isPrivateKeyFileSelectionCancelled,
   withUploadedPrivateKey,
 } from '@/crypto/privateKeyFile.ts';
-import { signCanonicalBody } from '@/crypto/manifestSign.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { bytesToBase64 } from '@/utils/bytes.ts';
 import { stringifyManifestPayloadForDisplay } from '@/utils/formatManifestJsonForDisplay.ts';
@@ -153,12 +143,10 @@ export function useEncryptCommentSteps(
           'Uploaded private key does not match your stored public key.',
         );
 
-        const payload = parseManifestPayload(demo.parentPayload);
-        const entry = getKeyManifestEntryForRecipient(payload, material.keyId);
-        const { rawDek } = await decryptDekFromManifestEntry(
-          entry,
+        const rawDek = await decryptDekFromManifestPayload(
+          demo.parentPayload,
+          material.keyId,
           material.ecdhPrivateKey,
-          payload.ephemeralPublicKey,
         );
         rawDekRef.current = rawDek;
         setDekOutput(bytesToBase64(new Uint8Array(rawDek)));
@@ -190,15 +178,9 @@ export function useEncryptCommentSteps(
 
     setBusyStep('hkdfImport');
     try {
-      const hkdfKeyMaterial = await importSharedSecretAsHkdfKeyMaterial(rawDek);
+      const { hkdfKeyMaterial, dekBase64, hkdfMaterialFingerprintBase64 } =
+        await importCommentHkdfKeyMaterialFromDek(rawDek);
       hkdfMaterialRef.current = hkdfKeyMaterial;
-
-      const digest = await crypto.subtle.digest('SHA-256', rawDek);
-      const dekBase64 = bytesToBase64(new Uint8Array(rawDek));
-      const hkdfMaterialFingerprintBase64 = bytesToBase64(
-        new Uint8Array(digest),
-      );
-
       hkdfMaterialFingerprintRef.current = hkdfMaterialFingerprintBase64;
       setHkdfMaterialFingerprintOutput(hkdfMaterialFingerprintBase64);
       setImportHkdfMaterialExample({
@@ -229,16 +211,12 @@ export function useEncryptCommentSteps(
 
     setBusyStep('deriveCommentKey');
     try {
-      const hkdfSalt = crypto.getRandomValues(new Uint8Array(HKDF_SALT_LENGTH));
+      const hkdfSalt = generateCommentHkdfSalt();
       hkdfSaltRef.current = hkdfSalt;
-      const commentKey = await deriveAesGcmKeyFromHkdfMaterial(
+      const commentKey = await deriveCommentKeyFromHkdfMaterial(
         hkdfKeyMaterial,
         hkdfSalt,
-        {
-          info: COMMENT_HKDF_INFO,
-          keyUsages: ['encrypt', 'decrypt'],
-          extractable: true,
-        },
+        { extractable: true },
       );
       commentKeyRef.current = commentKey;
 
@@ -285,7 +263,7 @@ export function useEncryptCommentSteps(
 
     setBusyStep('encryptBody');
     try {
-      const encryptedContent = await aesGcmEncryptManifestBody(
+      const encryptedContent = await encryptCommentBody(
         commentKey,
         commentPlaintext,
       );
@@ -347,14 +325,12 @@ export function useEncryptCommentSteps(
 
     setBusyStep('assemble');
     try {
-      const signableBody: CommentSignableBody = {
-        version: COMMENT_VERSION,
-        wrap: COMMENT_WRAP,
-        parentMessageId: demo.parentMessageId,
-        senderPublicJwk: await exportCryptoKeyAsJwk(senderPublicKey),
-        salt: bytesToBase64(hkdfSalt),
-        encryptedContent: encryptedContentToSignableBody(encryptedContent),
-      };
+      const signableBody = await buildCommentSignableBody({
+        messageId: demo.parentMessageId,
+        senderPublicKey,
+        hkdfSalt,
+        encryptedContent,
+      });
       signableBodyRef.current = signableBody;
       setAssemblyOutput(JSON.stringify(signableBody, null, 2));
     } catch (e) {
@@ -400,13 +376,14 @@ export function useEncryptCommentSteps(
           'Uploaded private key does not match your stored public key.',
         );
 
-        const senderSignature = await signCanonicalBody(
-          material.ecdsaSignPrivateKey,
+        const signedJson = await signCommentPayload(
           signableBody,
+          material.ecdsaSignPrivateKey,
         );
-        const signedPayload = { senderSignature, ...signableBody };
-        const signedJson = JSON.stringify(signedPayload);
-        setSenderSignatureOutput(senderSignature);
+        const signedPayload = JSON.parse(signedJson) as CommentSignableBody & {
+          senderSignature: string;
+        };
+        setSenderSignatureOutput(signedPayload.senderSignature);
         setSignedPayloadJson(signedJson);
         setSignedPayloadDisplay(
           stringifyManifestPayloadForDisplay(signedPayload),

@@ -17,6 +17,7 @@ import {
   exportCryptoKeyAsJwk,
   encryptedContentToSignableBody,
   importSharedSecretAsHkdfKeyMaterial,
+  type ManifestEncryptedContent,
 } from '@/crypto/manifestEncrypt.ts';
 import {
   signCanonicalBody,
@@ -39,15 +40,84 @@ function parseCommentHkdfSalt(saltBase64: string): Uint8Array<ArrayBuffer> {
   return salt;
 }
 
-async function deriveCommentKeyFromDek(
+export function generateCommentHkdfSalt(): Uint8Array<ArrayBuffer> {
+  return crypto.getRandomValues(new Uint8Array(HKDF_SALT_LENGTH));
+}
+
+export async function importCommentHkdfKeyMaterialFromDek(
+  rawDek: ArrayBuffer,
+): Promise<{
+  hkdfKeyMaterial: CryptoKey;
+  dekBase64: string;
+  hkdfMaterialFingerprintBase64: string;
+}> {
+  const hkdfKeyMaterial = await importSharedSecretAsHkdfKeyMaterial(rawDek);
+  const digest = await crypto.subtle.digest('SHA-256', rawDek);
+  return {
+    hkdfKeyMaterial,
+    dekBase64: bytesToBase64(new Uint8Array(rawDek)),
+    hkdfMaterialFingerprintBase64: bytesToBase64(new Uint8Array(digest)),
+  };
+}
+
+export async function deriveCommentKeyFromDek(
   rawDek: ArrayBuffer,
   hkdfSalt: Uint8Array<ArrayBuffer>,
+  options: { extractable?: boolean } = {},
 ): Promise<CryptoKey> {
   const hkdfKeyMaterial = await importSharedSecretAsHkdfKeyMaterial(rawDek);
+  return deriveCommentKeyFromHkdfMaterial(hkdfKeyMaterial, hkdfSalt, options);
+}
+
+export async function deriveCommentKeyFromHkdfMaterial(
+  hkdfKeyMaterial: CryptoKey,
+  hkdfSalt: Uint8Array<ArrayBuffer>,
+  options: { extractable?: boolean } = {},
+): Promise<CryptoKey> {
   return deriveAesGcmKeyFromHkdfMaterial(hkdfKeyMaterial, hkdfSalt, {
     info: COMMENT_HKDF_INFO,
     keyUsages: ['encrypt', 'decrypt'],
+    extractable: options.extractable,
   });
+}
+
+export async function encryptCommentBody(
+  commentKey: CryptoKey,
+  commentText: string,
+): Promise<ManifestEncryptedContent> {
+  return aesGcmEncryptManifestBody(commentKey, commentText);
+}
+
+export async function buildCommentSignableBody({
+  messageId,
+  senderPublicKey,
+  hkdfSalt,
+  encryptedContent,
+}: {
+  messageId: string;
+  senderPublicKey: CryptoKey;
+  hkdfSalt: Uint8Array<ArrayBuffer>;
+  encryptedContent: ManifestEncryptedContent;
+}): Promise<CommentSignableBody> {
+  return {
+    version: COMMENT_VERSION,
+    wrap: COMMENT_WRAP,
+    parentMessageId: messageId,
+    senderPublicJwk: await exportCryptoKeyAsJwk(senderPublicKey),
+    salt: bytesToBase64(hkdfSalt),
+    encryptedContent: encryptedContentToSignableBody(encryptedContent),
+  };
+}
+
+export async function signCommentPayload(
+  signableBody: CommentSignableBody,
+  senderSigningPrivateKey: CryptoKey,
+): Promise<string> {
+  const senderSignature = await signCanonicalBody(
+    senderSigningPrivateKey,
+    signableBody,
+  );
+  return JSON.stringify({ senderSignature, ...signableBody }, null, 2);
 }
 
 /**
@@ -68,28 +138,16 @@ export async function encryptCommentWithMessageKey(
     recipientKeyId,
     recipientPrivateKey,
   );
-  const hkdfSalt = crypto.getRandomValues(new Uint8Array(HKDF_SALT_LENGTH));
+  const hkdfSalt = generateCommentHkdfSalt();
   const commentKey = await deriveCommentKeyFromDek(rawDek, hkdfSalt);
-  const encryptedContent = await aesGcmEncryptManifestBody(
-    commentKey,
-    commentText,
-  );
-
-  const signableBody: CommentSignableBody = {
-    version: COMMENT_VERSION,
-    wrap: COMMENT_WRAP,
-    parentMessageId: messageId,
-    senderPublicJwk: await exportCryptoKeyAsJwk(senderPublicKey),
-    salt: bytesToBase64(hkdfSalt),
-    encryptedContent: encryptedContentToSignableBody(encryptedContent),
-  };
-
-  const senderSignature = await signCanonicalBody(
-    senderSigningPrivateKey,
-    signableBody,
-  );
-
-  return JSON.stringify({ senderSignature, ...signableBody }, null, 2);
+  const encryptedContent = await encryptCommentBody(commentKey, commentText);
+  const signableBody = await buildCommentSignableBody({
+    messageId,
+    senderPublicKey,
+    hkdfSalt,
+    encryptedContent,
+  });
+  return signCommentPayload(signableBody, senderSigningPrivateKey);
 }
 
 /**
