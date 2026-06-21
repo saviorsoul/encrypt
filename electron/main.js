@@ -6,6 +6,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  screen,
   session,
   Tray,
 } from 'electron';
@@ -42,6 +43,9 @@ let traySuccessIconTimeout = null;
 const TRAY_TOOLTIP_DEFAULT = 'Encrypt';
 const TRAY_TOOLTIP_SUCCESS = 'Encrypted message copied to clipboard';
 const TRAY_SUCCESS_ICON_DURATION_MS = 5000;
+
+/** GNOME/Ubuntu panel icon size at 100% scale (StatusNotifier/AppIndicator). */
+const LINUX_TRAY_ICON_SIZE = 24;
 
 /** @type {boolean} */
 let isQuitting = false;
@@ -360,13 +364,24 @@ function getTrayIconPath(variant = 'default') {
   return path.join(__dirname, `${baseName}.png`);
 }
 
+function getLinuxTrayIconSize() {
+  const scaleFactor = screen.getPrimaryDisplay().scaleFactor;
+  return Math.round(LINUX_TRAY_ICON_SIZE * scaleFactor);
+}
+
 function createTrayImage(iconPath) {
+  // Let Windows pick the best embedded ICO frame instead of pre-rasterizing.
+  if (process.platform === 'win32') {
+    return iconPath;
+  }
+
   let image = nativeImage.createFromPath(iconPath);
 
   if (process.platform === 'linux') {
+    const size = getLinuxTrayIconSize();
     const { width, height } = image.getSize();
-    if (width !== 24 || height !== 24) {
-      image = image.resize({ width: 24, height: 24, quality: 'best' });
+    if (width !== size || height !== size) {
+      image = image.resize({ width: size, height: size, quality: 'best' });
     }
   }
 
