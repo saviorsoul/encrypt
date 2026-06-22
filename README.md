@@ -2,6 +2,16 @@
 
 Encryption app run locally. Build with React and Electron.
 
+## Usage
+
+There is a GitHub Pages site - [saviorsoul.github.io/encrypt/](saviorsoul.github.io/encrypt/) - that you can visit to learn more about this app. However, the best user experience is always provided by the desktop application.
+
+The app does not connect to any backend service, either in the browser or in the desktop application. All messages are stored locally in the built-in browser database, IndexedDB.
+
+## Discord
+
+There is a [discord](https://discord.gg/PAmgfU7ZR9) that you can join for announcements, release plans or just to get in touch.
+
 ## Download
 
 Pre-built desktop installers are published on [GitHub Releases](https://github.com/saviorsoul/encrypt/releases/latest):
@@ -9,7 +19,7 @@ Pre-built desktop installers are published on [GitHub Releases](https://github.c
 - **Windows** — download the `.exe` installer
 - **Linux** — download the `.deb` package (Ubuntu / Debian)
 
-## Prerequisites
+## Prerequisites for local development
 
 You need **Node.js 24 or newer** and **npm** (included with Node.js).
 
@@ -71,7 +81,14 @@ Alternatively, download the Linux installer from [https://nodejs.org](https://no
 
 ## Desktop app (Electron)
 
-The same UI runs as a desktop app via Electron. In Electron mode the app uses hash-based routing (`HashRouter`) so navigation works from the `file://` protocol.
+The same UI runs as a desktop app via Electron. Dektop app has additional functionalities:
+
+- disabled network requests
+- opening files directly in your system (open with -> Encrypt)
+- system tray functions:
+  - encrypt plain text from a **clipboard** to specific recipient and write back encrypted text to the **clipboard**
+  - import an encrypted message
+  - copy public key from current user
 
 ### Development
 
@@ -103,7 +120,7 @@ On Linux, the dev and preview scripts pass `--no-sandbox` to Electron to avoid s
 
 ### Open files from the file manager (Ubuntu)
 
-The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message** or **sign in with a private key**.
+The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message**, **add recipient with provided public key** or **sign in with a private key**.
 
 After installing the `.deb` package (from [GitHub Releases](https://github.com/saviorsoul/encrypt/releases/latest) or a local `release/` build), right-click a `.json` or `.jwk` file and choose **Open With → Encrypt**. If Encrypt is not listed, use **Open With Other Application** once; later opens will show it in the menu.
 
