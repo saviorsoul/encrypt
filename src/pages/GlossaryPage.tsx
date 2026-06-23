@@ -20,15 +20,8 @@ function scrollToTerm(id: string) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function GlossaryEntry({
-  term,
-  activeId,
-}: {
-  term: GlossaryTerm;
-  activeId: string | null;
-}) {
+function GlossaryEntry({ term }: { term: GlossaryTerm }) {
   const isChild = Boolean(term.parentId);
-  const isActive = activeId === term.id;
 
   return (
     <Paper
@@ -40,8 +33,8 @@ function GlossaryEntry({
         p: 2,
         pl: isChild ? 4 : 2,
         border: 1,
-        borderColor: isActive ? 'primary.main' : 'divider',
-        bgcolor: isActive ? 'action.selected' : 'background.paper',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
       }}
     >
       <Typography
@@ -52,15 +45,19 @@ function GlossaryEntry({
       >
         {term.title}
       </Typography>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mb: term.seeAlso?.length ? 1 : 0 }}
-      >
+      <Typography variant="body2" color="text.secondary">
         {term.summary}
       </Typography>
+      {term.inAppPurpose && term.inAppPurpose.length > 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Box component="span" sx={{ fontStyle: 'italic' }}>
+            In app purpose:{' '}
+          </Box>
+          {term.inAppPurpose}
+        </Typography>
+      ) : null}
       {term.seeAlso && term.seeAlso.length > 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           See also:{' '}
           {term.seeAlso.map((relatedId, index) => (
             <React.Fragment key={relatedId}>
@@ -107,7 +104,6 @@ export function GlossaryPage() {
                 key={term.id}
                 component={RouterLink}
                 to={glossaryHref(term.id)}
-                selected={activeId === term.id}
                 sx={{ pl: term.parentId ? 3 : 1 }}
               >
                 <ListItemText primary={term.title} />
@@ -118,7 +114,7 @@ export function GlossaryPage() {
 
         <Stack spacing={2}>
           {terms.map((term) => (
-            <GlossaryEntry key={term.id} term={term} activeId={activeId} />
+            <GlossaryEntry key={term.id} term={term} />
           ))}
         </Stack>
       </Stack>
