@@ -22,15 +22,11 @@ export function assembleShareExportPayloadJson(
   const shareCore = parseManifestShareCorePayload(shareCoreJson);
   const originalMessage = parseManifestCorePayload(parentCorePayloadJson);
 
-  return JSON.stringify(
-    {
-      originalMessage,
-      share: shareCoreToWirePayload(shareCore),
-      keyManifest,
-    },
-    null,
-    2,
-  );
+  return JSON.stringify({
+    originalMessage,
+    share: shareCoreToWirePayload(shareCore),
+    keyManifest,
+  });
 }
 
 export function shareExportFilename(): string {

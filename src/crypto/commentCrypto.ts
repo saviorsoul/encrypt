@@ -117,7 +117,7 @@ export async function signCommentPayload(
     senderSigningPrivateKey,
     signableBody,
   );
-  return JSON.stringify({ senderSignature, ...signableBody }, null, 2);
+  return JSON.stringify({ senderSignature, ...signableBody });
 }
 
 /**

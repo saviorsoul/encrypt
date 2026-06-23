@@ -64,5 +64,5 @@ export function assembleManifestWithKeyManifest(
     ...core,
     keyManifest,
   };
-  return JSON.stringify(payload, null, 2);
+  return JSON.stringify(payload);
 }

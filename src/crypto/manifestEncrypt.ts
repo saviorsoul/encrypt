@@ -316,7 +316,7 @@ export async function buildManifestPayload(
     assembly,
   );
 
-  return JSON.stringify({ senderSignature, ...assembly }, null, 2);
+  return JSON.stringify({ senderSignature, ...assembly });
 }
 
 export async function recipientsIncludingSender(

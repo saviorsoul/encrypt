@@ -277,11 +277,11 @@ export async function buildManifestShare(
     signableBody,
   );
 
-  const shareCoreJson = JSON.stringify(
-    { sharerSignature, ...signableBody, parentMessageId },
-    null,
-    2,
-  );
+  const shareCoreJson = JSON.stringify({
+    sharerSignature,
+    ...signableBody,
+    parentMessageId,
+  });
 
   return { shareCoreJson, keyManifest };
 }
