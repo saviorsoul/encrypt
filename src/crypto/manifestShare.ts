@@ -1,7 +1,6 @@
 import type { KeyManifestMap, ManifestPayload } from '@/types/manifest.ts';
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import type {
-  ManifestShareCorePayload,
   ManifestShareSignableBody,
   ManifestShareWirePayload,
 } from '@/types/manifestShare.ts';
@@ -58,11 +57,11 @@ export function getCommentThreadMessageId(
 
 export function parseManifestShareCorePayload(
   payloadJson: string,
-): ManifestShareCorePayload {
+): ManifestShareWirePayload {
   const payload = parseBaseJsonObjectOrThrow(
     payloadJson,
-  ) as unknown as ManifestShareCorePayload;
-  const validationError = validateManifestShareCorePayload(payload);
+  ) as unknown as ManifestShareWirePayload;
+  const validationError = validateManifestShareWirePayload(payload);
   if (validationError) {
     throw new Error(validationError);
   }
@@ -91,17 +90,6 @@ export function validateManifestShareWirePayload(
     return 'Missing sharerSignature in share payload.';
   }
 
-  return null;
-}
-
-export function validateManifestShareCorePayload(
-  payload: ManifestShareCorePayload,
-): string | null {
-  const wireError = validateManifestShareWirePayload(payload);
-  if (wireError) {
-    return wireError;
-  }
-
   if (!payload.parentMessageId) {
     return 'Missing parentMessageId in share payload.';
   }
@@ -115,6 +103,7 @@ export function manifestShareSignableBodyForSigning(
   return {
     version: body.version,
     wrap: body.wrap,
+    parentMessageId: body.parentMessageId,
     sharerPublicJwk: body.sharerPublicJwk,
     ephemeralPublicKey: body.ephemeralPublicKey,
   };
@@ -140,18 +129,6 @@ export async function verifyManifestShareSignature(
     manifestShareSignableBodyForSigning(signableBody),
     'Share signature verification failed (payload may have been tampered with).',
   );
-}
-
-export function shareCoreToWirePayload(
-  shareCore: ManifestShareCorePayload,
-): ManifestShareWirePayload {
-  return {
-    version: shareCore.version,
-    wrap: shareCore.wrap,
-    sharerPublicJwk: shareCore.sharerPublicJwk,
-    ephemeralPublicKey: shareCore.ephemeralPublicKey,
-    sharerSignature: shareCore.sharerSignature,
-  };
 }
 
 export async function getSharerKeyIdFromSharePayload(
@@ -217,12 +194,10 @@ export type BuildManifestShareResult = {
 /**
  * Re-wrap the parent message DEK for new recipients under a fresh ephemeral key pair.
  * Does not mutate the parent message or existing recipient shards.
+ * The sharer's shard may be on the parent row or any prior share delivery for that parent.
  */
 export async function buildManifestShare(
   parentMessageId: string,
-  parentCorePayloadJson: string,
-  deliveryMessageId: string,
-  deliveryCorePayloadJson: string,
   sharerKeyId: string,
   sharerPrivateKey: CryptoKey,
   sharerPublicKey: CryptoKey,
@@ -233,14 +208,21 @@ export async function buildManifestShare(
     throw new Error('Select at least one recipient to share with.');
   }
 
-  const parentCore = parseManifestCorePayload(parentCorePayloadJson);
+  const access = await resolveParentMessageAccess(parentMessageId, sharerKeyId);
+  if (!access) {
+    throw new Error(
+      'No key manifest entry for the given recipientKeyId (wrong key pair?).',
+    );
+  }
+
+  const parentCore = parseManifestCorePayload(access.parentCorePayloadJson);
   await verifyManifestSignature(parentCore);
 
   const rawDek = await decryptParentMessageDekFromDelivery(
-    parentMessageId,
-    parentCorePayloadJson,
-    deliveryMessageId,
-    deliveryCorePayloadJson,
+    access.parentMessageId,
+    access.parentCorePayloadJson,
+    access.deliveryMessageId,
+    access.deliveryCorePayloadJson,
     sharerKeyId,
     sharerPrivateKey,
   );
@@ -268,6 +250,7 @@ export async function buildManifestShare(
   const signableBody: ManifestShareSignableBody = {
     version: MANIFEST_SHARE_VERSION,
     wrap: MANIFEST_SHARE_WRAP,
+    parentMessageId,
     sharerPublicJwk,
     ephemeralPublicKey,
   };
@@ -280,7 +263,6 @@ export async function buildManifestShare(
   const shareCoreJson = JSON.stringify({
     sharerSignature,
     ...signableBody,
-    parentMessageId,
   });
 
   return { shareCoreJson, keyManifest };
@@ -330,12 +312,11 @@ export async function decryptSharedStoredMessage(
   const shareCore = parseManifestShareCorePayload(shareCorePayloadJson);
   await verifyManifestShareSignature(shareCore);
 
+  const parentCore = parseManifestCorePayload(parentCorePayloadJson);
+  await verifyManifestSignature(parentCore);
   if (shareCore.parentMessageId !== parentMessageId) {
     throw new Error('Share delivery does not match the parent message.');
   }
-
-  const parentCore = parseManifestCorePayload(parentCorePayloadJson);
-  await verifyManifestSignature(parentCore);
 
   const rawDek = await decryptParentMessageDekFromDelivery(
     parentMessageId,
@@ -358,15 +339,33 @@ export async function decryptStoredDeliveryWithPrivateKey(
   recipientPrivateKey: CryptoKey,
 ): Promise<string> {
   if (!isShareDelivery(message)) {
-    const assembledPayload = await assembleStoredMessagePayload(
-      message.id,
-      message.payload,
+    const access = await resolveParentMessageAccess(message.id, recipientKeyId);
+    if (!access) {
+      throw new Error(
+        'No key manifest entry for the given recipientKeyId (wrong key pair?).',
+      );
+    }
+
+    if (access.deliveryMessageId === message.id) {
+      const assembledPayload = await assembleStoredMessagePayload(
+        message.id,
+        message.payload,
+        recipientKeyId,
+      );
+      return decryptWithManifest(
+        assembledPayload,
+        recipientPrivateKey,
+        recipientKeyId,
+      );
+    }
+
+    return decryptSharedStoredMessage(
+      access.deliveryMessageId,
+      access.parentMessageId,
+      access.deliveryCorePayloadJson,
+      access.parentCorePayloadJson,
       recipientKeyId,
-    );
-    return decryptWithManifest(
-      assembledPayload,
       recipientPrivateKey,
-      recipientKeyId,
     );
   }
 
@@ -425,6 +424,22 @@ export async function resolveParentMessageAccess(
   }
 
   return null;
+}
+
+/** Sharer key id when access is via a share delivery; null for direct parent access. */
+export async function getSharerKeyIdForRecipientParentAccess(
+  parentMessageId: string,
+  recipientKeyId: string,
+): Promise<string | null> {
+  const access = await resolveParentMessageAccess(
+    parentMessageId,
+    recipientKeyId,
+  );
+  if (!access || access.deliveryMessageId === parentMessageId) {
+    return null;
+  }
+
+  return getSharerKeyIdFromSharePayload(access.deliveryCorePayloadJson);
 }
 
 export async function recipientHasAccessToParentMessage(

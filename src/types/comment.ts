@@ -13,3 +13,9 @@ export type CommentSignableBody = {
 export interface CommentPayload extends CommentSignableBody {
   senderSignature: string;
 }
+
+export type ParsedCommentImportPayload = CommentPayload;
+
+export type ParseCommentImportPayloadResult =
+  | { ok: true; payload: ParsedCommentImportPayload }
+  | { ok: false; error: string };

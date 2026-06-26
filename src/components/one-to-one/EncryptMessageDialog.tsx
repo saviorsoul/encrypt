@@ -61,7 +61,7 @@ export function EncryptMessageDialog({
               onEncrypt(trimmedMessage);
             }
           }}
-          helperText={`You will be prompted to upload a private key that matches ${roleLabel}'s public key.`}
+          helperText={`You will be prompted to use a private key that matches ${roleLabel}'s public key.`}
         />
         {error && (
           <Alert severity="error" sx={{ mt: 1 }}>

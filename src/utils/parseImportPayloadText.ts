@@ -2,14 +2,9 @@ import {
   MANIFEST_SHARE_VERSION,
   MANIFEST_SHARE_WRAP,
 } from '@/constants/manifestShare.ts';
-import { validateManifestPayload } from '@/crypto/manifestDecrypt.ts';
 import { validateManifestShareWirePayload } from '@/crypto/manifestShare.ts';
-import type { KeyManifestMap, ManifestCorePayload } from '@/types/manifest.ts';
+import type { KeyManifestMap } from '@/types/manifest.ts';
 import type { ManifestShareWirePayload } from '@/types/manifestShare.ts';
-import {
-  encryptedMessageFingerprintFromPayloadJson,
-  type EncryptedMessageFingerprint,
-} from '@/types/oneToOne.ts';
 import {
   parseJsonObjectText,
   parseManifestPayloadText,
@@ -19,13 +14,15 @@ export type ParsedOriginalImportPayload = {
   kind: 'original';
   fullPayloadJson: string;
   keyManifest: KeyManifestMap;
+  /** Present when the export included a local IndexedDB message id. */
+  exportedMessageId?: string;
 };
 
 export type ParsedShareImportPayload = {
   kind: 'share';
   shareWire: ManifestShareWirePayload;
   keyManifest: KeyManifestMap;
-  parentCorePayloadJson: string;
+  parentMessageId: string;
 };
 
 export type ParsedImportPayload =
@@ -35,11 +32,6 @@ export type ParsedImportPayload =
 export type ParseImportPayloadResult =
   | { ok: true; payload: ParsedImportPayload }
   | { ok: false; error: string };
-
-type ShareImportWirePayload = ManifestShareWirePayload & {
-  keyManifest?: KeyManifestMap;
-  originalMessage?: ManifestCorePayload;
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -51,6 +43,7 @@ function extractShareWire(
   return {
     version: value.version as number,
     wrap: value.wrap as ManifestShareWirePayload['wrap'],
+    parentMessageId: value.parentMessageId as string,
     sharerPublicJwk: value.sharerPublicJwk as JsonWebKey,
     ephemeralPublicKey: value.ephemeralPublicKey as JsonWebKey,
     sharerSignature: value.sharerSignature as string,
@@ -59,10 +52,9 @@ function extractShareWire(
 
 function normalizeShareImportWire(
   parsed: Record<string, unknown>,
-): ShareImportWirePayload | null {
+): ShareImportWire | null {
   if (
     !isRecord(parsed.share) ||
-    !isRecord(parsed.originalMessage) ||
     parsed.share.wrap !== MANIFEST_SHARE_WRAP ||
     parsed.share.version !== MANIFEST_SHARE_VERSION
   ) {
@@ -70,16 +62,20 @@ function normalizeShareImportWire(
   }
 
   return {
-    ...extractShareWire(parsed.share),
+    shareWire: extractShareWire(parsed.share),
     keyManifest: parsed.keyManifest as KeyManifestMap | undefined,
-    originalMessage: parsed.originalMessage as ManifestCorePayload,
   };
 }
 
+type ShareImportWire = {
+  shareWire: ManifestShareWirePayload;
+  keyManifest?: KeyManifestMap;
+};
+
 function parseShareImportPayload(
-  wire: ShareImportWirePayload,
+  wire: ShareImportWire,
 ): ParseImportPayloadResult {
-  const shareWire = extractShareWire(wire);
+  const shareWire = wire.shareWire;
   const shareWireError = validateManifestShareWirePayload(shareWire);
   if (shareWireError) {
     return { ok: false, error: shareWireError };
@@ -93,18 +89,10 @@ function parseShareImportPayload(
     };
   }
 
-  if (!wire.originalMessage) {
+  if (!shareWire.parentMessageId) {
     return {
       ok: false,
-      error: 'Shared message export is missing embedded originalMessage.',
-    };
-  }
-
-  const parentValidationError = validateManifestPayload(wire.originalMessage);
-  if (parentValidationError) {
-    return {
-      ok: false,
-      error: `Invalid originalMessage in share export: ${parentValidationError}`,
+      error: 'Share payload is missing parentMessageId.',
     };
   }
 
@@ -114,13 +102,23 @@ function parseShareImportPayload(
       kind: 'share',
       shareWire,
       keyManifest,
-      parentCorePayloadJson: JSON.stringify(wire.originalMessage),
+      parentMessageId: shareWire.parentMessageId,
     },
   };
 }
 
 function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
-  const manifestResult = parseManifestPayloadText(text);
+  const json = parseJsonObjectText(text);
+  if (json.ok === false) {
+    return json;
+  }
+
+  const { messageId, ...manifestRecord } = json.parsed;
+  const exportedMessageId =
+    typeof messageId === 'string' ? messageId : undefined;
+  const manifestText = JSON.stringify(manifestRecord);
+
+  const manifestResult = parseManifestPayloadText(manifestText);
   if (manifestResult.ok === false) {
     return manifestResult;
   }
@@ -137,8 +135,9 @@ function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
     ok: true,
     payload: {
       kind: 'original',
-      fullPayloadJson: text,
+      fullPayloadJson: manifestText,
       keyManifest,
+      exportedMessageId,
     },
   };
 }
@@ -150,9 +149,15 @@ export function parseImportPayloadText(text: string): ParseImportPayloadResult {
     return json;
   }
 
-  const shareWire = normalizeShareImportWire(json.parsed);
-  if (shareWire) {
-    return parseShareImportPayload(shareWire);
+  const shareImport = normalizeShareImportWire(json.parsed);
+  if (shareImport) {
+    if (!shareImport.keyManifest) {
+      return {
+        ok: false,
+        error: 'Share payload has no keyManifest entries to store.',
+      };
+    }
+    return parseShareImportPayload(shareImport);
   }
 
   return parseOriginalImportPayload(text);
@@ -163,12 +168,4 @@ export function recipientKeyInImportPayload(
   recipientKeyId: string,
 ): boolean {
   return recipientKeyId in payload.keyManifest;
-}
-
-export function shareImportContentFingerprint(
-  payload: ParsedShareImportPayload,
-): EncryptedMessageFingerprint | null {
-  return encryptedMessageFingerprintFromPayloadJson(
-    payload.parentCorePayloadJson,
-  );
 }

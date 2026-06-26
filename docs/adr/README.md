@@ -12,6 +12,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0002](./0002-in-memory-non-extractable-private-key-cache.md) | In-memory non-extractable private key cache | Accepted |
 | [0003](./0003-ephemeral-sender-ecdhe-for-key-manifest-shards.md) | Ephemeral sender ECDHE for key-manifest shards | Accepted |
 | [0004](./0004-main-process-owns-external-file-reads.md) | Main process owns external file reads (no path-based IPC from renderer) | Accepted |
+| [0005](./0005-feed-share-and-comments-parent-dek-model.md) | Feed share and comments: `parentMessageId`, shared DEK, and delivery isolation | Accepted |
 
 ## When to write an ADR
 

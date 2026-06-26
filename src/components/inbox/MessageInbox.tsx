@@ -144,7 +144,7 @@ export function MessageInbox({
     () => [...new Set(messages.map(getCommentThreadMessageId))],
     [messages],
   );
-  const senderLabelsById = useInboxSenderLabels(messages);
+  const senderLabelsById = useInboxSenderLabels(messages, recipientKeyId);
   const { commentCountByMessageId, incrementCommentCount } =
     useMessageCommentCounts(commentThreadIds, recipientKeyId);
 

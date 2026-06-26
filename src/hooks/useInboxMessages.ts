@@ -3,9 +3,12 @@ import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import {
   listStoredMessagesForRecipientKeyId,
+  getStoredMessageById,
   type StoredMessage,
 } from '@/services/db/storedMessages.ts';
 import { hasMessageKeyManifestShard } from '@/services/db/storedMessageKeyManifest.ts';
+import { filterFeedInboxMessages } from '@/utils/feedInboxVisibility.ts';
+import { isShareDelivery } from '@/crypto/manifestShare.ts';
 
 export type InboxMessage = StoredMessage;
 
@@ -85,7 +88,9 @@ export function useInboxMessages() {
 
     async function loadInboxFromStore() {
       try {
-        const storedMessages = await listStoredMessagesForRecipientKeyId(keyId);
+        const storedMessages = filterFeedInboxMessages(
+          await listStoredMessagesForRecipientKeyId(keyId),
+        );
         if (cancelled) {
           return;
         }
@@ -127,8 +132,9 @@ export function useInboxMessages() {
       setError(null);
 
       try {
-        const storedMessages =
-          await listStoredMessagesForRecipientKeyId(recipientKeyId);
+        const storedMessages = filterFeedInboxMessages(
+          await listStoredMessagesForRecipientKeyId(recipientKeyId),
+        );
         setMessages(storedMessages);
         setHasLoadedOnce(true);
       } catch (e) {
@@ -152,11 +158,21 @@ export function useInboxMessages() {
         return;
       }
 
-      setMessages((prev) => {
-        if (prev.some((existing) => existing.id === message.id)) {
-          return prev;
+      const toMerge: StoredMessage[] = [message];
+      if (isShareDelivery(message) && message.parentMessageId) {
+        const parent = await getStoredMessageById(message.parentMessageId);
+        if (parent) {
+          toMerge.push(parent);
         }
-        return [message, ...prev];
+      }
+
+      const mergeIds = new Set(toMerge.map((row) => row.id));
+      setMessages((prev) => {
+        const merged = [
+          ...toMerge,
+          ...prev.filter((existing) => !mergeIds.has(existing.id)),
+        ];
+        return filterFeedInboxMessages(merged);
       });
     },
     [recipientKeyId],

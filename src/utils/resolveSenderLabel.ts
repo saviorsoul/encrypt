@@ -26,14 +26,14 @@ export async function resolveSenderLabelFromImportText(
   }
 
   if (parsed.payload.kind === 'share') {
-    const parentBase = validateBaseJsonText(
-      parsed.payload.parentCorePayloadJson,
+    const shareBase = validateBaseJsonText(
+      JSON.stringify(parsed.payload.shareWire),
     );
-    if (parentBase.ok === false || !parentBase.parsed.senderPublicJwk) {
+    if (shareBase.ok === false || !shareBase.parsed.sharerPublicJwk) {
       return UNKNOWN_SENDER_LABEL;
     }
     const senderKeyId = await ecPublicJwkThumbprintSha256(
-      parentBase.parsed.senderPublicJwk as JsonWebKey,
+      shareBase.parsed.sharerPublicJwk as JsonWebKey,
     );
     return resolveUsernameForKeyId(senderKeyId);
   }

@@ -16,6 +16,7 @@ import { LoginPage } from '@/pages/LoginPage.tsx';
 import { FeedPage } from '@/pages/FeedPage.tsx';
 import { ProofOfConceptEncryptDecryptPage } from '@/pages/ProofOfConceptEncryptDecryptPage';
 import { ProofOfConceptFeedCommentPage } from '@/pages/ProofOfConceptFeedCommentPage.tsx';
+import { ProofOfConceptFeedSharePage } from '@/pages/ProofOfConceptFeedSharePage.tsx';
 import { OneToOnePage } from '@/pages/OneToOnePage.tsx';
 import { GlossaryPage } from '@/pages/GlossaryPage.tsx';
 import { PrivateKeyDownloadPage } from '@/pages/PrivateKeyDownloadPage.tsx';
@@ -73,6 +74,10 @@ function App() {
                         <Route
                           path="proof-of-concepts/feed-comment"
                           element={<ProofOfConceptFeedCommentPage />}
+                        />
+                        <Route
+                          path="proof-of-concepts/feed-share"
+                          element={<ProofOfConceptFeedSharePage />}
                         />
                         <Route
                           path="proof-of-concepts/1-1"

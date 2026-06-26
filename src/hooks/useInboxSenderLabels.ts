@@ -6,6 +6,8 @@ import {
 } from '@/services/db/storedMessages.ts';
 import {
   getSharerKeyIdFromSharePayload,
+  getSharerKeyIdForRecipientParentAccess,
+  getCommentThreadMessageId,
   isShareDelivery,
 } from '@/crypto/manifestShare.ts';
 import { listStoredUsers } from '@/services/db/storedPublicKeys.ts';
@@ -23,6 +25,7 @@ function labelForKeyId(
 /** Resolve display names for message senders (username or truncated keyId). */
 export function useInboxSenderLabels(
   messages: StoredMessage[],
+  recipientKeyId: string | null,
 ): Record<string, string> {
   const [labelsById, setLabelsById] = useState<Record<string, string>>({});
 
@@ -56,11 +59,25 @@ export function useInboxSenderLabels(
             ] as const;
           }
 
-          const senderKeyId = await getSenderKeyIdFromPayload(message.payload);
-          return [
-            message.id,
-            labelForKeyId(senderKeyId, usernameByKeyId),
-          ] as const;
+          const threadId = getCommentThreadMessageId(message);
+          const authorKeyId = await getSenderKeyIdFromPayload(message.payload);
+          const authorLabel = labelForKeyId(authorKeyId, usernameByKeyId);
+
+          if (recipientKeyId) {
+            const sharerKeyId = await getSharerKeyIdForRecipientParentAccess(
+              threadId,
+              recipientKeyId,
+            );
+            if (sharerKeyId) {
+              const sharerLabel = labelForKeyId(sharerKeyId, usernameByKeyId);
+              return [
+                message.id,
+                `${authorLabel} · shared by ${sharerLabel}`,
+              ] as const;
+            }
+          }
+
+          return [message.id, authorLabel] as const;
         }),
       );
 
@@ -74,7 +91,7 @@ export function useInboxSenderLabels(
     return () => {
       cancelled = true;
     };
-  }, [messages]);
+  }, [messages, recipientKeyId]);
 
   return messages.length === 0 ? {} : labelsById;
 }

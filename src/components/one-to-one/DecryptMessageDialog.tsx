@@ -64,7 +64,7 @@ export function DecryptMessageDialog({
   const canDecrypt = parsed?.ok === true && !decrypting && !decryptDisabled;
   const pasteHelperText =
     payloadError ??
-    'You will be prompted to upload a private key that matches the sender or recipient public key.';
+    'You will be prompted to use a private key that matches the sender or recipient public key.';
 
   return (
     <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">

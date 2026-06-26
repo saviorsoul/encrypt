@@ -35,7 +35,6 @@ type ShareDeliveryPayload = {
   shareCoreJson: string;
   keyManifest: Awaited<ReturnType<typeof buildManifestShare>>['keyManifest'];
   parentMessageId: string;
-  parentCorePayloadJson: string;
 };
 
 export function useShareMessage({
@@ -125,9 +124,6 @@ export function useShareMessage({
 
         const { shareCoreJson, keyManifest } = await buildManifestShare(
           parentMessageId,
-          parentMessage.payload,
-          sourceMessage.id,
-          sourceMessage.payload,
           sharerKeyId,
           material.ecdhPrivateKey,
           keys.publicKey!,
@@ -139,7 +135,6 @@ export function useShareMessage({
           shareCoreJson,
           keyManifest,
           parentMessageId,
-          parentCorePayloadJson: parentMessage.payload,
         };
       });
     },
@@ -192,7 +187,6 @@ export function useShareMessage({
         const payloadJson = assembleShareExportPayloadJson(
           delivery.shareCoreJson,
           delivery.keyManifest,
-          delivery.parentCorePayloadJson,
         );
         const filename = shareExportFilename();
 

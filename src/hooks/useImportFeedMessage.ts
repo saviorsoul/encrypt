@@ -1,5 +1,4 @@
-import { useCallback, useState } from 'react';
-import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
+import { useCallback, useEffect, useState } from 'react';
 import { importParsedFeedMessage } from '@/crypto/importFeedMessage.ts';
 import {
   encryptedMessageFingerprintFromPayloadJson,
@@ -9,12 +8,12 @@ import {
 import {
   parseImportPayloadText,
   recipientKeyInImportPayload,
-  shareImportContentFingerprint,
   type ParsedImportPayload,
 } from '@/utils/parseImportPayloadText.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import { getStoredMessageById } from '@/services/db/storedMessages.ts';
 
 function findDuplicateMessageId(
   messages: StoredMessage[],
@@ -42,11 +41,11 @@ export function validateImportPayloadText(text: string): string | null {
   return null;
 }
 
-export function validateImportForRecipient(
+export async function validateImportForRecipient(
   text: string,
   recipientKeyId: string | null,
   existingMessages: StoredMessage[],
-): string | null {
+): Promise<string | null> {
   const validated = validateImportJsonText(text);
   if (validated.ok === false) {
     return validated.error;
@@ -70,38 +69,76 @@ export function validateImportForRecipient(
   }
 
   if (parsed.payload.kind === 'original') {
-    const fingerprint = encryptedMessageFingerprintFromPayloadJson(trimmed);
-    if (fingerprint !== null) {
-      const duplicateId = findDuplicateMessageId(existingMessages, fingerprint);
-      if (duplicateId !== null) {
+    const originalPayload = parsed.payload;
+    if (originalPayload.exportedMessageId) {
+      const existing = await getStoredMessageById(
+        originalPayload.exportedMessageId,
+      );
+      if (existing) {
         return 'This message is already in your feed.';
+      }
+    } else {
+      const fingerprint = encryptedMessageFingerprintFromPayloadJson(
+        originalPayload.fullPayloadJson,
+      );
+      if (fingerprint !== null) {
+        const duplicateId = findDuplicateMessageId(
+          existingMessages,
+          fingerprint,
+        );
+        if (duplicateId !== null) {
+          return 'This message is already in your feed.';
+        }
       }
     }
   }
 
   if (parsed.payload.kind === 'share') {
-    const fingerprint = shareImportContentFingerprint(parsed.payload);
-    if (fingerprint !== null) {
-      for (const message of existingMessages) {
-        const threadId = getCommentThreadMessageId(message);
-        const parent = existingMessages.find((row) => row.id === threadId);
-        if (!parent) {
-          continue;
-        }
-        const existing = encryptedMessageFingerprintFromPayloadJson(
-          parent.payload,
-        );
-        if (
-          existing !== null &&
-          encryptedMessageFingerprintsMatch(existing, fingerprint)
-        ) {
-          return 'You already have access to this message in your feed.';
-        }
-      }
+    const sharePayload = parsed.payload;
+    const parentMessage = await getStoredMessageById(
+      sharePayload.parentMessageId,
+    );
+    if (!parentMessage) {
+      return 'Parent message not found. Import the original message first.';
     }
   }
 
   return null;
+}
+
+/** Async import validation; only updates state when IndexedDB checks complete. */
+export function useImportFeedValidation(
+  text: string | null,
+  enabled: boolean,
+  validateForImport: (text: string) => Promise<string | null>,
+) {
+  const [result, setResult] = useState<{
+    text: string;
+    error: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !text) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void validateForImport(text).then((error) => {
+      if (!cancelled) {
+        setResult({ text, error });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, text, validateForImport]);
+
+  const pending = Boolean(enabled && text && result?.text !== text);
+  const error = enabled && text && result?.text === text ? result.error : null;
+
+  return { error, pending };
 }
 
 type UseImportFeedMessageOptions = {
@@ -119,7 +156,7 @@ export function useImportFeedMessage({
   const [busy, setBusy] = useState(false);
 
   const validateForImport = useCallback(
-    (text: string): string | null => {
+    async (text: string): Promise<string | null> => {
       return validateImportForRecipient(text, recipientKeyId, existingMessages);
     },
     [recipientKeyId, existingMessages],
@@ -135,7 +172,7 @@ export function useImportFeedMessage({
         return false;
       }
 
-      const importError = validateImportForRecipient(
+      const importError = await validateImportForRecipient(
         validated.text,
         recipientKeyId,
         existingMessages,

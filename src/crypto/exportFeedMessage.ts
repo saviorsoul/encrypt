@@ -1,30 +1,18 @@
 import type { KeyManifestMap } from '@/types/manifest.ts';
 import { isShareDelivery } from '@/crypto/manifestShare.ts';
-import {
-  assembleManifestWithKeyManifest,
-  parseManifestCorePayload,
-} from '@/crypto/manifestStorage.ts';
-import {
-  parseManifestShareCorePayload,
-  shareCoreToWirePayload,
-} from '@/crypto/manifestShare.ts';
+import { assembleManifestWithKeyManifest } from '@/crypto/manifestStorage.ts';
+import { parseManifestShareCorePayload } from '@/crypto/manifestShare.ts';
 import { getKeyManifestForMessage } from '@/services/db/storedMessageKeyManifest.ts';
-import {
-  getStoredMessageById,
-  type StoredMessage,
-} from '@/services/db/storedMessages.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 export function assembleShareExportPayloadJson(
   shareCoreJson: string,
   keyManifest: KeyManifestMap,
-  parentCorePayloadJson: string,
 ): string {
-  const shareCore = parseManifestShareCorePayload(shareCoreJson);
-  const originalMessage = parseManifestCorePayload(parentCorePayloadJson);
+  const share = parseManifestShareCorePayload(shareCoreJson);
 
   return JSON.stringify({
-    originalMessage,
-    share: shareCoreToWirePayload(shareCore),
+    share,
     keyManifest,
   });
 }
@@ -39,22 +27,16 @@ export async function assembleStoredFeedMessageCopyPayload(
   const keyManifest = await getKeyManifestForMessage(message.id);
 
   if (isShareDelivery(message)) {
-    const parentMessageId = message.parentMessageId;
-    if (!parentMessageId) {
-      throw new Error('Share delivery is missing parentMessageId.');
-    }
-
-    const parentMessage = await getStoredMessageById(parentMessageId);
-    if (!parentMessage) {
-      throw new Error('Parent message not found.');
-    }
-
-    return assembleShareExportPayloadJson(
-      message.payload,
-      keyManifest,
-      parentMessage.payload,
-    );
+    return assembleShareExportPayloadJson(message.payload, keyManifest);
   }
 
-  return assembleManifestWithKeyManifest(message.payload, keyManifest);
+  const manifestJson = assembleManifestWithKeyManifest(
+    message.payload,
+    keyManifest,
+  );
+  const manifest = JSON.parse(manifestJson) as Record<string, unknown>;
+  return JSON.stringify({
+    messageId: message.id,
+    ...manifest,
+  });
 }

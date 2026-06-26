@@ -12,6 +12,7 @@ import {
   getMessageKeyManifestEntry,
   listMessageIdsForRecipientKeyId,
 } from './storedMessageKeyManifest.ts';
+import { isShareDelivery } from '@/crypto/manifestShare.ts';
 
 export type StoredMessage = {
   id: string;
@@ -97,9 +98,16 @@ export async function saveStoredMessageCoreWithId(
 export async function saveStoredMessage(
   fullPayload: string,
 ): Promise<StoredMessage> {
+  return saveStoredMessageWithId(crypto.randomUUID(), fullPayload);
+}
+
+export async function saveStoredMessageWithId(
+  id: string,
+  fullPayload: string,
+): Promise<StoredMessage> {
   const { corePayloadJson, keyManifest } = splitManifestForStorage(fullPayload);
   const message: StoredMessage = {
-    id: crypto.randomUUID(),
+    id,
     payload: corePayloadJson,
     createdAt: Date.now(),
   };
@@ -202,9 +210,28 @@ export async function listStoredMessagesForRecipientKeyId(
   const messages = await Promise.all(
     messageIds.map((id) => getStoredMessageById(id)),
   );
-  return messages
-    .filter((row): row is StoredMessage => row !== null)
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const rows = messages.filter((row): row is StoredMessage => row !== null);
+
+  const parentIds = new Set<string>();
+  for (const message of rows) {
+    if (isShareDelivery(message) && message.parentMessageId) {
+      parentIds.add(message.parentMessageId);
+    }
+  }
+
+  const existingIds = new Set(rows.map((message) => message.id));
+  for (const parentId of parentIds) {
+    if (existingIds.has(parentId)) {
+      continue;
+    }
+    const parent = await getStoredMessageById(parentId);
+    if (parent) {
+      rows.push(parent);
+      existingIds.add(parentId);
+    }
+  }
+
+  return rows.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function getSenderKeyIdFromPayload(

@@ -10,6 +10,7 @@ import {
   signCommentPayload,
 } from '@/crypto/commentCrypto.ts';
 import { decryptDekFromManifestPayload } from '@/crypto/manifestDecrypt.ts';
+import { assembleCommentExportPayloadJson } from '@/crypto/exportComment.ts';
 import { type ManifestEncryptedContent } from '@/crypto/manifestEncrypt.ts';
 import {
   ecPublicJwkThumbprintSha256,
@@ -77,7 +78,8 @@ export function useEncryptCommentSteps(
   const [assemblyOutput, setAssemblyOutput] = useState('');
   const [senderSignatureOutput, setSenderSignatureOutput] = useState('');
   const [signedPayloadJson, setSignedPayloadJson] = useState('');
-  const [signedPayloadDisplay, setSignedPayloadDisplay] = useState('');
+  const [exportPayloadJson, setExportPayloadJson] = useState('');
+  const [exportPayloadDisplay, setExportPayloadDisplay] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [errorStep, setErrorStep] = useState<CommentBusyStep | null>(null);
   const [busyStep, setBusyStep] = useState<CommentBusyStep | null>(null);
@@ -98,7 +100,8 @@ export function useEncryptCommentSteps(
     setAssemblyOutput('');
     setSenderSignatureOutput('');
     setSignedPayloadJson('');
-    setSignedPayloadDisplay('');
+    setExportPayloadJson('');
+    setExportPayloadDisplay('');
   }, []);
 
   const clearFromDeriveCommentKey = useCallback(() => {
@@ -295,7 +298,8 @@ export function useEncryptCommentSteps(
     setAssemblyOutput('');
     setSenderSignatureOutput('');
     setSignedPayloadJson('');
-    setSignedPayloadDisplay('');
+    setExportPayloadJson('');
+    setExportPayloadDisplay('');
 
     if (!demo) {
       setError('Demo feed post is not ready.');
@@ -325,8 +329,12 @@ export function useEncryptCommentSteps(
 
     setBusyStep('assemble');
     try {
+      if (!demo) {
+        throw new Error('Demo feed post is not ready.');
+      }
+
       const signableBody = await buildCommentSignableBody({
-        messageId: demo.parentMessageId,
+        parentMessageId: demo.parentMessageId,
         senderPublicKey,
         hkdfSalt,
         encryptedContent,
@@ -349,7 +357,8 @@ export function useEncryptCommentSteps(
     clearError();
     setSenderSignatureOutput('');
     setSignedPayloadJson('');
-    setSignedPayloadDisplay('');
+    setExportPayloadJson('');
+    setExportPayloadDisplay('');
 
     const senderPublicKeyJwk = keys?.publicKeyJwk;
     if (!senderPublicKeyJwk) {
@@ -385,8 +394,15 @@ export function useEncryptCommentSteps(
         };
         setSenderSignatureOutput(signedPayload.senderSignature);
         setSignedPayloadJson(signedJson);
-        setSignedPayloadDisplay(
-          stringifyManifestPayloadForDisplay(signedPayload),
+
+        if (!demo) {
+          throw new Error('Demo feed post is not ready.');
+        }
+
+        const exportJson = assembleCommentExportPayloadJson(signedJson);
+        setExportPayloadJson(exportJson);
+        setExportPayloadDisplay(
+          stringifyManifestPayloadForDisplay(JSON.parse(exportJson)),
         );
       });
     } catch (e) {
@@ -395,13 +411,14 @@ export function useEncryptCommentSteps(
       }
       setSenderSignatureOutput('');
       setSignedPayloadJson('');
-      setSignedPayloadDisplay('');
+      setExportPayloadJson('');
+      setExportPayloadDisplay('');
       setError(e instanceof Error ? e.message : 'Failed to sign comment.');
       setErrorStep('sign');
     } finally {
       setBusyStep(null);
     }
-  }, [keys?.publicKeyJwk, clearError]);
+  }, [demo, keys?.publicKeyJwk, clearError]);
 
   const canRunImportHkdfMaterial = Boolean(dekOutput);
   const canRunDeriveCommentKey = Boolean(hkdfMaterialFingerprintOutput);
@@ -423,7 +440,8 @@ export function useEncryptCommentSteps(
     assemblyOutput,
     senderSignatureOutput,
     signedPayloadJson,
-    signedPayloadDisplay,
+    exportPayloadJson,
+    exportPayloadDisplay,
     error,
     errorStep,
     busyStep,

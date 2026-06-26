@@ -32,7 +32,7 @@ import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 import { stringifyManifestPayloadForDisplay } from '@/utils/formatManifestJsonForDisplay.ts';
 
 export const COMMENT_CRYPTO_OVERVIEW =
-  'A feed comment is encrypted under the same message DEK as its parent post—not under per-recipient KEKs. Anyone who can decrypt the post can decrypt its comments after verifying the author signature. The author uses their private key and their keyManifest entry on the parent feed manifest to recover that DEK before encrypting.';
+  'A feed comment is encrypted under the same message DEK as its parent post - not under per-recipient KEKs. Anyone who can decrypt the post can decrypt its comments after verifying the author signature. The author uses their private key and their keyManifest entry on the parent feed manifest to recover that DEK before encrypting.';
 
 const DERIVE_DEK_STEP_DESCRIPTION = (
   <>
@@ -74,22 +74,22 @@ const IMPORT_HKDF_MATERIAL_STEP_DESCRIPTION =
 const DERIVE_COMMENT_KEY_STEP_DESCRIPTION = (
   <>
     With a fresh random salt, HKDF-expand to an AES-256-GCM comment key. This
-    key encrypts the comment body only—the DEK stays unchanged and is never
+    key encrypts the comment body only - the DEK stays unchanged and is never
     re-wrapped for other recipients. The salt on the wire lets anyone with the
     DEK re-derive the same comment key.
   </>
 );
 
 const ENCRYPT_COMMENT_BODY_STEP_DESCRIPTION =
-  'AES-GCM-encrypt the comment plaintext with the comment key from step 3. The IV and ciphertext become encryptedContent on the wire—the comment key itself is not stored; recipients re-derive it from the DEK and salt.';
+  'AES-GCM-encrypt the comment plaintext with the comment key from step 3. The IV and ciphertext become encryptedContent on the wire - the comment key itself is not stored; recipients re-derive it from the DEK and salt.';
 
-const ASSEMBLE_PAYLOAD_STEP_DESCRIPTION = `Build the payload: version, wrap name, parentMessageId, senderPublicJwk, the base64 HKDF salt from step 3, and encryptedContent from step 4. The salt—not the comment key—lets every recipient who has the DEK re-derive the same comment key to decrypt.`;
+const ASSEMBLE_PAYLOAD_STEP_DESCRIPTION = `Build the payload: version, wrap name, parentMessageId, senderPublicJwk, the base64 HKDF salt from step 3, and encryptedContent from step 4. The salt - not the comment key - lets every recipient who has the DEK re-derive the same comment key to decrypt.`;
 
 const SIGN_COMMENT_STEP_DESCRIPTION =
   'Sign the canonical JSON of the signable body with your long-term ECDSA P-256 private key. Recipients verify signature against sender public key before decrypting.';
 
 const DEFAULT_COMMENT_TEXT =
-  'Great post — adding a comment encrypted under the parent message DEK.';
+  'Great post  -  adding a comment encrypted under the parent message DEK.';
 
 type ParentFeedMessagePanelProps = {
   demo: DemoParentFeedMessage;
@@ -262,7 +262,7 @@ function EncryptCommentBodyExampleCaption({
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <StepOutputTextField
-          tooltipMessage="From step 3 — used for AES-GCM only, not sent on the wire"
+          tooltipMessage="From step 3  -  used for AES-GCM only, not sent on the wire"
           label="Comment key (AES-256-GCM, step 3)"
           value={keyBase64}
           multiline
@@ -550,8 +550,8 @@ const CommentStepsPanel = memo(function CommentStepsPanel({
           slotProps={{ input: { readOnly: true } }}
         />
         <StepOutputTextField
-          label="Signed comment payload JSON"
-          value={steps.signedPayloadDisplay}
+          label="Export JSON (comment)"
+          value={steps.exportPayloadDisplay}
           multiline
           minRows={8}
           maxRows={12}
@@ -570,13 +570,13 @@ const CommentStepsPanel = memo(function CommentStepsPanel({
           <Button
             variant="outlined"
             onClick={onCopyPayload}
-            disabled={!steps.signedPayloadJson}
+            disabled={!steps.exportPayloadJson}
           >
             {copyState === 'ok'
               ? 'Copied'
               : copyState === 'err'
                 ? 'Copy failed'
-                : 'Copy JSON payload'}
+                : 'Copy export JSON'}
           </Button>
         </Box>
       </Box>
@@ -600,15 +600,15 @@ export function EncryptCommentStepByStep({
   const steps = useEncryptCommentSteps(demo, getCommentPlaintextRef);
 
   const handleCopyPayload = useCallback(async () => {
-    if (!steps.signedPayloadJson) return;
+    if (!steps.exportPayloadJson) return;
     try {
-      await copyTextToClipboard(steps.signedPayloadJson);
+      await copyTextToClipboard(steps.exportPayloadJson);
       setCopyState('ok');
     } catch {
       setCopyState('err');
     }
     window.setTimeout(() => setCopyState('idle'), 2000);
-  }, [steps.signedPayloadJson]);
+  }, [steps.exportPayloadJson]);
 
   if (demoLoading) {
     return (

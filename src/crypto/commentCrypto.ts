@@ -26,10 +26,6 @@ import {
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
-export function parseCommentPayload(payloadJson: string): CommentPayload {
-  return parseBaseJsonObjectOrThrow(payloadJson) as unknown as CommentPayload;
-}
-
 function parseCommentHkdfSalt(saltBase64: string): Uint8Array<ArrayBuffer> {
   const salt = new Uint8Array(base64ToBytes(saltBase64));
   if (salt.length !== HKDF_SALT_LENGTH) {
@@ -88,13 +84,52 @@ export async function encryptCommentBody(
   return aesGcmEncryptManifestBody(commentKey, commentText);
 }
 
+export function validateCommentPayload(payload: CommentPayload): string | null {
+  if (payload.version !== COMMENT_VERSION) {
+    return `Unsupported comment version: ${payload.version}`;
+  }
+  if (payload.wrap !== COMMENT_WRAP) {
+    return `Unsupported comment wrap: ${payload.wrap}`;
+  }
+  if (typeof payload.parentMessageId !== 'string' || !payload.parentMessageId) {
+    return 'Comment is missing parentMessageId.';
+  }
+  if (!payload.senderPublicJwk || typeof payload.senderSignature !== 'string') {
+    return 'Comment is missing signature fields.';
+  }
+  if (typeof payload.salt !== 'string' || !payload.salt) {
+    return 'Comment is missing HKDF salt.';
+  }
+  if (!payload.encryptedContent) {
+    return 'Comment is missing encryptedContent.';
+  }
+  return null;
+}
+
+export async function verifyCommentSignature(
+  payload: CommentPayload,
+): Promise<void> {
+  const validationError = validateCommentPayload(payload);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const { senderSignature, ...signableBody } = payload;
+  await verifyCanonicalSignature(
+    payload.senderPublicJwk,
+    senderSignature,
+    signableBody,
+    'Comment signature verification failed (payload may have been tampered with).',
+  );
+}
+
 export async function buildCommentSignableBody({
-  messageId,
+  parentMessageId,
   senderPublicKey,
   hkdfSalt,
   encryptedContent,
 }: {
-  messageId: string;
+  parentMessageId: string;
   senderPublicKey: CryptoKey;
   hkdfSalt: Uint8Array<ArrayBuffer>;
   encryptedContent: ManifestEncryptedContent;
@@ -102,7 +137,7 @@ export async function buildCommentSignableBody({
   return {
     version: COMMENT_VERSION,
     wrap: COMMENT_WRAP,
-    parentMessageId: messageId,
+    parentMessageId,
     senderPublicJwk: await exportCryptoKeyAsJwk(senderPublicKey),
     salt: bytesToBase64(hkdfSalt),
     encryptedContent: encryptedContentToSignableBody(encryptedContent),
@@ -142,7 +177,7 @@ export async function encryptCommentWithMessageKey(
   const commentKey = await deriveCommentKeyFromDek(rawDek, hkdfSalt);
   const encryptedContent = await encryptCommentBody(commentKey, commentText);
   const signableBody = await buildCommentSignableBody({
-    messageId,
+    parentMessageId: messageId,
     senderPublicKey,
     hkdfSalt,
     encryptedContent,
@@ -160,7 +195,9 @@ export async function decryptComment(
   recipientKeyId: string,
   recipientPrivateKey: CryptoKey,
 ): Promise<string> {
-  const payload = parseCommentPayload(payloadJson);
+  const payload = parseBaseJsonObjectOrThrow(
+    payloadJson,
+  ) as unknown as CommentPayload;
 
   if (payload.parentMessageId !== messageId) {
     throw new Error(
@@ -168,13 +205,7 @@ export async function decryptComment(
     );
   }
 
-  const { senderSignature, ...signableBody } = payload;
-  await verifyCanonicalSignature(
-    payload.senderPublicJwk,
-    senderSignature,
-    signableBody,
-    'Comment signature verification failed (payload may have been tampered with).',
-  );
+  await verifyCommentSignature(payload);
 
   const rawDek = await decryptParentMessageDekForRecipient(
     messageId,
@@ -183,7 +214,7 @@ export async function decryptComment(
   );
   const commentKey = await deriveCommentKeyFromDek(
     rawDek,
-    parseCommentHkdfSalt(signableBody.salt),
+    parseCommentHkdfSalt(payload.salt),
   );
 
   return aesGcmDecryptManifestBody(
@@ -196,7 +227,9 @@ export async function getCommentAuthorKeyIdFromPayload(
   payload: string,
 ): Promise<string | null> {
   try {
-    const parsed = parseCommentPayload(payload);
+    const parsed = parseBaseJsonObjectOrThrow(
+      payload,
+    ) as unknown as CommentPayload;
     return ecPublicJwkThumbprintSha256(parsed.senderPublicJwk);
   } catch {
     return null;

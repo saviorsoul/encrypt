@@ -8,6 +8,7 @@ import { Link as RouterLink, useLocation } from 'react-router-dom';
 export const PROOF_OF_CONCEPT_ITEMS = [
   { label: 'Encrypt / Decrypt', to: '/proof-of-concepts/encrypt-decrypt' },
   { label: 'Feed Comment', to: '/proof-of-concepts/feed-comment' },
+  { label: 'Feed Share', to: '/proof-of-concepts/feed-share' },
 ] as const;
 
 export function isProofOfConceptsPath(pathname: string): boolean {

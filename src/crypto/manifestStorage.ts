@@ -26,6 +26,15 @@ export function splitManifestForStorage(fullPayloadJson: string): {
   };
 }
 
+/** Accepts stored core JSON or a full inline manifest; returns core JSON. */
+export function manifestCorePayloadJsonFromWire(payloadJson: string): string {
+  const parsed = parseBaseJsonObjectOrThrow(payloadJson);
+  if (isManifestCorePayload(parsed)) {
+    return payloadJson;
+  }
+  return splitManifestForStorage(payloadJson).corePayloadJson;
+}
+
 export function parseManifestCorePayload(
   payloadJson: string,
 ): ManifestCorePayload {

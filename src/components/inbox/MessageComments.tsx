@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -8,14 +8,20 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SendIcon from '@mui/icons-material/Send';
 import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
+import { assembleStoredCommentCopyPayload } from '@/crypto/exportComment.ts';
 import { useEncryptComment } from '@/hooks/useEncryptComment.ts';
+import { ImportCommentDialog } from '@/components/inbox/ImportCommentDialog.tsx';
 import type { StoredComment } from '@/services/db/storedComments.ts';
 import type { InboxComment } from '@/hooks/useMessageComments.ts';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
+import type { CopyState } from '@/types/copyState.ts';
+import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 
 type MessageCommentsProps = {
   messageId: string;
@@ -47,6 +53,22 @@ function CommentItem({
 }) {
   const { text: decryptedText, error: decryptError } = decryption;
   const postedAgo = useRelativeTime(comment.createdAt);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [copyBusy, setCopyBusy] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    setCopyBusy(true);
+    try {
+      const payloadJson = await assembleStoredCommentCopyPayload(comment);
+      await copyTextToClipboard(payloadJson);
+      setCopyState('ok');
+    } catch {
+      setCopyState('err');
+    } finally {
+      setCopyBusy(false);
+      window.setTimeout(() => setCopyState('idle'), 2000);
+    }
+  }, [comment]);
 
   return (
     <Box
@@ -99,18 +121,35 @@ function CommentItem({
           {decryptedText ?? 'Encrypted comment — decrypt to read.'}
         </Typography>
 
-        {showDecryptButton && (
+        <Box sx={{ display: 'inline-flex', gap: 1, alignItems: 'flex-start' }}>
+          {showDecryptButton && (
+            <Button
+              size="small"
+              variant="text"
+              onClick={onDecrypt}
+              disabled={decryptDisabled}
+              startIcon={<LockOpenIcon fontSize="small" />}
+              sx={{ alignSelf: 'flex-start', minWidth: 0, px: 0.5 }}
+            >
+              {decrypting ? 'Decrypting…' : 'Decrypt'}
+            </Button>
+          )}
+
           <Button
             size="small"
             variant="text"
-            onClick={onDecrypt}
-            disabled={decryptDisabled}
-            startIcon={<LockOpenIcon fontSize="small" />}
+            onClick={handleCopy}
+            disabled={copyBusy}
+            startIcon={<ContentCopyOutlinedIcon fontSize="small" />}
             sx={{ alignSelf: 'flex-start', minWidth: 0, px: 0.5 }}
           >
-            {decrypting ? 'Decrypting…' : 'Decrypt'}
+            {copyState === 'ok'
+              ? 'Copied'
+              : copyState === 'err'
+                ? 'Copy failed'
+                : 'Copy'}
           </Button>
-        )}
+        </Box>
       </Stack>
     </Box>
   );
@@ -118,6 +157,7 @@ function CommentItem({
 
 export function MessageComments({
   messageId,
+  recipientKeyId,
   comments,
   commentsLoading,
   commentsError,
@@ -127,6 +167,8 @@ export function MessageComments({
   onCommentPosted,
   onClose,
 }: MessageCommentsProps) {
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
   const {
     keysLoading,
     keysReady,
@@ -154,13 +196,37 @@ export function MessageComments({
     [handlePost],
   );
 
+  const handleCommentImported = useCallback(
+    (comment: StoredComment) => {
+      if (comment.messageId === messageId) {
+        onCommentPosted?.(comment);
+      }
+    },
+    [messageId, onCommentPosted],
+  );
+
   return (
     <Stack spacing={1.5} sx={{ pt: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<FileUploadOutlinedIcon fontSize="small" />}
+          onClick={() => setImportDialogOpen(true)}
+        >
+          Import comment
+        </Button>
         <IconButton size="small" onClick={onClose} aria-label="Close comments">
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
+
+      <ImportCommentDialog
+        open={importDialogOpen}
+        recipientKeyId={recipientKeyId}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={handleCommentImported}
+      />
 
       {commentsLoading && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

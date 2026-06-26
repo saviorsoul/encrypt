@@ -11,7 +11,10 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { MessageFeedCard } from '@/components/inbox/MessageFeedCard.tsx';
 import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
-import { useImportFeedMessage } from '@/hooks/useImportFeedMessage.ts';
+import {
+  useImportFeedMessage,
+  useImportFeedValidation,
+} from '@/hooks/useImportFeedMessage.ts';
 import { useImportMessagePreview } from '@/hooks/useImportMessagePreview.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
@@ -103,12 +106,15 @@ export function ImportFeedMessageDialog({
     return validatePayloadText(trimmedPayload);
   }, [step, trimmedPayload, validatePayloadText]);
 
-  const importValidationError = useMemo(() => {
-    if (step !== 'input' || !trimmedPayload || payloadError) {
-      return null;
-    }
-    return validateForImport(trimmedPayload);
-  }, [step, trimmedPayload, payloadError, validateForImport]);
+  const importValidationActive =
+    step === 'input' && trimmedPayload.length > 0 && payloadError === null;
+
+  const { error: importValidationError, pending: importValidationPending } =
+    useImportFeedValidation(
+      importValidationActive ? trimmedPayload : null,
+      importValidationActive,
+      validateForImport,
+    );
 
   const canImportFromExternal =
     externalImport &&
@@ -116,29 +122,19 @@ export function ImportFeedMessageDialog({
     trimmedPayload.length > 0 &&
     payloadError === null &&
     importValidationError === null &&
+    !importValidationPending &&
     !busy;
 
   const canPreviewFromJson =
     step === 'input' &&
     trimmedPayload.length > 0 &&
     payloadError === null &&
-    importValidationError === null;
+    importValidationError === null &&
+    !importValidationPending;
 
   const validateFeedFileContent = useCallback(
-    (text: string) => {
-      const validated = validateImportJsonText(text);
-      if (validated.ok === false) {
-        return validated;
-      }
-
-      const importValidationError = validateForImport(validated.text);
-      if (importValidationError) {
-        return { ok: false as const, error: importValidationError };
-      }
-
-      return validated;
-    },
-    [validateForImport],
+    (text: string) => validateImportJsonText(text),
+    [],
   );
 
   const goToPreview = useCallback(
@@ -163,14 +159,23 @@ export function ImportFeedMessageDialog({
       return;
     }
 
-    const importValidationError = validateForImport(validated.text);
     if (importValidationError) {
       clearError();
       return;
     }
 
+    if (importValidationPending) {
+      return;
+    }
+
     goToPreview(validated.text);
-  }, [goToPreview, trimmedPayload, validateForImport, clearError]);
+  }, [
+    goToPreview,
+    trimmedPayload,
+    importValidationError,
+    importValidationPending,
+    clearError,
+  ]);
 
   const handleBack = useCallback(() => {
     setStep('input');
