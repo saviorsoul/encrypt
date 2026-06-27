@@ -10,6 +10,7 @@ import {
 } from '@/crypto/manifestShare.ts';
 import {
   getStoredMessageById,
+  type StoredFeedDelivery,
   type StoredMessage,
 } from '@/services/db/storedMessages.ts';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
@@ -22,7 +23,7 @@ export type MessageDecryptionResult = {
   error: string | null;
 };
 
-export type DecryptableMessage = StoredMessage;
+export type DecryptableMessage = StoredFeedDelivery;
 
 export type DecryptableComment = {
   id: string;

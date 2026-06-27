@@ -12,7 +12,10 @@ import {
 } from '@/utils/parseImportPayloadText.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
-import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type {
+  StoredFeedDelivery,
+  StoredMessage,
+} from '@/services/db/storedMessages.ts';
 import { getStoredMessageById } from '@/services/db/storedMessages.ts';
 
 function findDuplicateMessageId(
@@ -144,7 +147,7 @@ export function useImportFeedValidation(
 type UseImportFeedMessageOptions = {
   recipientKeyId: string | null;
   existingMessages: StoredMessage[];
-  onImported?: (message: StoredMessage) => void;
+  onImported?: (message: StoredFeedDelivery) => void;
 };
 
 export function useImportFeedMessage({

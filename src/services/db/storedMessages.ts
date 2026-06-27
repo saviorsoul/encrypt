@@ -1,10 +1,8 @@
 import {
   openCryptoDb,
-  MESSAGES_PARENT_MESSAGE_ID_INDEX,
   MESSAGES_STORE,
   MESSAGE_KEY_MANIFEST_STORE,
 } from './cryptoDb.ts';
-import type { KeyManifestMap } from '@/types/manifest.ts';
 import { getSenderKeyIdFromCorePayload } from '@/crypto/manifestDecrypt.ts';
 import { splitManifestForStorage } from '@/crypto/manifestStorage.ts';
 import { putMessageKeyManifestShardsInTransaction } from './storedMessageKeyManifest.ts';
@@ -12,15 +10,15 @@ import {
   getMessageKeyManifestEntry,
   listMessageIdsForRecipientKeyId,
 } from './storedMessageKeyManifest.ts';
-import { isShareDelivery } from '@/crypto/manifestShare.ts';
+import { getStoredShareById, type StoredShare } from './storedShares.ts';
 
 export type StoredMessage = {
   id: string;
   payload: string;
   createdAt: number;
-  /** Set on share deliveries; points at the original feed post. */
-  parentMessageId?: string;
 };
+
+export type StoredFeedDelivery = StoredMessage | StoredShare;
 
 function parseStoredMessage(value: unknown): StoredMessage | null {
   if (
@@ -33,44 +31,7 @@ function parseStoredMessage(value: unknown): StoredMessage | null {
     return null;
   }
 
-  const row = value as StoredMessage;
-  if (
-    row.parentMessageId !== undefined &&
-    typeof row.parentMessageId !== 'string'
-  ) {
-    return null;
-  }
-
-  return row;
-}
-
-export async function saveStoredShare(
-  shareCoreJson: string,
-  keyManifest: KeyManifestMap,
-  parentMessageId: string,
-): Promise<StoredMessage> {
-  const message: StoredMessage = {
-    id: crypto.randomUUID(),
-    payload: shareCoreJson,
-    parentMessageId,
-    createdAt: Date.now(),
-  };
-
-  const db = await openCryptoDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(
-      [MESSAGES_STORE, MESSAGE_KEY_MANIFEST_STORE],
-      'readwrite',
-    );
-    const messagesStore = tx.objectStore(MESSAGES_STORE);
-
-    messagesStore.put(message);
-    putMessageKeyManifestShardsInTransaction(tx, message.id, keyManifest);
-
-    tx.oncomplete = () => resolve(message);
-    tx.onerror = () => reject(tx.error);
-  });
+  return value as StoredMessage;
 }
 
 /** Store a message core without key-manifest shards (e.g. imported share parent). */
@@ -146,6 +107,16 @@ export async function getStoredMessageById(
   });
 }
 
+export async function getStoredFeedDeliveryById(
+  id: string,
+): Promise<StoredFeedDelivery | null> {
+  const message = await getStoredMessageById(id);
+  if (message) {
+    return message;
+  }
+  return getStoredShareById(id);
+}
+
 export async function listStoredMessages(): Promise<StoredMessage[]> {
   const db = await openCryptoDb();
 
@@ -165,73 +136,47 @@ export async function listStoredMessages(): Promise<StoredMessage[]> {
   });
 }
 
-export async function listShareDeliveriesForParentMessage(
-  parentMessageId: string,
-): Promise<StoredMessage[]> {
-  const db = await openCryptoDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(MESSAGES_STORE, 'readonly');
-    const store = tx.objectStore(MESSAGES_STORE);
-
-    if (store.indexNames.contains(MESSAGES_PARENT_MESSAGE_ID_INDEX)) {
-      const index = store.index(MESSAGES_PARENT_MESSAGE_ID_INDEX);
-      const request = index.getAll(parentMessageId);
-      request.onsuccess = () => {
-        const rows = (request.result ?? [])
-          .map(parseStoredMessage)
-          .filter((row): row is StoredMessage => row !== null)
-          .sort((a, b) => a.createdAt - b.createdAt);
-        resolve(rows);
-      };
-      request.onerror = () => reject(request.error);
-      return;
-    }
-
-    const request = store.getAll();
-    request.onsuccess = () => {
-      const rows = (request.result ?? [])
-        .map(parseStoredMessage)
-        .filter(
-          (row): row is StoredMessage =>
-            row !== null && row.parentMessageId === parentMessageId,
-        )
-        .sort((a, b) => a.createdAt - b.createdAt);
-      resolve(rows);
-    };
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function listStoredMessagesForRecipientKeyId(
   recipientKeyId: string,
-): Promise<StoredMessage[]> {
+): Promise<StoredFeedDelivery[]> {
   const messageIds = await listMessageIdsForRecipientKeyId(recipientKeyId);
-  const messages = await Promise.all(
-    messageIds.map((id) => getStoredMessageById(id)),
-  );
-  const rows = messages.filter((row): row is StoredMessage => row !== null);
+  const deliveries: StoredFeedDelivery[] = [];
+  const existingIds = new Set<string>();
 
-  const parentIds = new Set<string>();
-  for (const message of rows) {
-    if (isShareDelivery(message) && message.parentMessageId) {
-      parentIds.add(message.parentMessageId);
+  for (const id of messageIds) {
+    const message = await getStoredMessageById(id);
+    if (message) {
+      deliveries.push(message);
+      existingIds.add(id);
+      continue;
+    }
+
+    const share = await getStoredShareById(id);
+    if (share) {
+      deliveries.push(share);
+      existingIds.add(id);
     }
   }
 
-  const existingIds = new Set(rows.map((message) => message.id));
+  const parentIds = new Set<string>();
+  for (const delivery of deliveries) {
+    if ('parentMessageId' in delivery) {
+      parentIds.add(delivery.parentMessageId);
+    }
+  }
+
   for (const parentId of parentIds) {
     if (existingIds.has(parentId)) {
       continue;
     }
     const parent = await getStoredMessageById(parentId);
     if (parent) {
-      rows.push(parent);
+      deliveries.push(parent);
       existingIds.add(parentId);
     }
   }
 
-  return rows.sort((a, b) => b.createdAt - a.createdAt);
+  return deliveries.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function getSenderKeyIdFromPayload(
@@ -241,3 +186,8 @@ export async function getSenderKeyIdFromPayload(
 }
 
 export { getMessageKeyManifestEntry };
+export type { StoredShare } from './storedShares.ts';
+export {
+  saveStoredShare,
+  listShareDeliveriesForParentMessage,
+} from './storedShares.ts';

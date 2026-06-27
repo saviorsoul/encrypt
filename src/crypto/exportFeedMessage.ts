@@ -3,7 +3,7 @@ import { isShareDelivery } from '@/crypto/manifestShare.ts';
 import { assembleManifestWithKeyManifest } from '@/crypto/manifestStorage.ts';
 import { parseManifestShareCorePayload } from '@/crypto/manifestShare.ts';
 import { getKeyManifestForMessage } from '@/services/db/storedMessageKeyManifest.ts';
-import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type { StoredFeedDelivery } from '@/services/db/storedMessages.ts';
 
 export function assembleShareExportPayloadJson(
   shareCoreJson: string,
@@ -22,7 +22,7 @@ export function shareExportFilename(): string {
 }
 
 export async function assembleStoredFeedMessageCopyPayload(
-  message: StoredMessage,
+  message: StoredFeedDelivery,
 ): Promise<string> {
   const keyManifest = await getKeyManifestForMessage(message.id);
 

@@ -18,14 +18,17 @@ import {
 import { useImportMessagePreview } from '@/hooks/useImportMessagePreview.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
-import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type {
+  StoredFeedDelivery,
+  StoredMessage,
+} from '@/services/db/storedMessages.ts';
 
 type ImportFeedMessageDialogProps = {
   open: boolean;
   recipientKeyId: string | null;
   existingMessages: StoredMessage[];
   onClose: () => void;
-  onImported?: (message: StoredMessage) => void;
+  onImported?: (message: StoredFeedDelivery) => void;
   initialPayload?: string | null;
   initialFileName?: string | null;
   externalImport?: boolean;
@@ -57,7 +60,7 @@ export function ImportFeedMessageDialog({
   const displayPayload = externalPayload ?? payload;
 
   const handleImported = useCallback(
-    (message: StoredMessage) => {
+    (message: StoredFeedDelivery) => {
       onImported?.(message);
       onClose();
     },

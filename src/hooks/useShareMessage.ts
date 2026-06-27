@@ -18,16 +18,17 @@ import {
 } from '@/crypto/exportFeedMessage.ts';
 import {
   getStoredMessageById,
-  saveStoredShare,
   type StoredMessage,
 } from '@/services/db/storedMessages.ts';
+import type { StoredShare } from '@/services/db/storedShares.ts';
+import { saveStoredShare } from '@/services/db/storedShares.ts';
 import { downloadTextFile } from '@/utils/downloadJson.ts';
 
 type UseShareMessageOptions = {
   sourceMessage: StoredMessage | null;
   recipients: ManifestRecipientKeys[];
   recipientsLoading?: boolean;
-  onShareCreated?: (shareDelivery: StoredMessage) => void;
+  onShareCreated?: (shareDelivery: StoredShare) => void;
   onExported?: () => void;
 };
 

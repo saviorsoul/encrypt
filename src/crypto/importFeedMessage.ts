@@ -7,16 +7,16 @@ import {
   getStoredMessageById,
   saveStoredMessage,
   saveStoredMessageWithId,
-  saveStoredShare,
-  type StoredMessage,
+  type StoredFeedDelivery,
 } from '@/services/db/storedMessages.ts';
+import { saveStoredShare } from '@/services/db/storedShares.ts';
 import { parseManifestPayload } from '@/crypto/manifestDecrypt.ts';
 import { verifyManifestSignature } from '@/crypto/manifestSign.ts';
 
 export async function importParsedFeedMessage(
   payload: ParsedImportPayload,
   recipientKeyId: string,
-): Promise<StoredMessage> {
+): Promise<StoredFeedDelivery> {
   if (payload.kind === 'original') {
     const manifest = parseManifestPayload(payload.fullPayloadJson);
     await verifyManifestSignature(manifest);

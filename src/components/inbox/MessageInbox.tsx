@@ -24,7 +24,11 @@ import { useExternalImportDestination } from '@/hooks/useExternalImportDestinati
 import type { PendingExternalImport } from '@/components/providers/ExternalFileProvider.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
-import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type {
+  StoredFeedDelivery,
+  StoredMessage,
+} from '@/services/db/storedMessages.ts';
+import type { StoredShare } from '@/services/db/storedShares.ts';
 
 const MESSAGE_POP_IN = 'messagePopIn';
 
@@ -80,8 +84,8 @@ type MessageInboxProps = {
   loading: boolean;
   error: string | null;
   recipientKeyId: string | null;
-  onShareCreated?: (shareDelivery: StoredMessage) => void;
-  onMessageImported?: (message: StoredMessage) => void;
+  onShareCreated?: (shareDelivery: StoredShare) => void;
+  onMessageImported?: (message: StoredFeedDelivery) => void;
 };
 
 export function MessageInbox({

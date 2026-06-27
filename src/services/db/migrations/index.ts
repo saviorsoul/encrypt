@@ -11,8 +11,10 @@ import type { DbMigration, DbMigrationContext } from './types.ts';
  * Schema changes (new stores/indexes) stay in `openCryptoDb`'s `onupgradeneeded` handler.
  * Data transforms belong here so existing rows survive app updates.
  */
+import { v8MoveSharesToSharesTable } from './v8MoveSharesToSharesTable.ts';
+
 export const DB_MIGRATIONS: readonly DbMigration[] = [
-  // vXTestMigration,
+  v8MoveSharesToSharesTable,
 ];
 
 export function runDbMigrations(ctx: DbMigrationContext): void {

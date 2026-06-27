@@ -4,6 +4,7 @@ import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import {
   listStoredMessagesForRecipientKeyId,
   getStoredMessageById,
+  type StoredFeedDelivery,
   type StoredMessage,
 } from '@/services/db/storedMessages.ts';
 import { hasMessageKeyManifestShard } from '@/services/db/storedMessageKeyManifest.ts';
@@ -149,18 +150,18 @@ export function useInboxMessages() {
   );
 
   const prependMessage = useCallback(
-    async (message: StoredMessage) => {
+    async (delivery: StoredFeedDelivery) => {
       if (!recipientKeyId) {
         return;
       }
 
-      if (!(await hasMessageKeyManifestShard(message.id, recipientKeyId))) {
+      if (!(await hasMessageKeyManifestShard(delivery.id, recipientKeyId))) {
         return;
       }
 
-      const toMerge: StoredMessage[] = [message];
-      if (isShareDelivery(message) && message.parentMessageId) {
-        const parent = await getStoredMessageById(message.parentMessageId);
+      const toMerge: StoredFeedDelivery[] = [delivery];
+      if (isShareDelivery(delivery)) {
+        const parent = await getStoredMessageById(delivery.parentMessageId);
         if (parent) {
           toMerge.push(parent);
         }

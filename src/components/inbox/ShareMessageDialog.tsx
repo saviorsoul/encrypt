@@ -11,12 +11,13 @@ import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.
 import { useShareMessage } from '@/hooks/useShareMessage.ts';
 import { useMessageRecipients } from '@/hooks/useMessageRecipients.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type { StoredShare } from '@/services/db/storedShares.ts';
 
 type ShareMessageDialogProps = {
   open: boolean;
   sourceMessage: StoredMessage | null;
   onClose: () => void;
-  onShared?: (shareDelivery: StoredMessage) => void;
+  onShared?: (shareDelivery: StoredShare) => void;
 };
 
 export function ShareMessageDialog({

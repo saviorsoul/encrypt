@@ -2,10 +2,13 @@ import {
   getCommentThreadMessageId,
   isShareDelivery,
 } from '@/crypto/manifestShare.ts';
-import type { StoredMessage } from '@/services/db/storedMessages.ts';
+import type {
+  StoredFeedDelivery,
+  StoredMessage,
+} from '@/services/db/storedMessages.ts';
 
 function pickCanonicalFeedMessage(
-  threadMessages: StoredMessage[],
+  threadMessages: StoredFeedDelivery[],
 ): StoredMessage | null {
   return threadMessages.find((message) => !isShareDelivery(message)) ?? null;
 }
@@ -15,9 +18,9 @@ function pickCanonicalFeedMessage(
  * grouped under their parent and never shown as inbox rows.
  */
 export function filterFeedInboxMessages(
-  messages: StoredMessage[],
+  messages: StoredFeedDelivery[],
 ): StoredMessage[] {
-  const threads = new Map<string, StoredMessage[]>();
+  const threads = new Map<string, StoredFeedDelivery[]>();
 
   for (const message of messages) {
     const threadId = getCommentThreadMessageId(message);

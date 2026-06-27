@@ -1,11 +1,12 @@
 import { runDbMigrations } from './migrations/index.ts';
 
 export const DB_NAME = 'crypto-db';
-export const DB_VERSION = 7;
+export const DB_VERSION = 8;
 export const USERS_STORE = 'users';
 export const USERS_USERNAME_INDEX = 'username';
 export const MESSAGES_STORE = 'messages';
-export const MESSAGES_PARENT_MESSAGE_ID_INDEX = 'parentMessageId';
+export const SHARES_STORE = 'shares';
+export const SHARES_PARENT_MESSAGE_ID_INDEX = 'parentMessageId';
 export const COMMENTS_STORE = 'comments';
 export const COMMENTS_MESSAGE_ID_INDEX = 'messageId';
 export const MESSAGE_KEY_MANIFEST_STORE = 'messageKeyManifest';
@@ -45,25 +46,19 @@ export function openCryptoDb(): Promise<IDBDatabase> {
       }
 
       if (!db.objectStoreNames.contains(MESSAGES_STORE)) {
-        const messagesStore = db.createObjectStore(MESSAGES_STORE, {
+        db.createObjectStore(MESSAGES_STORE, {
           keyPath: 'id',
         });
-        messagesStore.createIndex(
-          MESSAGES_PARENT_MESSAGE_ID_INDEX,
+      }
+      if (!db.objectStoreNames.contains(SHARES_STORE)) {
+        const sharesStore = db.createObjectStore(SHARES_STORE, {
+          keyPath: 'id',
+        });
+        sharesStore.createIndex(
+          SHARES_PARENT_MESSAGE_ID_INDEX,
           'parentMessageId',
           { unique: false },
         );
-      } else {
-        const messagesStore = request.transaction!.objectStore(MESSAGES_STORE);
-        if (
-          !messagesStore.indexNames.contains(MESSAGES_PARENT_MESSAGE_ID_INDEX)
-        ) {
-          messagesStore.createIndex(
-            MESSAGES_PARENT_MESSAGE_ID_INDEX,
-            'parentMessageId',
-            { unique: false },
-          );
-        }
       }
       if (!db.objectStoreNames.contains(COMMENTS_STORE)) {
         const commentsStore = db.createObjectStore(COMMENTS_STORE, {

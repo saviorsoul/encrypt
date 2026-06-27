@@ -37,22 +37,21 @@ import {
   hasMessageKeyManifestShard,
 } from '@/services/db/storedMessageKeyManifest.ts';
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
-import {
-  getStoredMessageById,
-  listShareDeliveriesForParentMessage,
-} from '@/services/db/storedMessages.ts';
+import type { StoredShare } from '@/services/db/storedShares.ts';
+import { getStoredMessageById } from '@/services/db/storedMessages.ts';
+import { listShareDeliveriesForParentMessage } from '@/services/db/storedShares.ts';
 import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function isShareDelivery(
-  message: Pick<StoredMessage, 'parentMessageId'>,
-): boolean {
-  return typeof message.parentMessageId === 'string';
+  delivery: StoredMessage | StoredShare,
+): delivery is StoredShare {
+  return 'parentMessageId' in delivery;
 }
 
 export function getCommentThreadMessageId(
-  message: Pick<StoredMessage, 'id' | 'parentMessageId'>,
+  delivery: StoredMessage | StoredShare,
 ): string {
-  return message.parentMessageId ?? message.id;
+  return isShareDelivery(delivery) ? delivery.parentMessageId : delivery.id;
 }
 
 export function parseManifestShareCorePayload(
@@ -334,22 +333,22 @@ export async function decryptSharedStoredMessage(
 }
 
 export async function decryptStoredDeliveryWithPrivateKey(
-  message: StoredMessage,
+  delivery: StoredMessage | StoredShare,
   recipientKeyId: string,
   recipientPrivateKey: CryptoKey,
 ): Promise<string> {
-  if (!isShareDelivery(message)) {
-    const access = await resolveParentMessageAccess(message.id, recipientKeyId);
+  if (!isShareDelivery(delivery)) {
+    const access = await resolveParentMessageAccess(delivery.id, recipientKeyId);
     if (!access) {
       throw new Error(
         'No key manifest entry for the given recipientKeyId (wrong key pair?).',
       );
     }
 
-    if (access.deliveryMessageId === message.id) {
+    if (access.deliveryMessageId === delivery.id) {
       const assembledPayload = await assembleStoredMessagePayload(
-        message.id,
-        message.payload,
+        delivery.id,
+        delivery.payload,
         recipientKeyId,
       );
       return decryptWithManifest(
@@ -369,15 +368,15 @@ export async function decryptStoredDeliveryWithPrivateKey(
     );
   }
 
-  const parent = await getStoredMessageById(message.parentMessageId!);
+  const parent = await getStoredMessageById(delivery.parentMessageId);
   if (!parent) {
-    throw new Error(`Parent message not found: ${message.parentMessageId}`);
+    throw new Error(`Parent message not found: ${delivery.parentMessageId}`);
   }
 
   return decryptSharedStoredMessage(
-    message.id,
-    message.parentMessageId!,
-    message.payload,
+    delivery.id,
+    delivery.parentMessageId,
+    delivery.payload,
     parent.payload,
     recipientKeyId,
     recipientPrivateKey,
