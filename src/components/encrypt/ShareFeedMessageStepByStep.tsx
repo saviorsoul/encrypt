@@ -91,7 +91,7 @@ function ParentFeedMessagePanel({ demo }: ParentFeedMessagePanelProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <StepOutputTextField
         label="Message ID"
-        value={demo.parentMessageId}
+        value={demo.messageId}
         fullWidth
         slotProps={{ input: { readOnly: true } }}
       />

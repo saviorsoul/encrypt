@@ -160,8 +160,8 @@ export async function listStoredMessagesForRecipientKeyId(
 
   const parentIds = new Set<string>();
   for (const delivery of deliveries) {
-    if ('parentMessageId' in delivery) {
-      parentIds.add(delivery.parentMessageId);
+    if ('messageId' in delivery) {
+      parentIds.add(delivery.messageId);
     }
   }
 
@@ -189,5 +189,5 @@ export { getMessageKeyManifestEntry };
 export type { StoredShare } from './storedShares.ts';
 export {
   saveStoredShare,
-  listShareDeliveriesForParentMessage,
+  listShareDeliveriesForMessage,
 } from './storedShares.ts';

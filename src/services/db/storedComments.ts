@@ -5,8 +5,8 @@ import {
 } from './cryptoDb.ts';
 import { getStoredMessageById } from './storedMessages.ts';
 import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
-import type { CommentPayload } from '@/types/comment.ts';
 import { canCommentOnParentMessage } from '@/crypto/manifestShare.ts';
+import type { CommentPayload } from '@/types/comment.ts';
 
 export type StoredComment = {
   id: string;
@@ -90,7 +90,7 @@ export async function commentVisibleToRecipient(
     const parsed = parseBaseJsonObjectOrThrow(
       payload,
     ) as unknown as CommentPayload;
-    if (parsed.parentMessageId !== messageId) {
+    if (parsed.messageId !== messageId) {
       return false;
     }
   } catch {

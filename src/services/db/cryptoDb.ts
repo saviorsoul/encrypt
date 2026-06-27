@@ -1,13 +1,14 @@
 import { runDbMigrations } from './migrations/index.ts';
 
 export const DB_NAME = 'crypto-db';
-export const DB_VERSION = 8;
+export const DB_VERSION = 10;
 export const USERS_STORE = 'users';
 export const USERS_USERNAME_INDEX = 'username';
 export const MESSAGES_STORE = 'messages';
 export const SHARES_STORE = 'shares';
-export const SHARES_PARENT_MESSAGE_ID_INDEX = 'parentMessageId';
+export const SHARES_MESSAGE_ID_INDEX = 'messageId';
 export const COMMENTS_STORE = 'comments';
+export const COMMENTS_OLD_V9_STORE = 'comments_old_v9';
 export const COMMENTS_MESSAGE_ID_INDEX = 'messageId';
 export const MESSAGE_KEY_MANIFEST_STORE = 'messageKeyManifest';
 export const MESSAGE_KEY_MANIFEST_KEY_ID_INDEX = 'keyId';
@@ -54,11 +55,9 @@ export function openCryptoDb(): Promise<IDBDatabase> {
         const sharesStore = db.createObjectStore(SHARES_STORE, {
           keyPath: 'id',
         });
-        sharesStore.createIndex(
-          SHARES_PARENT_MESSAGE_ID_INDEX,
-          'parentMessageId',
-          { unique: false },
-        );
+        sharesStore.createIndex(SHARES_MESSAGE_ID_INDEX, 'messageId', {
+          unique: false,
+        });
       }
       if (!db.objectStoreNames.contains(COMMENTS_STORE)) {
         const commentsStore = db.createObjectStore(COMMENTS_STORE, {

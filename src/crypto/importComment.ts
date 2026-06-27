@@ -14,23 +14,23 @@ export async function importParsedComment(
 ): Promise<StoredComment> {
   await verifyCommentSignature(payload);
 
-  const parentMessageId = payload.parentMessageId;
-  const parentMessage = await getStoredMessageById(parentMessageId);
+  const { messageId } = payload;
+  const parentMessage = await getStoredMessageById(messageId);
   if (!parentMessage) {
     throw new Error('Parent message not found.');
   }
 
-  if (!(await canCommentOnParentMessage(parentMessageId, recipientKeyId))) {
+  if (!(await canCommentOnParentMessage(messageId, recipientKeyId))) {
     throw new Error(
       'You cannot import this comment - you are not the sender or a recipient of the parent message.',
     );
   }
 
   const commentPayloadJson = JSON.stringify(payload);
-  const existingComments = await listCommentsForMessage(parentMessageId);
+  const existingComments = await listCommentsForMessage(messageId);
   if (existingComments.some((row) => row.payload === commentPayloadJson)) {
     throw new Error('This comment is already stored for this message.');
   }
 
-  return saveStoredComment(parentMessageId, commentPayloadJson);
+  return saveStoredComment(messageId, commentPayloadJson);
 }

@@ -4,7 +4,7 @@ import type { ManifestEncryptedContentSignableBody } from '@/types/manifest.ts';
 export type CommentSignableBody = {
   version: number;
   wrap: typeof COMMENT_WRAP;
-  parentMessageId: string;
+  messageId: string;
   senderPublicJwk: JsonWebKey;
   salt: string;
   encryptedContent: ManifestEncryptedContentSignableBody;

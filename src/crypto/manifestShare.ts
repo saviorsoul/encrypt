@@ -39,19 +39,19 @@ import {
 import type { StoredMessage } from '@/services/db/storedMessages.ts';
 import type { StoredShare } from '@/services/db/storedShares.ts';
 import { getStoredMessageById } from '@/services/db/storedMessages.ts';
-import { listShareDeliveriesForParentMessage } from '@/services/db/storedShares.ts';
+import { listShareDeliveriesForMessage } from '@/services/db/storedShares.ts';
 import { parseBaseJsonObjectOrThrow } from '@/utils/validateBaseJsonText.ts';
 
 export function isShareDelivery(
   delivery: StoredMessage | StoredShare,
 ): delivery is StoredShare {
-  return 'parentMessageId' in delivery;
+  return 'messageId' in delivery;
 }
 
 export function getCommentThreadMessageId(
   delivery: StoredMessage | StoredShare,
 ): string {
-  return isShareDelivery(delivery) ? delivery.parentMessageId : delivery.id;
+  return isShareDelivery(delivery) ? delivery.messageId : delivery.id;
 }
 
 export function parseManifestShareCorePayload(
@@ -338,7 +338,10 @@ export async function decryptStoredDeliveryWithPrivateKey(
   recipientPrivateKey: CryptoKey,
 ): Promise<string> {
   if (!isShareDelivery(delivery)) {
-    const access = await resolveParentMessageAccess(delivery.id, recipientKeyId);
+    const access = await resolveParentMessageAccess(
+      delivery.id,
+      recipientKeyId,
+    );
     if (!access) {
       throw new Error(
         'No key manifest entry for the given recipientKeyId (wrong key pair?).',
@@ -368,14 +371,14 @@ export async function decryptStoredDeliveryWithPrivateKey(
     );
   }
 
-  const parent = await getStoredMessageById(delivery.parentMessageId);
+  const parent = await getStoredMessageById(delivery.messageId);
   if (!parent) {
-    throw new Error(`Parent message not found: ${delivery.parentMessageId}`);
+    throw new Error(`Parent message not found: ${delivery.messageId}`);
   }
 
   return decryptSharedStoredMessage(
     delivery.id,
-    delivery.parentMessageId,
+    delivery.messageId,
     delivery.payload,
     parent.payload,
     recipientKeyId,
@@ -409,8 +412,7 @@ export async function resolveParentMessageAccess(
     };
   }
 
-  const shareDeliveries =
-    await listShareDeliveriesForParentMessage(parentMessageId);
+  const shareDeliveries = await listShareDeliveriesForMessage(parentMessageId);
   for (const share of shareDeliveries) {
     if (await hasMessageKeyManifestShard(share.id, recipientKeyId)) {
       return {

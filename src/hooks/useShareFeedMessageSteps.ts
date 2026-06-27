@@ -525,7 +525,7 @@ export function useShareFeedMessageSteps(demo: DemoParentFeedMessage | null) {
       const signableBody: ManifestShareSignableBody = {
         version: MANIFEST_SHARE_VERSION,
         wrap: MANIFEST_SHARE_WRAP,
-        parentMessageId: demo.parentMessageId,
+        parentMessageId: demo.messageId,
         sharerPublicJwk,
         ephemeralPublicKey,
       };

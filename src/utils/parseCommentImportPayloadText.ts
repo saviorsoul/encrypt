@@ -16,8 +16,8 @@ function isCommentPayloadShape(value: unknown): value is CommentPayload {
   return (
     value.wrap === COMMENT_WRAP &&
     value.version === COMMENT_VERSION &&
-    typeof value.parentMessageId === 'string' &&
-    Boolean(value.parentMessageId)
+    typeof value.messageId === 'string' &&
+    Boolean(value.messageId)
   );
 }
 

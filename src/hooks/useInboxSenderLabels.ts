@@ -46,7 +46,7 @@ export function useInboxSenderLabels(
         messages.map(async (message) => {
           if (isShareDelivery(message)) {
             const [authorKeyId, sharerKeyId] = await Promise.all([
-              getStoredParentSenderKeyId(message.parentMessageId),
+              getStoredParentSenderKeyId(message.messageId),
               getSharerKeyIdFromSharePayload(message.payload),
             ]);
             const authorLabel = labelForKeyId(authorKeyId, usernameByKeyId);

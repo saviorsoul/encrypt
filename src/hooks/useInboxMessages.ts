@@ -161,7 +161,7 @@ export function useInboxMessages() {
 
       const toMerge: StoredFeedDelivery[] = [delivery];
       if (isShareDelivery(delivery)) {
-        const parent = await getStoredMessageById(delivery.parentMessageId);
+        const parent = await getStoredMessageById(delivery.messageId);
         if (parent) {
           toMerge.push(parent);
         }

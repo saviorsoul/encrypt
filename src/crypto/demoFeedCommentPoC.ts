@@ -14,7 +14,7 @@ export const DEMO_PARENT_FEED_PLAINTEXT =
   'This feed post was encrypted earlier. You are adding a comment under the same message DEK.';
 
 export type DemoParentFeedMessage = {
-  parentMessageId: string;
+  messageId: string;
   parentPayload: string;
   parentPlaintext: string;
   /** Current user — recipient on the parent post and comment author. */
@@ -59,7 +59,7 @@ async function createDemoParentFeedMessage(
   );
 
   return {
-    parentMessageId: DEMO_PARENT_MESSAGE_ID,
+    messageId: DEMO_PARENT_MESSAGE_ID,
     parentPayload,
     parentPlaintext: DEMO_PARENT_FEED_PLAINTEXT,
     recipientKeyId,

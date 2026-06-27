@@ -1,6 +1,6 @@
 import {
   openCryptoDb,
-  SHARES_PARENT_MESSAGE_ID_INDEX,
+  SHARES_MESSAGE_ID_INDEX,
   SHARES_STORE,
   MESSAGE_KEY_MANIFEST_STORE,
 } from './cryptoDb.ts';
@@ -10,7 +10,7 @@ import { listMessageIdsForRecipientKeyId } from './storedMessageKeyManifest.ts';
 
 export type StoredShare = {
   id: string;
-  parentMessageId: string;
+  messageId: string;
   payload: string;
   createdAt: number;
 };
@@ -20,7 +20,7 @@ function parseStoredShare(value: unknown): StoredShare | null {
     typeof value !== 'object' ||
     value === null ||
     typeof (value as StoredShare).id !== 'string' ||
-    typeof (value as StoredShare).parentMessageId !== 'string' ||
+    typeof (value as StoredShare).messageId !== 'string' ||
     typeof (value as StoredShare).payload !== 'string' ||
     typeof (value as StoredShare).createdAt !== 'number'
   ) {
@@ -33,12 +33,12 @@ function parseStoredShare(value: unknown): StoredShare | null {
 export async function saveStoredShare(
   shareCoreJson: string,
   keyManifest: KeyManifestMap,
-  parentMessageId: string,
+  messageId: string,
 ): Promise<StoredShare> {
   const share: StoredShare = {
     id: crypto.randomUUID(),
     payload: shareCoreJson,
-    parentMessageId,
+    messageId,
     createdAt: Date.now(),
   };
 
@@ -76,16 +76,16 @@ export async function getStoredShareById(
   });
 }
 
-export async function listShareDeliveriesForParentMessage(
-  parentMessageId: string,
+export async function listShareDeliveriesForMessage(
+  messageId: string,
 ): Promise<StoredShare[]> {
   const db = await openCryptoDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(SHARES_STORE, 'readonly');
     const store = tx.objectStore(SHARES_STORE);
-    const index = store.index(SHARES_PARENT_MESSAGE_ID_INDEX);
-    const request = index.getAll(parentMessageId);
+    const index = store.index(SHARES_MESSAGE_ID_INDEX);
+    const request = index.getAll(messageId);
 
     request.onsuccess = () => {
       const rows = (request.result ?? [])

@@ -334,7 +334,7 @@ export function useEncryptCommentSteps(
       }
 
       const signableBody = await buildCommentSignableBody({
-        parentMessageId: demo.parentMessageId,
+        messageId: demo.messageId,
         senderPublicKey,
         hkdfSalt,
         encryptedContent,

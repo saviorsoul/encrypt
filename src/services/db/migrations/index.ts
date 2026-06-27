@@ -12,9 +12,13 @@ import type { DbMigration, DbMigrationContext } from './types.ts';
  * Data transforms belong here so existing rows survive app updates.
  */
 import { v8MoveSharesToSharesTable } from './v8MoveSharesToSharesTable.ts';
+import { v9RenameSharesMessageIdKey } from './v9RenameSharesMessageIdKey.ts';
+import { v10ArchiveCommentsToOldTable } from './v10ArchiveCommentsToOldTable.ts';
 
 export const DB_MIGRATIONS: readonly DbMigration[] = [
   v8MoveSharesToSharesTable,
+  v9RenameSharesMessageIdKey,
+  v10ArchiveCommentsToOldTable,
 ];
 
 export function runDbMigrations(ctx: DbMigrationContext): void {

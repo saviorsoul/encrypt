@@ -83,7 +83,7 @@ const DERIVE_COMMENT_KEY_STEP_DESCRIPTION = (
 const ENCRYPT_COMMENT_BODY_STEP_DESCRIPTION =
   'AES-GCM-encrypt the comment plaintext with the comment key from step 3. The IV and ciphertext become encryptedContent on the wire - the comment key itself is not stored; recipients re-derive it from the DEK and salt.';
 
-const ASSEMBLE_PAYLOAD_STEP_DESCRIPTION = `Build the payload: version, wrap name, parentMessageId, senderPublicJwk, the base64 HKDF salt from step 3, and encryptedContent from step 4. The salt - not the comment key - lets every recipient who has the DEK re-derive the same comment key to decrypt.`;
+const ASSEMBLE_PAYLOAD_STEP_DESCRIPTION = `Build the payload: version, wrap name, messageId, senderPublicJwk, the base64 HKDF salt from step 3, and encryptedContent from step 4. The salt - not the comment key - lets every recipient who has the DEK re-derive the same comment key to decrypt.`;
 
 const SIGN_COMMENT_STEP_DESCRIPTION =
   'Sign the canonical JSON of the signable body with your long-term ECDSA P-256 private key. Recipients verify signature against sender public key before decrypting.';
@@ -104,7 +104,7 @@ function ParentFeedMessagePanel({ demo }: ParentFeedMessagePanelProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <StepOutputTextField
         label="Message ID"
-        value={demo.parentMessageId}
+        value={demo.messageId}
         fullWidth
         slotProps={{ input: { readOnly: true } }}
       />

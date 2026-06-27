@@ -91,8 +91,8 @@ export function validateCommentPayload(payload: CommentPayload): string | null {
   if (payload.wrap !== COMMENT_WRAP) {
     return `Unsupported comment wrap: ${payload.wrap}`;
   }
-  if (typeof payload.parentMessageId !== 'string' || !payload.parentMessageId) {
-    return 'Comment is missing parentMessageId.';
+  if (typeof payload.messageId !== 'string' || !payload.messageId) {
+    return 'Comment is missing messageId.';
   }
   if (!payload.senderPublicJwk || typeof payload.senderSignature !== 'string') {
     return 'Comment is missing signature fields.';
@@ -124,12 +124,12 @@ export async function verifyCommentSignature(
 }
 
 export async function buildCommentSignableBody({
-  parentMessageId,
+  messageId,
   senderPublicKey,
   hkdfSalt,
   encryptedContent,
 }: {
-  parentMessageId: string;
+  messageId: string;
   senderPublicKey: CryptoKey;
   hkdfSalt: Uint8Array<ArrayBuffer>;
   encryptedContent: ManifestEncryptedContent;
@@ -137,7 +137,7 @@ export async function buildCommentSignableBody({
   return {
     version: COMMENT_VERSION,
     wrap: COMMENT_WRAP,
-    parentMessageId,
+    messageId,
     senderPublicJwk: await exportCryptoKeyAsJwk(senderPublicKey),
     salt: bytesToBase64(hkdfSalt),
     encryptedContent: encryptedContentToSignableBody(encryptedContent),
@@ -177,7 +177,7 @@ export async function encryptCommentWithMessageKey(
   const commentKey = await deriveCommentKeyFromDek(rawDek, hkdfSalt);
   const encryptedContent = await encryptCommentBody(commentKey, commentText);
   const signableBody = await buildCommentSignableBody({
-    parentMessageId: messageId,
+    messageId,
     senderPublicKey,
     hkdfSalt,
     encryptedContent,
@@ -199,10 +199,8 @@ export async function decryptComment(
     payloadJson,
   ) as unknown as CommentPayload;
 
-  if (payload.parentMessageId !== messageId) {
-    throw new Error(
-      'Comment parentMessageId does not match the parent message.',
-    );
+  if (payload.messageId !== messageId) {
+    throw new Error('Comment messageId does not match the parent message.');
   }
 
   await verifyCommentSignature(payload);
