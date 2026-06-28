@@ -24,6 +24,7 @@ import { useExternalFileContext } from '@/components/providers/ExternalFileProvi
 import { useAuth } from '@/hooks/useAuth.ts';
 import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
+import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 import { errorMessage } from '@/utils/errorMessage.ts';
 import { getImportDestinationRoute } from '@/utils/importDestination.ts';
 import { usernameFromPrivateKeyFilename } from '@/utils/privateKeyFilename.ts';
@@ -41,7 +42,7 @@ function readLastUsername(): string {
 }
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, logout } = useAuth();
   const navigate = useNavigate();
   const { pendingImport } = useExternalFileContext();
   const onboardingStatus = usePrivateKeyOnboardingGuard();
@@ -65,6 +66,10 @@ export function LoginPage() {
 
     if (onboardingStatus === 'required') {
       navigate('/save-private-key', { replace: true });
+      return;
+    }
+
+    if (onboardingStatus === 'error') {
       return;
     }
 
@@ -241,6 +246,21 @@ export function LoginPage() {
 
   const showSignInButton =
     loginMode !== 'privateKey' || !privateKeyFile || privateKeyNeedsUsername;
+
+  if (user && onboardingStatus === 'error') {
+    return (
+      <NotFoundPage
+        code="Error"
+        title="Something went wrong"
+        message="We could not load your account data. Check your connection, refresh the page, or sign in again."
+        actionLabel="Sign in again"
+        onAction={() => {
+          logout();
+          navigate('/login', { replace: true });
+        }}
+      />
+    );
+  }
 
   return (
     <Box

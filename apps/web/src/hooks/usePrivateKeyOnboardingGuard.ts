@@ -9,7 +9,8 @@ import { useAuth } from '@/hooks/useAuth.ts';
 export type PrivateKeyOnboardingGuardStatus =
   | 'loading'
   | 'required'
-  | 'complete';
+  | 'complete'
+  | 'error';
 
 /**
  * Reads IndexedDB on each navigation to decide whether the user must finish
@@ -49,7 +50,7 @@ export function usePrivateKeyOnboardingGuard(): PrivateKeyOnboardingGuardStatus 
 
     void check().catch(() => {
       if (!cancelled) {
-        setStatus('required');
+        setStatus('error');
       }
     });
 

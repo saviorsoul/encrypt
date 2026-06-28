@@ -4,6 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
+import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 
 export function OnboardedRoute() {
   const { user } = useAuth();
@@ -22,6 +23,17 @@ export function OnboardedRoute() {
       >
         <CircularProgress aria-label="Checking onboarding status" />
       </Box>
+    );
+  }
+  if (onboardingStatus === 'error') {
+    return (
+      <NotFoundPage
+        code="Error"
+        title="Something went wrong"
+        message="We could not load your account data. Check your connection, refresh the page, or sign in again."
+        actionLabel="Refresh page"
+        onAction={() => window.location.reload()}
+      />
     );
   }
   if (onboardingStatus === 'required') {
