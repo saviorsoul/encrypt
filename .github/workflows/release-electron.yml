@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
-          npm pkg set "version=${TAG#v}"
+          npm pkg set "version=${TAG#v}" -ws --include-workspace-root
 
       - name: Build Vite bundle
         working-directory: apps/web
