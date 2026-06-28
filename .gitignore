@@ -12,6 +12,8 @@
 /build
 /dist
 /release
+apps/web/dist
+apps/web/release
 
 # misc
 .DS_Store

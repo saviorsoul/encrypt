@@ -1,0 +1,17 @@
+{
+  "name": "@encrypt/api",
+  "version": "0.1.6",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "echo '@encrypt/api: not implemented yet (step 3)' && exit 1",
+    "migrate": "echo '@encrypt/api: migrations not implemented yet (step 4)' && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  }
+}

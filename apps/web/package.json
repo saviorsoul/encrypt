@@ -1,0 +1,109 @@
+{
+  "name": "@encrypt/web",
+  "version": "0.1.6",
+  "private": true,
+  "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
+  "license": "MIT",
+  "homepage": "https://saviorsoul.github.io/encrypt",
+  "bugs": "https://github.com/saviorsoul/encrypt/issues",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^6.30.3",
+    "web-vitals": "^2.1.4"
+  },
+  "main": "electron/main.js",
+  "desktopName": "com.encrypt.app",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
+    "build:electron": "tsc --noEmit && vite build --mode electron",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"vite --mode electron\" \"wait-on http://localhost:5173 && node scripts/electron-dev.mjs\"",
+    "electron:preview": "vite build --mode electron && node scripts/electron-run.mjs",
+    "electron:run": "node scripts/electron-run.mjs",
+    "electron:build": "vite build --mode electron && electron-builder",
+    "test": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "build": {
+    "appId": "com.encrypt.app",
+    "productName": "Encrypt",
+    "artifactName": "${productName}_${version}_${arch}.${ext}",
+    "extraMetadata": {
+      "name": "encrypt"
+    },
+    "icon": "electron/icons",
+    "fileAssociations": [
+      {
+        "ext": [
+          "json",
+          "jwk"
+        ],
+        "mimeType": "application/json",
+        "name": "JSON",
+        "description": "Encrypt message or key file"
+      }
+    ],
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Utility",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "encrypt"
+        }
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities"
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "36.4.0",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.3",
+    "@types/node": "^22.15.21",
+    "@vitejs/plugin-react": "^4.5.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.1"
+  }
+}
