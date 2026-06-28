@@ -25,6 +25,7 @@ import { ExternalFileProvider } from '@/components/providers/ExternalFileProvide
 import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
 import { ElectronTrayEncryptHandler } from '@/components/providers/ElectronTrayEncryptHandler.tsx';
 import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivateKeyProvider.tsx';
+import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 
 const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
 
@@ -90,7 +91,7 @@ function App() {
                         <Route path="glossary" element={<GlossaryPage />} />
                       </Route>
                     </Route>
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Routes>
               </ExternalFileProvider>

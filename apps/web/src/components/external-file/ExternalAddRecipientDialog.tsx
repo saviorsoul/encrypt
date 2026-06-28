@@ -45,7 +45,8 @@ export function ExternalAddRecipientDialog({
   const canSavePublicKey =
     user !== null &&
     onboardingStatus !== 'loading' &&
-    onboardingStatus !== 'required';
+    onboardingStatus !== 'required' &&
+    onboardingStatus !== 'error';
 
   const publicKeyDisabledReason = !user
     ? 'Sign in first to save a recipient public key.'
@@ -53,7 +54,9 @@ export function ExternalAddRecipientDialog({
       ? 'Checking account status…'
       : onboardingStatus === 'required'
         ? 'Finish saving your private key before adding recipients.'
-        : null;
+        : onboardingStatus === 'error'
+          ? 'Could not verify account status. Refresh and try again.'
+          : null;
 
   const handleDismiss = useCallback(() => {
     if (busy) {

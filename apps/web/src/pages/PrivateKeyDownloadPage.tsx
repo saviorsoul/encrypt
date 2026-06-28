@@ -11,6 +11,7 @@ import { useExternalFileContext } from '@/components/providers/ExternalFileProvi
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
 import { getImportDestinationRoute } from '@/utils/importDestination.ts';
+import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 import Stack from '@mui/material/Stack';
 
 export function PrivateKeyDownloadPage() {
@@ -78,6 +79,17 @@ export function PrivateKeyDownloadPage() {
       >
         <CircularProgress aria-label="Checking onboarding status" />
       </Box>
+    );
+  }
+  if (onboardingStatus === 'error') {
+    return (
+      <NotFoundPage
+        code="Error"
+        title="Something went wrong"
+        message="We could not load your account data. Check your connection, refresh the page, or sign in again."
+        actionLabel="Refresh page"
+        onAction={() => window.location.reload()}
+      />
     );
   }
   const handleDownload = async () => {
