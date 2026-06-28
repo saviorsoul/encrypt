@@ -16,106 +16,41 @@
     "cryptography"
   ],
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": ">=24"
   },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^9.0.0",
-    "@mui/material": "^9.0.0",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^13.5.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-router-dom": "^6.30.3",
-    "web-vitals": "^2.1.4"
-  },
-  "main": "electron/main.js",
-  "desktopName": "com.encrypt.app",
   "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "tsc --noEmit && vite build",
-    "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
-    "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite --mode electron\" \"wait-on http://localhost:5173 && node scripts/electron-dev.mjs\"",
-    "electron:preview": "vite build --mode electron && node scripts/electron-run.mjs",
-    "electron:run": "node scripts/electron-run.mjs",
-    "electron:build": "vite build --mode electron && electron-builder",
-    "test": "vitest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "build": {
-    "appId": "com.encrypt.app",
-    "productName": "Encrypt",
-    "icon": "electron/icons",
-    "fileAssociations": [
-      {
-        "ext": [
-          "json",
-          "jwk"
-        ],
-        "mimeType": "application/json",
-        "name": "JSON",
-        "description": "Encrypt message or key file"
-      }
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "linux": {
-      "target": [
-        "deb"
-      ],
-      "category": "Utility",
-      "syncDesktopName": true,
-      "desktop": {
-        "entry": {
-          "StartupWMClass": "encrypt"
-        }
-      }
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ]
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.utilities"
-    }
+    "dev": "npm run dev -w @encrypt/web",
+    "start": "npm run start -w @encrypt/web",
+    "build": "npm run build -w @encrypt/web",
+    "build:pages": "npm run build:pages -w @encrypt/web",
+    "preview": "npm run preview -w @encrypt/web",
+    "electron:dev": "npm run electron:dev -w @encrypt/web",
+    "electron:preview": "npm run electron:preview -w @encrypt/web",
+    "electron:run": "npm run electron:run -w @encrypt/web",
+    "electron:build": "npm run electron:build -w @encrypt/web",
+    "test": "npm run test -w @encrypt/web",
+    "lint": "eslint apps/web apps/api packages/schemas",
+    "lint:fix": "eslint apps/web apps/api packages/schemas --fix",
+    "format": "prettier --write apps/web apps/api packages/schemas",
+    "format:check": "prettier --check apps/web apps/api packages/schemas",
+    "dev:api": "npm run dev -w @encrypt/api",
+    "dev:stack": "docker compose up -d && npm run dev:api",
+    "db:migrate": "npm run migrate -w @encrypt/api"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "electron": "^36.4.0",
-    "electron-builder": "^26.0.12",
-    "wait-on": "^8.0.3",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^22.15.21",
-    "@vitejs/plugin-react": "^4.5.0",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "jsdom": "^26.1.0",
     "prettier": "^3.8.4",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.61.0",
-    "vite": "^6.3.5",
-    "vitest": "^3.2.1"
+    "typescript-eslint": "^8.61.0"
   }
 }

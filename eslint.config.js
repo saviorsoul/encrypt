@@ -6,6 +6,11 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const appAndPackageFiles = [
+  'apps/**/*.{js,jsx,ts,tsx}',
+  'packages/**/*.{js,jsx,ts,tsx}',
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -19,7 +24,14 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    files: appAndPackageFiles,
+    plugins: { prettier },
+    rules: {
+      'prettier/prettier': 'error',
+    },
+  },
+  {
+    files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -40,16 +52,19 @@ export default tseslint.config(
   },
   {
     files: [
-      'src/components/providers/**/*.{tsx,ts}',
-      'src/components/layout/ProofOfConceptsNav.tsx',
-      'src/components/manifest-steps/StepActionRow.tsx',
+      'apps/web/src/components/providers/**/*.{tsx,ts}',
+      'apps/web/src/components/layout/ProofOfConceptsNav.tsx',
+      'apps/web/src/components/manifest-steps/StepActionRow.tsx',
     ],
     rules: {
       'react-refresh/only-export-components': 'off',
     },
   },
   {
-    files: ['**/*.test.{js,jsx,ts,tsx}', 'src/setupTests.js'],
+    files: [
+      'apps/web/**/*.test.{js,jsx,ts,tsx}',
+      'apps/web/src/setupTests.js',
+    ],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -58,27 +73,43 @@ export default tseslint.config(
     },
   },
   {
-    files: ['vite.config.ts'],
+    files: ['apps/api/**/*.{js,ts,mjs,cjs}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
+    files: ['packages/**/*.{js,ts}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
+    files: ['apps/web/vite.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ['electron/**/*.js'],
+    files: ['apps/web/electron/**/*.js'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['apps/web/scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['electron/**/*.cjs'],
+    files: ['apps/web/electron/**/*.cjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'commonjs',
