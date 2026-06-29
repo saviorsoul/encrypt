@@ -9,8 +9,7 @@ export type FeedApiConfig = {
 export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: KeyManifestMap;
-  messageId: string;
-  parentMessage?: Record<string, unknown>;
+  messageId?: string;
 };
 
 export type CreateMessageRequest = {
@@ -21,6 +20,7 @@ export type CreateMessageRequest = {
   encryptedContent: Record<string, unknown>;
   senderSignature: string;
   keyManifest: KeyManifestMap;
+  messageId?: string;
 };
 
 function joinUrl(baseUrl: string, path: string): string {

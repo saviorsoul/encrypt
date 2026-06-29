@@ -157,12 +157,11 @@ export const commentPayloadSchema = {
 export const createShareRequestSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['share', 'keyManifest', 'messageId'],
+  required: ['share', 'keyManifest'],
   properties: {
     share: manifestShareWireSchema,
     keyManifest: keyManifestSchema,
     messageId: { type: 'string', minLength: 1, maxLength: 64 },
-    parentMessage: manifestCoreSchema,
   },
 } as const;
 
@@ -190,14 +189,14 @@ export const createMessageRequestSchema = {
       maxLength: MAX_BASE64_FIELD_LENGTH,
     },
     keyManifest: keyManifestSchema,
+    messageId: { type: 'string', minLength: 1, maxLength: 64 },
   },
 } as const;
 
 export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: Record<string, Record<string, unknown>>;
-  messageId: string;
-  parentMessage?: Record<string, unknown>;
+  messageId?: string;
 };
 
 export type CommentPayloadBody = Record<string, unknown>;
@@ -210,6 +209,7 @@ export type CreateMessageRequest = {
   encryptedContent: Record<string, unknown>;
   senderSignature: string;
   keyManifest: Record<string, Record<string, unknown>>;
+  messageId?: string;
 };
 
 /** Wire schemas for AJV — replace with @encrypt/schemas imports in step 2. */

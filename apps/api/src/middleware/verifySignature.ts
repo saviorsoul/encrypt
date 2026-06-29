@@ -17,7 +17,7 @@ type VerifySignatureOptions = {
 
 const defaultBodyPath: Record<SignatureType, string> = {
   sharer: 'share',
-  sender: 'parentMessage',
+  sender: '',
   'comment-sender': '',
 };
 
