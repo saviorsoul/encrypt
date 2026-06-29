@@ -51,10 +51,37 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/feed-lab/**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+    },
+    plugins: {
+      prettier,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'prettier/prettier': 'error',
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+  {
+    files: ['apps/feed-lab/src/hooks/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
+  {
     files: [
       'apps/web/src/components/providers/**/*.{tsx,ts}',
       'apps/web/src/components/layout/ProofOfConceptsNav.tsx',
       'apps/web/src/components/manifest-steps/StepActionRow.tsx',
+      'apps/feed-lab/src/providers/**/*.{tsx,ts}',
     ],
     rules: {
       'react-refresh/only-export-components': 'off',
@@ -81,7 +108,15 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/**/*.{js,ts}'],
+    files: ['packages/core/**/*.{js,ts}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+      sourceType: 'module',
+    },
+  },
+  {
+    files: ['packages/schemas/**/*.{js,ts}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.node,
@@ -90,6 +125,12 @@ export default tseslint.config(
   },
   {
     files: ['apps/web/vite.config.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['apps/feed-lab/vite.config.ts'],
     languageOptions: {
       globals: globals.node,
     },

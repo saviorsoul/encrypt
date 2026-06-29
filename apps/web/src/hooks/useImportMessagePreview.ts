@@ -12,7 +12,7 @@ function buildPreviewMessage(
   if (parsed.payload.kind === 'share') {
     return {
       id: IMPORT_PREVIEW_MESSAGE_ID,
-      payload: JSON.stringify(parsed.payload.shareWire),
+      payload: JSON.stringify(parsed.payload.share),
       createdAt: Date.now(),
     };
   }

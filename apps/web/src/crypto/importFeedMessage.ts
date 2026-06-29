@@ -33,7 +33,7 @@ export async function importParsedFeedMessage(
     return saveStoredMessage(payload.fullPayloadJson);
   }
 
-  await verifyManifestShareSignature(payload.shareWire);
+  await verifyManifestShareSignature(payload.share);
 
   const parentMessage = await getStoredMessageById(payload.parentMessageId);
   if (!parentMessage) {
@@ -49,7 +49,7 @@ export async function importParsedFeedMessage(
     throw new Error('You already have access to this message in your feed.');
   }
 
-  const shareCoreJson = JSON.stringify(payload.shareWire);
+  const shareCoreJson = JSON.stringify(payload.share);
 
   return saveStoredShare(
     shareCoreJson,
