@@ -27,7 +27,7 @@ export async function resolveSenderLabelFromImportText(
 
   if (parsed.payload.kind === 'share') {
     const shareBase = validateBaseJsonText(
-      JSON.stringify(parsed.payload.shareWire),
+      JSON.stringify(parsed.payload.share),
     );
     if (shareBase.ok === false || !shareBase.parsed.sharerPublicJwk) {
       return UNKNOWN_SENDER_LABEL;

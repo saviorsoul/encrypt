@@ -50,8 +50,13 @@ export function readPrivateKeyJwkFromText(text: string): JsonWebKey {
   return parsePrivateKeyJwk(text);
 }
 
+export type PickedPrivateKeyJwkFile = {
+  jwk: JsonWebKey;
+  fileName: string;
+};
+
 /** Open the browser file picker for a private-key JWK file. */
-export function pickPrivateKeyJwkFile(): Promise<JsonWebKey> {
+export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -83,7 +88,10 @@ export function pickPrivateKeyJwkFile(): Promise<JsonWebKey> {
       if (settled) return;
       settled = true;
       cleanup();
-      void readPrivateKeyJwkFromFile(file).then(resolve, reject);
+      void readPrivateKeyJwkFromFile(file).then(
+        (jwk) => resolve({ jwk, fileName: file.name }),
+        reject,
+      );
     };
 
     const onCancel = () => {
@@ -108,6 +116,11 @@ export function pickPrivateKeyJwkFile(): Promise<JsonWebKey> {
   });
 }
 
+/** Open the browser file picker for a private-key JWK file. */
+export function pickPrivateKeyJwkFile(): Promise<JsonWebKey> {
+  return pickPrivateKeyJwkFileWithName().then((picked) => picked.jwk);
+}
+
 export function isPrivateKeyFileSelectionCancelled(error: unknown): boolean {
   return error instanceof Error && error.message === FILE_SELECTION_CANCELLED;
 }
@@ -124,6 +137,9 @@ export async function pickPrivateKeyJwkInElectronNativeDialog(): Promise<JsonWeb
   }
   if (result.error) {
     throw new Error(result.error);
+  }
+  if (!result.text) {
+    throw new Error('Private key file was empty.');
   }
   return readPrivateKeyJwkFromText(result.text);
 }
