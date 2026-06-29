@@ -20,6 +20,7 @@ import { ProofOfConceptFeedSharePage } from '@/pages/ProofOfConceptFeedSharePage
 import { OneToOnePage } from '@/pages/OneToOnePage.tsx';
 import { GlossaryPage } from '@/pages/GlossaryPage.tsx';
 import { PrivateKeyDownloadPage } from '@/pages/PrivateKeyDownloadPage.tsx';
+import { LocalDataRecoveryPage } from '@/pages/LocalDataRecoveryPage.tsx';
 import { OnboardedRoute } from '@/components/routes/OnboardedRoute.tsx';
 import { ExternalFileProvider } from '@/components/providers/ExternalFileProvider.tsx';
 import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
@@ -55,6 +56,10 @@ function App() {
                       <Route
                         path="save-private-key"
                         element={<PrivateKeyDownloadPage />}
+                      />
+                      <Route
+                        path="recover-local-data"
+                        element={<LocalDataRecoveryPage />}
                       />
                       <Route element={<OnboardedRoute />}>
                         <Route index element={<OneToOnePage />} />

@@ -11,6 +11,7 @@ import {
   markPrivateKeyDownloadedForUsername,
   saveStoredPublicKeyForUsername,
 } from '@/services/db/storedPublicKeys.ts';
+import { markOnboardingComplete } from '@/components/providers/AuthProvider.tsx';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { downloadJsonFile } from '@/utils/downloadJson.ts';
 import { privateKeyDownloadFilename } from '@/utils/privateKeyFilename.ts';
@@ -66,7 +67,35 @@ async function createAndPersistPublicKeyPendingDownload(
   };
 }
 
-async function prepareOnboardingKeys(username: string): Promise<PreparedKeys> {
+async function loadExistingKeys(
+  username: string,
+): Promise<PreparedKeys | null> {
+  const stored = await loadStoredPublicKeyMaterial(username);
+  if (!stored) {
+    return null;
+  }
+
+  const result = await loadPublicKeyFromStored(stored.publicJwk);
+  if (stored.privateKeyDownloaded === false) {
+    return {
+      result,
+      pendingDownload: true,
+      savedToDb: false,
+      privateJwk: null,
+      downloadFilename: privateKeyDownloadFilename(username),
+    };
+  }
+
+  return {
+    result,
+    pendingDownload: false,
+    savedToDb: false,
+    privateJwk: null,
+    downloadFilename: null,
+  };
+}
+
+async function ensureOnboardingKeys(username: string): Promise<PreparedKeys> {
   const stored = await loadStoredPublicKeyMaterial(username);
 
   if (!stored || stored.privateKeyDownloaded === false) {
@@ -114,8 +143,8 @@ function applyPreparedKeys(
 
 /**
  * Browser ECDH public key + IndexedDB persistence, scoped to the logged-in user.
- * A new key pair is created when no public key exists for that username, or when
- * the user has not yet downloaded their private key.
+ * Loads existing keys on sign-in; new key pairs are created only via
+ * `ensurePendingPrivateKey` on the first-time download page.
  */
 export function useKeys(): UseKeysReturn {
   const { user } = useAuth();
@@ -128,7 +157,7 @@ export function useKeys(): UseKeysReturn {
   const [privateKeyDownloadFilenameState, setPrivateKeyDownloadFilenameState] =
     useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const preparingRef = useRef<Promise<PreparedKeys | null> | null>(null);
+  const ensuringRef = useRef<Promise<PreparedKeys> | null>(null);
   const [prevUsername, setPrevUsername] = useState<string | undefined>(
     undefined,
   );
@@ -145,13 +174,13 @@ export function useKeys(): UseKeysReturn {
     setLoading(true);
   }
 
-  const loadPreparedKeys = useCallback(async (username: string) => {
-    if (!preparingRef.current) {
-      preparingRef.current = prepareOnboardingKeys(username).finally(() => {
-        preparingRef.current = null;
+  const runEnsureOnboardingKeys = useCallback(async (username: string) => {
+    if (!ensuringRef.current) {
+      ensuringRef.current = ensureOnboardingKeys(username).finally(() => {
+        ensuringRef.current = null;
       });
     }
-    return preparingRef.current;
+    return ensuringRef.current;
   }, []);
 
   const ensurePendingPrivateKey = useCallback(async () => {
@@ -160,8 +189,7 @@ export function useKeys(): UseKeysReturn {
 
     setLoading(true);
     try {
-      const prepared = await loadPreparedKeys(username);
-      if (!prepared) return;
+      const prepared = await runEnsureOnboardingKeys(username);
       applyPreparedKeys(prepared, {
         setPublicKey,
         setPublicKeyJwk,
@@ -173,7 +201,7 @@ export function useKeys(): UseKeysReturn {
     } finally {
       setLoading(false);
     }
-  }, [user?.username, loadPreparedKeys]);
+  }, [user?.username, runEnsureOnboardingKeys]);
 
   if (username !== prevUsername) {
     setPrevUsername(username);
@@ -192,16 +220,29 @@ export function useKeys(): UseKeysReturn {
     async function init(activeUsername: string) {
       setLoading(true);
       try {
-        const prepared = await loadPreparedKeys(activeUsername);
-        if (cancelled || !prepared) return;
-        applyPreparedKeys(prepared, {
-          setPublicKey,
-          setPublicKeyJwk,
-          setNeedsPrivateKeyDownload,
-          setPrivateKeySaved,
-          setPendingPrivateKeyJwk,
-          setPrivateKeyDownloadFilenameState,
-        });
+        const prepared = await loadExistingKeys(activeUsername);
+        if (cancelled) return;
+        if (prepared) {
+          applyPreparedKeys(prepared, {
+            setPublicKey,
+            setPublicKeyJwk,
+            setNeedsPrivateKeyDownload,
+            setPrivateKeySaved,
+            setPendingPrivateKeyJwk,
+            setPrivateKeyDownloadFilenameState,
+          });
+          if (!prepared.pendingDownload) {
+            markOnboardingComplete();
+          }
+          return;
+        }
+
+        setPublicKey(null);
+        setPublicKeyJwk(null);
+        setNeedsPrivateKeyDownload(false);
+        setPrivateKeySaved(false);
+        setPendingPrivateKeyJwk(null);
+        setPrivateKeyDownloadFilenameState(null);
       } catch {
         if (!cancelled) {
           setPublicKey(null);
@@ -223,7 +264,7 @@ export function useKeys(): UseKeysReturn {
     return () => {
       cancelled = true;
     };
-  }, [username, loadPreparedKeys]);
+  }, [username]);
 
   const downloadPendingPrivateKey = useCallback(async () => {
     const username = user?.username;

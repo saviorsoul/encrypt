@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+  isFreshLogin,
+  markOnboardingComplete,
+  wasOnboardingComplete,
+} from '@/components/providers/AuthProvider.tsx';
+import {
   loadStoredPublicKeyMaterial,
   requiresPrivateKeyOnboarding,
 } from '@/services/db/storedPublicKeys.ts';
@@ -9,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth.ts';
 export type PrivateKeyOnboardingGuardStatus =
   | 'loading'
   | 'required'
+  | 'recovery'
   | 'complete'
   | 'error';
 
@@ -45,7 +51,20 @@ export function usePrivateKeyOnboardingGuard(): PrivateKeyOnboardingGuardStatus 
     async function check() {
       const stored = await loadStoredPublicKeyMaterial(username);
       if (cancelled) return;
-      setStatus(requiresPrivateKeyOnboarding(stored) ? 'required' : 'complete');
+
+      if (!stored) {
+        const isNewAccountSetup = isFreshLogin() && !wasOnboardingComplete();
+        setStatus(isNewAccountSetup ? 'required' : 'recovery');
+        return;
+      }
+
+      const nextStatus = requiresPrivateKeyOnboarding(stored)
+        ? 'required'
+        : 'complete';
+      if (nextStatus === 'complete') {
+        markOnboardingComplete();
+      }
+      setStatus(nextStatus);
     }
 
     void check().catch(() => {

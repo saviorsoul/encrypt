@@ -64,6 +64,11 @@ export function LoginPage() {
       return;
     }
 
+    if (onboardingStatus === 'recovery') {
+      navigate('/recover-local-data', { replace: true });
+      return;
+    }
+
     if (onboardingStatus === 'required') {
       navigate('/save-private-key', { replace: true });
       return;

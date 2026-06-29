@@ -92,7 +92,7 @@ function FeedLabApp() {
             {keys.keyId ? (
               <Chip
                 size="small"
-                label={`keyId ${keys.keyId.slice(0, 12)}…`}
+                label={`keyId ${keys.keyId.slice(0, 12)}...`}
               />
             ) : null}
             {keys.privateKeyFileName ? (
