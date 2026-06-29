@@ -13,7 +13,10 @@ import {
   slimEcPublicJwk,
 } from '@/crypto/jwkThumbprint.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
-import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
+import {
+  usePrivateKeyOnboardingGuard,
+  type PrivateKeyOnboardingGuardStatus,
+} from '@/hooks/usePrivateKeyOnboardingGuard.ts';
 import {
   listStoredUsernames,
   loadStoredPublicKeyMaterialByKeyId,
@@ -28,6 +31,28 @@ type ExternalAddRecipientDialogProps = {
   onClose: () => void;
   onSaved: () => void;
 };
+
+function getPublicKeyDisabledReason(
+  user: { username: string } | null,
+  onboardingStatus: PrivateKeyOnboardingGuardStatus,
+): string | null {
+  if (!user) {
+    return 'Sign in first to save a recipient public key.';
+  }
+
+  switch (onboardingStatus) {
+    case 'loading':
+      return 'Checking account status…';
+    case 'required':
+      return 'Finish saving your private key before adding recipients.';
+    case 'recovery':
+      return 'Restore your account with your private key before adding recipients.';
+    case 'error':
+      return 'Could not verify account status. Refresh and try again.';
+    default:
+      return null;
+  }
+}
 
 export function ExternalAddRecipientDialog({
   fileName,
@@ -46,17 +71,13 @@ export function ExternalAddRecipientDialog({
     user !== null &&
     onboardingStatus !== 'loading' &&
     onboardingStatus !== 'required' &&
+    onboardingStatus !== 'recovery' &&
     onboardingStatus !== 'error';
 
-  const publicKeyDisabledReason = !user
-    ? 'Sign in first to save a recipient public key.'
-    : onboardingStatus === 'loading'
-      ? 'Checking account status…'
-      : onboardingStatus === 'required'
-        ? 'Finish saving your private key before adding recipients.'
-        : onboardingStatus === 'error'
-          ? 'Could not verify account status. Refresh and try again.'
-          : null;
+  const publicKeyDisabledReason = getPublicKeyDisabledReason(
+    user,
+    onboardingStatus,
+  );
 
   const handleDismiss = useCallback(() => {
     if (busy) {

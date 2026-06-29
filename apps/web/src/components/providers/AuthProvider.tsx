@@ -8,11 +8,60 @@ import React, {
 
 export const SESSION_USER_STORAGE_KEY = 'social-fe-session-user';
 export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
+/** Set when the user explicitly signs in during this tab session. */
+export const FRESH_LOGIN_STORAGE_KEY = 'social-fe-fresh-login';
+export const ONBOARDING_COMPLETE_STORAGE_KEY = 'social-fe-onboarding-complete';
 
-export function clearAuthStorage(): void {
+function persistLoginStorage(username: string): void {
+  try {
+    sessionStorage.setItem(SESSION_USER_STORAGE_KEY, username);
+    sessionStorage.setItem(FRESH_LOGIN_STORAGE_KEY, '1');
+    sessionStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
+    localStorage.setItem(LAST_USERNAME_STORAGE_KEY, username);
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
+function clearSessionAuthStorage(): void {
   try {
     sessionStorage.removeItem(SESSION_USER_STORAGE_KEY);
+    sessionStorage.removeItem(FRESH_LOGIN_STORAGE_KEY);
+    sessionStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
+export function clearAuthStorage(): void {
+  clearSessionAuthStorage();
+  try {
     localStorage.removeItem(LAST_USERNAME_STORAGE_KEY);
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
+export function isFreshLogin(): boolean {
+  try {
+    return sessionStorage.getItem(FRESH_LOGIN_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function wasOnboardingComplete(): boolean {
+  try {
+    return sessionStorage.getItem(ONBOARDING_COMPLETE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markOnboardingComplete(): void {
+  try {
+    sessionStorage.setItem(ONBOARDING_COMPLETE_STORAGE_KEY, '1');
+    sessionStorage.removeItem(FRESH_LOGIN_STORAGE_KEY);
   } catch {
     /* ignore quota / privacy mode */
   }
@@ -55,12 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? `User already exists in database, logged in as: ${trimmed}`
         : null,
     );
-    try {
-      sessionStorage.setItem(SESSION_USER_STORAGE_KEY, trimmed);
-      localStorage.setItem(LAST_USERNAME_STORAGE_KEY, trimmed);
-    } catch {
-      /* ignore quota / privacy mode */
-    }
+    persistLoginStorage(trimmed);
   }, []);
 
   const clearLoginNotice = useCallback(() => {
@@ -70,11 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setLoginNotice(null);
-    try {
-      sessionStorage.removeItem(SESSION_USER_STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
+    clearSessionAuthStorage();
   }, []);
 
   const value = useMemo(

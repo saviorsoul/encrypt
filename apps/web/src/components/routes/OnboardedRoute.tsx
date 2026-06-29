@@ -36,6 +36,9 @@ export function OnboardedRoute() {
       />
     );
   }
+  if (onboardingStatus === 'recovery') {
+    return <Navigate to="/recover-local-data" replace />;
+  }
   if (onboardingStatus === 'required') {
     return <Navigate to="/save-private-key" replace />;
   }

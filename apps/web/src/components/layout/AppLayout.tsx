@@ -74,7 +74,9 @@ export function AppLayout() {
       : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
   const isFullscreenAuthPage =
-    location.pathname === '/login' || location.pathname === '/save-private-key';
+    location.pathname === '/login' ||
+    location.pathname === '/save-private-key' ||
+    location.pathname === '/recover-local-data';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

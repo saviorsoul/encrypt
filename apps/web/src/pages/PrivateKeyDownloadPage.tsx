@@ -92,6 +92,9 @@ export function PrivateKeyDownloadPage() {
       />
     );
   }
+  if (onboardingStatus === 'recovery') {
+    return <Navigate to="/recover-local-data" replace />;
+  }
   const handleDownload = async () => {
     if (!pendingPrivateKeyJwk) return;
     setDownloading(true);
