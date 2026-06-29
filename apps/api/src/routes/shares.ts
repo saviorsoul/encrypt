@@ -9,7 +9,9 @@ export function createSharesRouter(): Router {
   router.post('/shares', validateBody('createShareRequest'), (ctx) => {
     const body = ctx.request.body as CreateShareRequest;
     ctx.status = 201;
-    ctx.body = { id: body.messageId };
+    ctx.body = {
+      id: (body.share as { parentMessageId: string }).parentMessageId,
+    };
   });
 
   return router;

@@ -34,13 +34,9 @@ export async function postParsedImportToBackend(
   await verifyParsedImportPayload(payload);
 
   if (payload.kind === 'share') {
-    if (!payload.messageId) {
-      throw new Error('Share payload is missing messageId.');
-    }
     const result = await api.postShare({
       share: payload.share as unknown as Record<string, unknown>,
       keyManifest: payload.keyManifest,
-      messageId: payload.messageId,
     });
     return { kind: 'share', id: result.id };
   }
