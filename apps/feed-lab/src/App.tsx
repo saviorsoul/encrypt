@@ -68,8 +68,8 @@ function FeedLabApp() {
   }, [importSend, importPayload, feed, keys.keyId]);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
-      <AppBar position="static" color="default" elevation={1}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <AppBar position="sticky">
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Encrypt Feed Lab
