@@ -33,6 +33,7 @@
     "electron:preview": "npm run electron:preview -w @encrypt/web",
     "electron:run": "npm run electron:run -w @encrypt/web",
     "electron:build": "npm run electron:build -w @encrypt/web",
+    "electron:package": "npm run electron:package -w @encrypt/web",
     "test": "npm run test -w @encrypt/web",
     "lint": "eslint apps/web apps/api apps/feed-lab packages/core packages/schemas",
     "lint:fix": "eslint apps/web apps/api apps/feed-lab packages/core packages/schemas --fix",
@@ -40,7 +41,10 @@
     "format:check": "prettier --check apps/web apps/api apps/feed-lab packages/core packages/schemas",
     "dev:api": "npm run dev -w @encrypt/api",
     "dev:lab": "npm run dev -w @encrypt/feed-lab",
-    "dev:stack": "docker compose up -d && npm run dev:api",
+    "dev:stack": "docker compose --env-file .env.docker up -d",
+    "dev:stack:build": "docker compose --env-file .env.docker up -d --build",
+    "dev:stack:logs": "docker compose --env-file .env.docker logs -f",
+    "docker:down": "docker compose --env-file .env.docker down",
     "db:migrate": "npm run migrate -w @encrypt/api"
   },
   "devDependencies": {

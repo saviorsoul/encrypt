@@ -5,8 +5,10 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'packages/core/**'
       - 'package-lock.json'
       - 'package.json'
+      - '.nvmrc'
   workflow_dispatch:
 
 permissions:

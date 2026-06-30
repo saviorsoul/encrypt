@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import { contentSecurityPolicyPlugin } from './vite/contentSecurityPolicyPlugin.ts';
 import { subresourceIntegrityPlugin } from './vite/subresourceIntegrityPlugin.ts';
 
+const repoRoot = path.resolve(__dirname, '../..');
+
 export default defineConfig(({ command, mode }) => {
   const isElectron = mode === 'electron';
   const isGithubPages =
@@ -11,6 +13,7 @@ export default defineConfig(({ command, mode }) => {
   const isDevServer = command === 'serve';
 
   return {
+    envDir: repoRoot,
     plugins: [
       react(),
       contentSecurityPolicyPlugin(isDevServer),
