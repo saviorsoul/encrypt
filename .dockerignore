@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.cursor
+**/dist
+**/release
+**/coverage
+apps/web/release
+npm-debug.log*
+.DS_Store
+*.md
+!packages/**/README.md

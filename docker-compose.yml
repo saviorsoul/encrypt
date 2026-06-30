@@ -1,0 +1,158 @@
+name: encrypt
+
+networks:
+  encrypt-local:
+    name: encrypt-local
+
+volumes:
+  citus-coordinator-data:
+  citus-worker-1-data:
+  citus-worker-2-data:
+  citus-worker-3-data:
+
+x-citus-env: &citus-env
+  POSTGRES_USER: ${POSTGRES_USER:-encrypt}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-encrypt}
+  POSTGRES_DB: ${POSTGRES_DB:-encrypt_feed}
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+x-citus-healthcheck: &citus-healthcheck
+  test:
+    [
+      'CMD-SHELL',
+      'pg_isready -U ${POSTGRES_USER:-encrypt} -d ${POSTGRES_DB:-encrypt_feed}',
+    ]
+  interval: 5s
+  timeout: 5s
+  retries: 12
+  start_period: 10s
+
+services:
+  citus-coordinator:
+    image: citusdata/citus:12.1
+    container_name: citus-coordinator
+    env_file:
+      - .env.docker
+    environment: *citus-env
+    volumes:
+      - citus-coordinator-data:/var/lib/postgresql/data
+      - ./docker/citus/coordinator-init.sql:/docker-entrypoint-initdb.d/01-citus.sql:ro
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    networks:
+      - encrypt-local
+    healthcheck: *citus-healthcheck
+
+  citus-worker-1:
+    image: citusdata/citus:12.1
+    container_name: citus-worker-1
+    env_file:
+      - .env.docker
+    environment: *citus-env
+    volumes:
+      - citus-worker-1-data:/var/lib/postgresql/data
+      - ./docker/citus/worker-init.sql:/docker-entrypoint-initdb.d/01-citus.sql:ro
+    networks:
+      - encrypt-local
+    healthcheck: *citus-healthcheck
+
+  citus-worker-2:
+    image: citusdata/citus:12.1
+    container_name: citus-worker-2
+    env_file:
+      - .env.docker
+    environment: *citus-env
+    volumes:
+      - citus-worker-2-data:/var/lib/postgresql/data
+      - ./docker/citus/worker-init.sql:/docker-entrypoint-initdb.d/01-citus.sql:ro
+    networks:
+      - encrypt-local
+    healthcheck: *citus-healthcheck
+
+  citus-worker-3:
+    image: citusdata/citus:12.1
+    container_name: citus-worker-3
+    env_file:
+      - .env.docker
+    environment: *citus-env
+    volumes:
+      - citus-worker-3-data:/var/lib/postgresql/data
+      - ./docker/citus/worker-init.sql:/docker-entrypoint-initdb.d/01-citus.sql:ro
+    networks:
+      - encrypt-local
+    healthcheck: *citus-healthcheck
+
+  # One-shot init job: registers workers then exits 0. "Exited" in Docker Desktop is normal.
+  citus-bootstrap:
+    image: citusdata/citus:12.1
+    container_name: citus-bootstrap
+    env_file:
+      - .env.docker
+    environment: *citus-env
+    volumes:
+      - ./docker/citus/bootstrap-cluster.sh:/bootstrap-cluster.sh:ro
+    entrypoint: ['/bin/bash', '/bootstrap-cluster.sh']
+    depends_on:
+      citus-coordinator:
+        condition: service_healthy
+      citus-worker-1:
+        condition: service_healthy
+      citus-worker-2:
+        condition: service_healthy
+      citus-worker-3:
+        condition: service_healthy
+    networks:
+      - encrypt-local
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: encrypt-api
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-encrypt}:${POSTGRES_PASSWORD:-encrypt}@citus-coordinator:5432/${POSTGRES_DB:-encrypt_feed}
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./.env.docker:/app/.env:ro
+    depends_on:
+      citus-bootstrap:
+        condition: service_completed_successfully
+    networks:
+      - encrypt-local
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://api:3000/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  feed-lab:
+    build:
+      context: .
+      dockerfile: apps/feed-lab/Dockerfile
+    container_name: encrypt-feed-lab
+    env_file:
+      - .env.docker
+    ports:
+      - '5174:5174'
+    volumes:
+      - ./apps/feed-lab/src:/app/apps/feed-lab/src
+      - ./packages/core/src:/app/packages/core/src
+      - ./apps/web/src:/app/apps/web/src
+      - ./.env.docker:/app/.env:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - encrypt-local

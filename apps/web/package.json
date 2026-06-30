@@ -38,6 +38,7 @@
     "electron:preview": "vite build --mode electron && node scripts/electron-run.mjs",
     "electron:run": "node scripts/electron-run.mjs",
     "electron:build": "vite build --mode electron && electron-builder",
+    "electron:package": "electron-builder --publish never",
     "test": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

@@ -56,13 +56,10 @@ jobs:
           TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
           npm pkg set "version=${TAG#v}" -ws --include-workspace-root
 
-      - name: Build Vite bundle
-        working-directory: apps/web
-        run: npm run build:electron
-
-      - name: Package installer
-        working-directory: apps/web
-        run: npx electron-builder ${{ matrix.builder_args }} --publish never
+      - name: Build and package Electron installer
+        run: |
+          npm run build:electron -w @encrypt/web
+          npm run electron:package -w @encrypt/web -- ${{ matrix.builder_args }}
 
       - uses: actions/upload-artifact@v6
         with:
