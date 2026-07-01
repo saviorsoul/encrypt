@@ -1,4 +1,9 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useFeedLabUsers } from '@lab/hooks/useFeedLabUsers.ts';
 import { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
@@ -14,9 +19,10 @@ const FeedLabSessionContext = createContext<FeedLabSessionContextValue | null>(
 export function FeedLabSessionProvider({ children }: { children: ReactNode }) {
   const keys = usePrivateKeySession();
   const feedLabUsers = useFeedLabUsers();
+  const value = useMemo(() => ({ keys, feedLabUsers }), [keys, feedLabUsers]);
 
   return (
-    <FeedLabSessionContext.Provider value={{ keys, feedLabUsers }}>
+    <FeedLabSessionContext.Provider value={value}>
       {children}
     </FeedLabSessionContext.Provider>
   );
