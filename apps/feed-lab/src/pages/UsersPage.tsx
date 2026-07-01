@@ -19,7 +19,10 @@ import {
   AcceptFriendRequestDialog,
   type PendingFriendRequest,
 } from '@lab/components/AcceptFriendRequestDialog.tsx';
-import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
+import {
+  saveFeedLabUser,
+  loadFeedLabUserByKeyId,
+} from '@lab/services/db/storedUsers.ts';
 import {
   formatCommentAuthorLabel,
   formatFriendListEntry,
@@ -29,7 +32,7 @@ import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 export function UsersPage() {
   const api = useFeedApi();
   const { keys, feedLabUsers } = useFeedLabSession();
-  const { addBackendUser, addLocalUser, usernameByKeyId } = feedLabUsers;
+  const { addLocalUser, usernameByKeyId, usernames } = feedLabUsers;
 
   const [addUserName, setAddUserName] = useState('');
   const [addUserPublicKey, setAddUserPublicKey] = useState('');
@@ -46,9 +49,6 @@ export function UsersPage() {
   const friendshipRequests = useBackendFriendshipRequests(
     () => friendships.refresh(),
     (user) => {
-      addBackendUser(user);
-    },
-    (user) => {
       addLocalUser(user);
     },
   );
@@ -59,16 +59,12 @@ export function UsersPage() {
       username: string;
       publicKey: { x: string; y: string };
     }) => {
-      addBackendUser({
-        keyId: input.keyId,
-        publicKey: input.publicKey,
-      });
       addLocalUser({
         keyId: input.keyId,
         username: input.username,
       });
     },
-    [addBackendUser, addLocalUser],
+    [addLocalUser],
   );
 
   const addUser = useBackendAddUser(handleUserRegistered);
@@ -84,38 +80,39 @@ export function UsersPage() {
       setAcceptFriendError(null);
       const { requesterKeyId, targetKeyId } = acceptFriendRequest;
 
-      let backendUser = feedLabUsers.backendUsers.find(
-        (user) => user.keyId === requesterKeyId,
+      const storedUser = await loadFeedLabUserByKeyId(requesterKeyId);
+      const acceptError = await friendshipRequests.acceptRequest(
+        requesterKeyId,
+        targetKeyId,
       );
-      if (!backendUser) {
-        const users = await api.getUsers();
-        backendUser = users.find((user) => user.keyId === requesterKeyId);
-        if (backendUser) {
-          addBackendUser(backendUser);
-        }
-      }
-
-      if (!backendUser) {
-        setAcceptFriendError('Could not find this user on the backend.');
+      if (acceptError) {
+        setAcceptFriendError(acceptError);
         return;
       }
 
-      try {
-        await saveFeedLabUser(username, {
-          kty: 'EC',
-          crv: 'P-256',
-          x: backendUser.publicKey.x,
-          y: backendUser.publicKey.y,
-        });
-        addLocalUser({ keyId: requesterKeyId, username });
-        const acceptError = await friendshipRequests.acceptRequest(
-          requesterKeyId,
-          targetKeyId,
+      let publicJwk: JsonWebKey;
+      if (storedUser) {
+        publicJwk = storedUser.publicJwk;
+      } else {
+        const friendshipsList = await api.getFriendships(targetKeyId);
+        const friend = friendshipsList.find(
+          (entry) => entry.friendKeyId === requesterKeyId,
         );
-        if (acceptError) {
-          setAcceptFriendError(acceptError);
+        if (!friend) {
+          setAcceptFriendError('Could not load friend public key.');
           return;
         }
+        publicJwk = {
+          kty: 'EC',
+          crv: 'P-256',
+          x: friend.publicKey.x,
+          y: friend.publicKey.y,
+        };
+      }
+
+      try {
+        await saveFeedLabUser(username, publicJwk);
+        addLocalUser({ keyId: requesterKeyId, username });
         setAcceptFriendRequest(null);
       } catch (e) {
         setAcceptFriendError(
@@ -123,14 +120,7 @@ export function UsersPage() {
         );
       }
     },
-    [
-      acceptFriendRequest,
-      addBackendUser,
-      addLocalUser,
-      api,
-      feedLabUsers.backendUsers,
-      friendshipRequests,
-    ],
+    [acceptFriendRequest, addLocalUser, api, friendshipRequests],
   );
 
   return (
@@ -245,7 +235,7 @@ export function UsersPage() {
       <GenerateRecipientDialog
         open={generateDialogOpen}
         onClose={() => setGenerateDialogOpen(false)}
-        existingUsernames={feedLabUsers.usernames}
+        existingUsernames={usernames}
         generating={generateUser.busy}
         error={generateUser.error}
         onNameChange={generateUser.clearError}
@@ -392,7 +382,7 @@ export function UsersPage() {
                         keys.keyId,
                         friendRequestPublicKey.trim(),
                         friendRequestName.trim(),
-                        feedLabUsers.usernames,
+                        usernames,
                         usernameByKeyId,
                       )
                       .then((keyId) => {
@@ -526,7 +516,7 @@ export function UsersPage() {
             ? (usernameByKeyId[acceptFriendRequest.requesterKeyId] ?? '')
             : ''
         }
-        existingUsernames={feedLabUsers.usernames}
+        existingUsernames={usernames}
         busy={friendshipRequests.busy}
         error={acceptFriendError}
         onClose={() => {

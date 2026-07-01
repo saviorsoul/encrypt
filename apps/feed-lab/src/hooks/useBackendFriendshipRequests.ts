@@ -5,10 +5,6 @@ import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
 
 export function useBackendFriendshipRequests(
   onChanged?: () => void | Promise<void>,
-  onTargetRegistered?: (input: {
-    keyId: string;
-    publicKey: { x: string; y: string };
-  }) => void,
   onLocalUserSaved?: (input: { keyId: string; username: string }) => void,
 ) {
   const api = useFeedApi();
@@ -87,13 +83,6 @@ export function useBackendFriendshipRequests(
           return null;
         }
 
-        if (ensured.createdOnBackend) {
-          onTargetRegistered?.({
-            keyId: ensured.keyId,
-            publicKey: ensured.publicKey,
-          });
-        }
-
         await saveFeedLabUser(trimmedName, {
           kty: 'EC',
           crv: 'P-256',
@@ -115,7 +104,7 @@ export function useBackendFriendshipRequests(
         setBusy(false);
       }
     },
-    [api, onChanged, onLocalUserSaved, onTargetRegistered],
+    [api, onChanged, onLocalUserSaved],
   );
 
   const acceptRequest = useCallback(

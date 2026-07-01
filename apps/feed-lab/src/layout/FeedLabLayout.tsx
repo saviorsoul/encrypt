@@ -52,7 +52,7 @@ export function FeedLabLayout() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ py: 3 }}>
+      <Container maxWidth="sm" sx={{ py: 3 }}>
         <Stack spacing={3}>
           <Stack
             direction="row"
