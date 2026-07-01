@@ -1,14 +1,8 @@
 import {
   getCommentThreadMessageId,
-  isShareDelivery,
+  pickCanonicalFeedMessage,
 } from '../crypto/manifestShare.ts';
 import type { StoredFeedDelivery, StoredMessage } from '../feed/types.ts';
-
-function pickCanonicalFeedMessage(
-  threadMessages: StoredFeedDelivery[],
-): StoredMessage | null {
-  return threadMessages.find((message) => !isShareDelivery(message)) ?? null;
-}
 
 /**
  * One feed row per parent thread: the original post only. Share deliveries are

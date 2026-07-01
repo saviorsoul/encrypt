@@ -97,10 +97,12 @@ npm run db:migrate
 npm run db:citus:distribute
 ```
 
-Rebuild the API image after dependency changes:
+Rebuild the API image after dependency changes, or restart `api` after Prisma schema changes (the container runs `prisma generate` on startup):
 
 ```bash
 npm run dev:stack:build
+# or, after schema-only changes:
+docker compose --env-file .env.docker up -d --build api
 ```
 
 Register recipients before posting shares or messages with `keyManifest`:
@@ -108,7 +110,7 @@ Register recipients before posting shares or messages with `keyManifest`:
 ```bash
 curl -X POST http://localhost:3000/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"keyId":"<thumbprint>","publicKey":{"kty":"EC","crv":"P-256","x":"...","y":"..."}}'
+  -d '{"publicKey":{"x":"...","y":"..."}}'
 ```
 
 Manifest shards are stored only for `keyId` values that exist in `users`.

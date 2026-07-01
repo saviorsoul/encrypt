@@ -25,6 +25,7 @@ import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
 import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
+import { useBackendAddUser } from '@lab/hooks/useBackendAddUser.ts';
 import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import type { StoredMessage } from '@encrypt/core/feed/types';
 
@@ -39,8 +40,10 @@ function FeedLabApp() {
   );
   const [commentText, setCommentText] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [addUserPublicKey, setAddUserPublicKey] = useState('');
   const decrypt = useBackendDecrypt(keys.withPrivateKey);
   const share = useBackendShare(keys.withPrivateKey);
+  const addUser = useBackendAddUser();
   const comments = useBackendComments(
     selectedMessageId,
     keys.keyId,
@@ -109,6 +112,86 @@ function FeedLabApp() {
               {keys.keyId ? 'Change your keyId' : 'Set your keyId'}
             </Button>
           </Stack>
+
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Register user
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              POST a public key to{' '}
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{ fontFamily: 'monospace' }}
+              >
+                /api/users
+              </Typography>
+              . The backend derives keyId from the key. Use{' '}
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{ fontFamily: 'monospace' }}
+              >
+                x;y
+              </Typography>{' '}
+              coordinates or a JSON object with{' '}
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{ fontFamily: 'monospace' }}
+              >
+                x
+              </Typography>{' '}
+              and{' '}
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{ fontFamily: 'monospace' }}
+              >
+                y
+              </Typography>
+              .
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              label="Public key"
+              placeholder='x;y or {"x":"…","y":"…"}'
+              value={addUserPublicKey}
+              disabled={addUser.busy}
+              onChange={(event) => {
+                setAddUserPublicKey(event.target.value);
+                addUser.clearError();
+                addUser.clearLastKeyId();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  void addUser.addUser(addUserPublicKey.trim());
+                }
+              }}
+            />
+            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                disabled={addUser.busy || !addUserPublicKey.trim()}
+                onClick={() => void addUser.addUser(addUserPublicKey.trim())}
+              >
+                {addUser.busy ? 'Registering…' : 'POST /api/users'}
+              </Button>
+            </Stack>
+            {addUser.error ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {addUser.error}
+              </Alert>
+            ) : null}
+            {addUser.lastKeyId ? (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                User registered with keyId: {addUser.lastKeyId}
+              </Alert>
+            ) : null}
+          </Paper>
 
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>

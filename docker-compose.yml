@@ -118,6 +118,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-encrypt}:${POSTGRES_PASSWORD:-encrypt}@citus-coordinator:5432/${POSTGRES_DB:-encrypt_feed}
     volumes:
       - ./.env.docker:/app/.env:ro
+      - ./apps/api/prisma:/app/apps/api/prisma
     entrypoint: ['npm', 'run', 'db:setup', '-w', '@encrypt/api']
     depends_on:
       citus-bootstrap:
@@ -140,6 +141,7 @@ services:
       - '3000:3000'
     volumes:
       - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
       - ./.env.docker:/app/.env:ro
     depends_on:
       citus-bootstrap:

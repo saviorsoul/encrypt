@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import type { CreateShareRequest } from '../schemas/common.js';
 import { parseKeyManifest } from '../schemas/parseKeyManifest.js';
 import { prisma } from '../lib/prisma.js';
-import { insertManifestShards } from '../db/manifestShards.js';
+import {
+  filterRecipientsWithoutMessageAccess,
+  insertManifestShards,
+} from '../db/manifestShards.js';
 import { insertMessage } from '../db/messages.js';
 import { insertShare } from '../db/shares.js';
 import { assertRecipientsRegistered } from '../db/users.js';
@@ -55,8 +58,25 @@ export async function createShare(
       await insertMessage(tx, parentId, JSON.stringify(body.parentMessage));
     }
 
+    const newRecipientKeyIds = await filterRecipientsWithoutMessageAccess(
+      threadRootId,
+      Object.keys(keyManifest),
+      tx,
+    );
+    if (newRecipientKeyIds.length === 0) {
+      throw badRequest(
+        'All selected recipients already have access to this message.',
+      );
+    }
+
+    const filteredKeyManifest = Object.fromEntries(
+      newRecipientKeyIds.map((keyId) => [keyId, keyManifest[keyId]]),
+    );
+
     await insertShare(tx, shareId, threadRootId, shareCoreJson);
-    await insertManifestShards(tx, shareId, keyManifest);
+    await insertManifestShards(tx, threadRootId, filteredKeyManifest, {
+      shareId,
+    });
   });
 
   return { id: shareId };

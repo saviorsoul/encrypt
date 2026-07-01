@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -22,6 +23,48 @@ export function parsePublicKey(
   }
 
   return { kty, crv, x, y };
+}
+
+/** Parse wire publicKey (`x;y` string or object with x and y) for Prisma Json writes. */
+export function parseWirePublicKey(
+  wire: string | Record<string, unknown> | JsonWebKey,
+): Prisma.InputJsonValue {
+  if (typeof wire === 'string') {
+    const semicolon = wire.indexOf(';');
+    if (semicolon <= 0) {
+      throw badRequest(
+        'publicKey must be x;y coordinates or an object with x and y.',
+      );
+    }
+    const x = wire.slice(0, semicolon).trim();
+    const y = wire.slice(semicolon + 1).trim();
+    if (!x || !y) {
+      throw badRequest(
+        'publicKey must be x;y coordinates or an object with x and y.',
+      );
+    }
+    return parsePublicKey(ecPublicJwkFromCoords({ x, y }));
+  }
+
+  const { x, y, d } = wire;
+  if (typeof x === 'string' && typeof y === 'string') {
+    if (d != null && d !== '') {
+      throw badRequest('publicKey must not include private component d.');
+    }
+    return parsePublicKey(ecPublicJwkFromCoords({ x, y }));
+  }
+
+  throw badRequest(
+    'publicKey must be x;y coordinates or an object with x and y.',
+  );
+}
+
+/** Derive RFC 7638 keyId from wire publicKey. */
+export async function keyIdFromWirePublicKey(
+  wire: string | Record<string, unknown> | JsonWebKey,
+): Promise<string> {
+  const publicKey = parseWirePublicKey(wire);
+  return ecPublicJwkThumbprintSha256(slimEcPublicJwk(publicKey as JsonWebKey));
 }
 
 /** Ensure keyId is the RFC 7638 JWK thumbprint of publicKey. */
