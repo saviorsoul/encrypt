@@ -24,6 +24,8 @@ import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
 import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
+import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
+import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import type { StoredMessage } from '@encrypt/core/feed/types';
 
 function FeedLabApp() {
@@ -36,7 +38,9 @@ function FeedLabApp() {
     null,
   );
   const [commentText, setCommentText] = useState('');
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const decrypt = useBackendDecrypt(keys.withPrivateKey);
+  const share = useBackendShare(keys.withPrivateKey);
   const comments = useBackendComments(
     selectedMessageId,
     keys.keyId,
@@ -208,19 +212,33 @@ function FeedLabApp() {
               <Typography variant="h6" gutterBottom>
                 Thread: {selectedMessage.id}
               </Typography>
-              <Button
-                variant="outlined"
-                disabled={decrypt.busy}
-                onClick={() =>
-                  void decrypt.decryptDelivery({
-                    delivery: selectedMessage,
-                    allDeliveries: feed.allDeliveries,
-                    manifestLookup: feed.manifestLookup,
-                  })
-                }
-              >
-                Decrypt message
-              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  disabled={decrypt.busy}
+                  onClick={() =>
+                    void decrypt.decryptDelivery({
+                      delivery: selectedMessage,
+                      allDeliveries: feed.allDeliveries,
+                      manifestLookup: feed.manifestLookup,
+                    })
+                  }
+                >
+                  Decrypt message
+                </Button>
+                <Button
+                  variant="outlined"
+                  disabled={share.busy}
+                  onClick={() => setShareDialogOpen(true)}
+                >
+                  Share message
+                </Button>
+              </Stack>
+              {share.lastShareId ? (
+                <Alert severity="success" sx={{ mt: 1 }}>
+                  Share created: {share.lastShareId}
+                </Alert>
+              ) : null}
               {decrypt.error ? (
                 <Alert severity="error" sx={{ mt: 1 }}>
                   {decrypt.error}
@@ -285,6 +303,32 @@ function FeedLabApp() {
               </Button>
             </Paper>
           ) : null}
+
+          <ShareMessageDialog
+            open={shareDialogOpen}
+            messageId={selectedMessageId}
+            busy={share.busy}
+            error={share.error}
+            onClose={() => setShareDialogOpen(false)}
+            onClearError={share.clearError}
+            onShare={(recipients) =>
+              selectedMessageId
+                ? share
+                    .shareMessage({
+                      messageId: selectedMessageId,
+                      recipients,
+                      allDeliveries: feed.allDeliveries,
+                      manifestLookup: feed.manifestLookup,
+                    })
+                    .then(async (shareId) => {
+                      if (shareId && keys.keyId) {
+                        await feed.reload(keys.keyId);
+                      }
+                      return shareId;
+                    })
+                : Promise.resolve(null)
+            }
+          />
         </Stack>
       </Container>
     </Box>
