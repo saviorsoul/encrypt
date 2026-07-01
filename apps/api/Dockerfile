@@ -7,10 +7,20 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
+COPY packages/core/package.json ./packages/core/
 
-RUN npm ci -w @encrypt/api --include-workspace-root
+RUN npm ci -w @encrypt/api -w @encrypt/core --include-workspace-root --ignore-scripts
 
+# Fail the build if workspace deps are missing (catches MODULE_NOT_FOUND before runtime).
+RUN node --input-type=module -e "import 'dotenv'; import 'koa'"
+
+COPY packages/core ./packages/core
 COPY apps/api ./apps/api
+
+WORKDIR /app/apps/api
+RUN npx prisma generate
+
+WORKDIR /app
 
 EXPOSE 3000
 

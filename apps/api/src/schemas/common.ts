@@ -138,7 +138,7 @@ export const commentPayloadSchema = {
   properties: {
     version: { type: 'integer', const: COMMENT_VERSION },
     wrap: { type: 'string', const: COMMENT_WRAP },
-    messageId: { type: 'string', minLength: 1, maxLength: 64 },
+    messageId: { type: 'string', format: 'uuid' },
     senderPublicJwk: ecPublicJwkSchema,
     salt: {
       type: 'string',
@@ -161,7 +161,18 @@ export const createShareRequestSchema = {
   properties: {
     share: manifestShareWireSchema,
     keyManifest: keyManifestSchema,
-    messageId: { type: 'string', minLength: 1, maxLength: 64 },
+    messageId: { type: 'string', format: 'uuid' },
+    parentMessage: manifestCoreSchema,
+  },
+} as const;
+
+export const registerUserRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['keyId', 'publicKey'],
+  properties: {
+    keyId: { type: 'string', minLength: 1, maxLength: 128 },
+    publicKey: ecPublicJwkSchema,
   },
 } as const;
 
@@ -189,7 +200,6 @@ export const createMessageRequestSchema = {
       maxLength: MAX_BASE64_FIELD_LENGTH,
     },
     keyManifest: keyManifestSchema,
-    messageId: { type: 'string', minLength: 1, maxLength: 64 },
   },
 } as const;
 
@@ -197,6 +207,12 @@ export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: Record<string, Record<string, unknown>>;
   messageId?: string;
+  parentMessage?: Record<string, unknown>;
+};
+
+export type RegisterUserRequest = {
+  keyId: string;
+  publicKey: Record<string, unknown>;
 };
 
 export type CommentPayloadBody = Record<string, unknown>;
@@ -209,14 +225,34 @@ export type CreateMessageRequest = {
   encryptedContent: Record<string, unknown>;
   senderSignature: string;
   keyManifest: Record<string, Record<string, unknown>>;
-  messageId?: string;
 };
+
+export const recipientKeyIdQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['recipientKeyId'],
+  properties: {
+    recipientKeyId: { type: 'string', minLength: 1, maxLength: 128 },
+  },
+} as const;
+
+export const commentsQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['messageId'],
+  properties: {
+    messageId: { type: 'string', format: 'uuid' },
+  },
+} as const;
 
 /** Wire schemas for AJV — replace with @encrypt/schemas imports in step 2. */
 export const schemaDefinitions = {
   createShareRequest: createShareRequestSchema,
   createMessageRequest: createMessageRequestSchema,
   commentPayload: commentPayloadSchema,
+  registerUserRequest: registerUserRequestSchema,
+  recipientKeyIdQuery: recipientKeyIdQuerySchema,
+  commentsQuery: commentsQuerySchema,
 } as const;
 
 export type SchemaName = keyof typeof schemaDefinitions;

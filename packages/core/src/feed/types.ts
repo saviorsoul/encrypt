@@ -24,7 +24,8 @@ export type StoredComment = {
 export type InboxApiItem = {
   id: string;
   type: 'message' | 'share';
-  parentMessageId?: string;
+  /** Thread root id for share deliveries. */
+  messageId?: string;
   payload: string;
   createdAt: string;
   keyManifest: Record<
@@ -46,7 +47,7 @@ export function inboxApiItemToStoredDelivery(
   if (item.type === 'share') {
     return {
       id: item.id,
-      messageId: item.parentMessageId ?? item.id,
+      messageId: item.messageId ?? item.id,
       payload: item.payload,
       createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
     };

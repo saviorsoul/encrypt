@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  keyId     String @id
+  publicKey Json
+
+  @@map("users")
+}
+
+model Message {
+  id        String   @id @db.Uuid
+  payload   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  shares   Share[]
+  comments Comment[]
+
+  @@map("messages")
+}
+
+model Share {
+  id        String   @id @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  payload   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  threadRoot Message @relation(fields: [messageId], references: [id], onDelete: Restrict)
+
+  @@index([messageId])
+  @@map("shares")
+}
+
+model Comment {
+  id        String   @id @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  payload   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  threadRoot Message @relation(fields: [messageId], references: [id], onDelete: Restrict)
+
+  @@index([messageId])
+  @@map("comments")
+}
+
+model MessageKeyManifestShard {
+  messageId      String @map("message_id") @db.Uuid
+  recipientKeyId String @map("recipient_key_id") // Citus distribution key; must exist in users (app-enforced; no DB FK — Citus limitation)
+  entryJson      String @map("entry_json")
+
+  @@id([messageId, recipientKeyId])
+  @@index([recipientKeyId])
+  @@map("message_key_manifest_shards")
+}

@@ -1,12 +1,7 @@
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { findMonorepoRoot } from './lib/monorepoRoot.js';
 
-const repoRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../..',
-);
+const repoRoot = findMonorepoRoot(import.meta.dirname);
 
-for (const name of ['.env', '.env.docker']) {
-  dotenv.config({ path: path.join(repoRoot, name) });
-}
+dotenv.config({ path: path.join(repoRoot, '.env') });

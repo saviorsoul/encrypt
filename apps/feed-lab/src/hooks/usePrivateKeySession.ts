@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
-import { importPublicKeyExtractable } from '@encrypt/core/crypto/ecdhKeys';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPrivateJwk,
@@ -12,21 +11,6 @@ import {
   pickPrivateKeyJwkFileWithName,
   isPrivateKeyFileSelectionCancelled,
 } from '@/crypto/privateKeyFile.ts';
-
-export async function publicKeyFromMaterial(
-  material: UploadedPrivateKeyMaterial,
-): Promise<CryptoKey> {
-  const privateJwk = (await crypto.subtle.exportKey(
-    'jwk',
-    material.ecdhPrivateKey,
-  )) as JsonWebKey;
-  return importPublicKeyExtractable({
-    kty: 'EC',
-    crv: 'P-256',
-    x: privateJwk.x,
-    y: privateJwk.y,
-  });
-}
 
 async function keyIdFromPrivateJwk(jwk: JsonWebKey): Promise<string> {
   return ecPublicJwkThumbprintSha256(

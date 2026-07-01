@@ -45,7 +45,10 @@
     "dev:stack:build": "docker compose --env-file .env.docker up -d --build",
     "dev:stack:logs": "docker compose --env-file .env.docker logs -f",
     "docker:down": "docker compose --env-file .env.docker down",
-    "db:migrate": "npm run migrate -w @encrypt/api"
+    "db:migrate": "npm run migrate -w @encrypt/api",
+    "db:citus:distribute": "npm run db:citus:distribute -w @encrypt/api",
+    "db:seed": "npm run db:seed -w @encrypt/api",
+    "db:setup": "npm run db:setup -w @encrypt/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

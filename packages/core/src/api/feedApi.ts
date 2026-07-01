@@ -6,6 +6,11 @@ export type FeedApiConfig = {
   fetch?: typeof fetch;
 };
 
+export type RegisterUserRequest = {
+  keyId: string;
+  publicKey: Record<string, unknown>;
+};
+
 export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: KeyManifestMap;
@@ -20,7 +25,6 @@ export type CreateMessageRequest = {
   encryptedContent: Record<string, unknown>;
   senderSignature: string;
   keyManifest: KeyManifestMap;
-  messageId?: string;
 };
 
 function joinUrl(baseUrl: string, path: string): string {
@@ -60,6 +64,18 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
       return (await response.json()) as InboxApiItem[];
+    },
+
+    async postUser(body: RegisterUserRequest): Promise<{ keyId: string }> {
+      const response = await http(joinUrl(baseUrl, '/api/users'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as { keyId: string };
     },
 
     async postMessage(body: CreateMessageRequest): Promise<{ id: string }> {
@@ -102,13 +118,9 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as { id: string };
     },
 
-    async getComments(
-      messageId: string,
-      recipientKeyId: string,
-    ): Promise<StoredComment[]> {
+    async getComments(messageId: string): Promise<StoredComment[]> {
       const url = new URL(joinUrl(baseUrl, '/api/comments'));
       url.searchParams.set('messageId', messageId);
-      url.searchParams.set('recipientKeyId', recipientKeyId);
       const response = await http(url);
       if (!response.ok) {
         throw new Error(await readApiError(response));
@@ -149,17 +161,14 @@ export function createFeedApi(config: FeedApiConfig) {
       const threadIds = [
         ...new Set(
           inbox.map((item) =>
-            item.type === 'share' ? (item.parentMessageId ?? item.id) : item.id,
+            item.type === 'share' ? (item.messageId ?? item.id) : item.id,
           ),
         ),
       ];
       const commentsByMessageId: Record<string, StoredComment[]> = {};
       await Promise.all(
         threadIds.map(async (messageId) => {
-          commentsByMessageId[messageId] = await this.getComments(
-            messageId,
-            recipientKeyId,
-          );
+          commentsByMessageId[messageId] = await this.getComments(messageId);
         }),
       );
       return { inbox, commentsByMessageId };
