@@ -27,6 +27,13 @@ export async function registerUser(input: RegisterUserInput) {
   }
 }
 
+export async function listUsers() {
+  return prisma.user.findMany({
+    select: { keyId: true, publicKey: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function findRegisteredKeyIds(
   keyIds: string[],
 ): Promise<Set<string>> {
