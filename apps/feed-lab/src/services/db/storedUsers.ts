@@ -88,6 +88,23 @@ export async function listFeedLabStoredUsers(): Promise<FeedLabStoredUser[]> {
   });
 }
 
+export async function loadFeedLabUserByKeyId(
+  keyId: string,
+): Promise<FeedLabStoredUser | null> {
+  const db = await openFeedLabDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(USERS_STORE, 'readonly');
+    const store = tx.objectStore(USERS_STORE);
+    const request = store.get(keyId);
+
+    request.onsuccess = () => {
+      resolve(parseStoredUser(request.result ?? null));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function loadFeedLabUserByUsername(
   username: string,
 ): Promise<FeedLabStoredUser | null> {
