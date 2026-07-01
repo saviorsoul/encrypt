@@ -8,8 +8,9 @@ datasource db {
 }
 
 model User {
-  keyId     String @id
+  keyId     String   @id
   publicKey Json
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("users")
 }

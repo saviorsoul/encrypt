@@ -6,10 +6,15 @@ import {
 } from '@encrypt/core/crypto/jwkThumbprint';
 import { parseWirePublicKey } from '../schemas/parsePublicKey.js';
 import { validateBody } from '../middleware/validateBody.js';
-import { registerUser } from '../db/users.js';
+import { listUsers, registerUser } from '../db/users.js';
 
 export function createUsersRouter(): Router {
   const router = new Router({ prefix: '/api' });
+
+  router.get('/users', async (ctx) => {
+    const users = await listUsers();
+    ctx.body = users;
+  });
 
   router.post('/users', validateBody('registerUserRequest'), async (ctx) => {
     const body = ctx.request.body as RegisterUserRequest;

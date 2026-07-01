@@ -10,6 +10,11 @@ export type RegisterUserRequest = {
   publicKey: string | { x: string; y: string };
 };
 
+export type BackendUser = {
+  keyId: string;
+  publicKey: { x: string; y: string };
+};
+
 export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: KeyManifestMap;
@@ -63,6 +68,14 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
       return (await response.json()) as InboxApiItem[];
+    },
+
+    async getUsers(): Promise<BackendUser[]> {
+      const response = await http(joinUrl(baseUrl, '/api/users'));
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as BackendUser[];
     },
 
     async postUser(body: RegisterUserRequest): Promise<{ keyId: string }> {

@@ -1,10 +1,17 @@
 import { useCallback, useState } from 'react';
-import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
-import { slimEcPublicJwk } from '@encrypt/core/crypto/jwkThumbprint';
+import { downloadJsonFile } from '@/utils/downloadJson.ts';
+import { privateKeyDownloadFilename } from '@/utils/privateKeyFilename.ts';
+import {
+  exportPublicKeyJwk,
+  generateExtractableEcdhKeyPair,
+  jwkWithoutKeyOps,
+} from '@encrypt/core/crypto/ecdhKeys';
+import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { registerFeedLabRecipient } from '@lab/lib/registerFeedLabRecipient.ts';
+import { loadFeedLabUserByUsername } from '@lab/services/db/storedUsers.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 
-export function useBackendAddUser(
+export function useBackendGenerateUser(
   onRegistered?: (input: {
     keyId: string;
     username: string;
@@ -16,15 +23,14 @@ export function useBackendAddUser(
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [lastKeyId, setLastKeyId] = useState<string | null>(null);
+  const [lastUsername, setLastUsername] = useState<string | null>(null);
 
-  const addUser = useCallback(
-    async (
-      username: string,
-      publicKeyText: string,
-    ): Promise<string | null> => {
+  const generateUser = useCallback(
+    async (username: string): Promise<string | null> => {
       setError(null);
       setInfo(null);
       setLastKeyId(null);
+      setLastUsername(null);
 
       const trimmedName = username.trim();
       if (!trimmedName) {
@@ -32,24 +38,27 @@ export function useBackendAddUser(
         return null;
       }
 
-      const parsed = parsePublicKeyText(publicKeyText);
-      if (parsed.ok === false) {
-        setError(parsed.error);
-        return null;
-      }
-
-      const { x, y } = parsed.jwk;
-      if (!x || !y) {
-        setError('Public key must include x and y coordinates.');
+      const existing = await loadFeedLabUserByUsername(trimmedName);
+      if (existing) {
+        setError(`"${trimmedName}" already exists. Choose a unique name.`);
         return null;
       }
 
       setBusy(true);
       try {
+        const keyPair = await generateExtractableEcdhKeyPair();
+        const publicJwk = await exportPublicKeyJwk(keyPair);
+        const privateJwk = slimEcPrivateJwk(
+          (await crypto.subtle.exportKey(
+            'jwk',
+            keyPair.privateKey,
+          )) as JsonWebKey,
+        );
+
         const result = await registerFeedLabRecipient(
           api,
           trimmedName,
-          slimEcPublicJwk(parsed.jwk),
+          publicJwk,
         );
 
         if (result.status === 'error') {
@@ -64,9 +73,20 @@ export function useBackendAddUser(
           return result.keyId;
         }
 
+        downloadJsonFile(
+          jwkWithoutKeyOps(privateJwk),
+          privateKeyDownloadFilename(trimmedName),
+        );
+
         setLastKeyId(result.keyId);
+        setLastUsername(trimmedName);
         onRegistered?.(result.user);
         return result.keyId;
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : 'Failed to generate recipient keys.',
+        );
+        return null;
       } finally {
         setBusy(false);
       }
@@ -84,6 +104,7 @@ export function useBackendAddUser(
 
   const clearLastKeyId = useCallback(() => {
     setLastKeyId(null);
+    setLastUsername(null);
   }, []);
 
   return {
@@ -91,7 +112,8 @@ export function useBackendAddUser(
     error,
     info,
     lastKeyId,
-    addUser,
+    lastUsername,
+    generateUser,
     clearError,
     clearInfo,
     clearLastKeyId,
