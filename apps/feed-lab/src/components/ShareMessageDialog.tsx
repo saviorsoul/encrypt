@@ -22,6 +22,7 @@ type ShareMessageDialogProps = {
   recipientOptions: string[];
   selectedRecipients: string[];
   onSelectedRecipientsChange: (value: string[]) => void;
+  getOptionLabel?: (option: string) => string;
   recipients: ManifestRecipientKeys[];
   loadingRecipients: boolean;
   recipientsError: string | null;
@@ -38,6 +39,7 @@ export function ShareMessageDialog({
   recipientOptions,
   selectedRecipients,
   onSelectedRecipientsChange,
+  getOptionLabel,
   recipients,
   loadingRecipients,
   recipientsError,
@@ -89,13 +91,14 @@ export function ShareMessageDialog({
             </Box>
           ) : recipientOptions.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              No recipients yet. Register a user above to add one.
+              No friends yet. Add or accept a friend request before sharing.
             </Typography>
           ) : (
             <RecipientMultiSelect
               options={recipientOptions}
               value={selectedRecipients}
               onChange={onSelectedRecipientsChange}
+              getOptionLabel={getOptionLabel}
               disabled={busy}
             />
           )}

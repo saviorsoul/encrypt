@@ -1,119 +1,109 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { importPublicKeyExtractable } from '@encrypt/core/crypto/ecdhKeys';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
-import { loadRecipientKeysForUsername } from '@lab/services/db/storedUsers.ts';
+import type { FeedLabFriend } from '@lab/hooks/useFeedLabFriendships.ts';
 
 type FeedLabRecipientsInput = {
-  availableUsernames: string[];
-  loadingUsers: boolean;
-  usersError: string | null;
+  friends: FeedLabFriend[];
+  loadingFriends: boolean;
+  friendsError: string | null;
 };
 
+function toPublicJwk(publicKey: { x: string; y: string }): JsonWebKey {
+  return {
+    kty: 'EC',
+    crv: 'P-256',
+    x: publicKey.x,
+    y: publicKey.y,
+  };
+}
+
 export function useFeedLabRecipients({
-  availableUsernames,
-  loadingUsers,
-  usersError,
+  friends,
+  loadingFriends,
+  friendsError,
 }: FeedLabRecipientsInput) {
-  const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const [selectedKeyIds, setSelectedKeyIds] = useState<string[]>([]);
   const [recipients, setRecipients] = useState<ManifestRecipientKeys[]>([]);
   const [loadingRecipientKeys, setLoadingRecipientKeys] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [prevAvailableUsernames, setPrevAvailableUsernames] =
-    useState(availableUsernames);
-  const [prevUsersError, setPrevUsersError] = useState(usersError);
-  const [prevSelectedUsernamesKey, setPrevSelectedUsernamesKey] = useState('');
-  const recipientCacheRef = useRef<Map<string, ManifestRecipientKeys>>(
-    new Map(),
+  const [prevFriendKeyIdsKey, setPrevFriendKeyIdsKey] = useState('');
+
+  const friendKeyIdsKey = friends.map((friend) => friend.keyId).join('\0');
+  const friendByKeyId = useMemo(
+    () => new Map(friends.map((friend) => [friend.keyId, friend])),
+    [friends],
+  );
+  const recipientOptions = useMemo(
+    () => friends.map((friend) => friend.keyId),
+    [friends],
+  );
+  const getOptionLabel = useMemo(
+    () => (keyId: string) => friendByKeyId.get(keyId)?.label ?? keyId,
+    [friendByKeyId],
   );
 
-  const selectedUsernamesKey = selectedUsernames.join('\0');
-
-  if (availableUsernames !== prevAvailableUsernames) {
-    setPrevAvailableUsernames(availableUsernames);
-    setSelectedUsernames((prev) => {
-      const stillValid = prev.filter((name) =>
-        availableUsernames.includes(name),
-      );
+  if (friendKeyIdsKey !== prevFriendKeyIdsKey) {
+    setPrevFriendKeyIdsKey(friendKeyIdsKey);
+    setSelectedKeyIds((prev) => {
+      const stillValid = prev.filter((keyId) => friendByKeyId.has(keyId));
       if (stillValid.length > 0) {
         return stillValid;
       }
-      return availableUsernames;
+      return friends.map((friend) => friend.keyId);
     });
   }
 
-  if (usersError !== prevUsersError) {
-    setPrevUsersError(usersError);
-    if (usersError) {
-      setSelectedUsernames([]);
+  useEffect(() => {
+    if (friendsError) {
+      setSelectedKeyIds([]);
     }
-  }
-
-  if (selectedUsernamesKey !== prevSelectedUsernamesKey) {
-    setPrevSelectedUsernamesKey(selectedUsernamesKey);
-    if (selectedUsernames.length === 0) {
-      setRecipients([]);
-      setLoadingRecipientKeys(false);
-    }
-  }
+  }, [friendsError]);
 
   useEffect(() => {
-    if (selectedUsernames.length === 0) {
+    if (selectedKeyIds.length === 0) {
+      setRecipients([]);
+      setLoadingRecipientKeys(false);
       return;
     }
 
     let cancelled = false;
-    const cache = recipientCacheRef.current;
 
-    if (selectedUsernames.every((username) => cache.has(username))) {
-      setRecipients(selectedUsernames.map((username) => cache.get(username)!));
-      setLoadingRecipientKeys(false);
-      return;
-    }
-
-    setRecipients(
-      selectedUsernames
-        .map((username) => cache.get(username) ?? null)
-        .filter(Boolean) as ManifestRecipientKeys[],
-    );
-
-    const missingUsernames = selectedUsernames.filter(
-      (username) => !cache.has(username),
-    );
-
-    async function loadMissingRecipients() {
+    async function loadRecipients() {
       setLoadingRecipientKeys(true);
       setError(null);
       try {
         const loaded = await Promise.all(
-          missingUsernames.map((username) =>
-            loadRecipientKeysForUsername(username),
-          ),
+          selectedKeyIds.map(async (keyId) => {
+            const friend = friendByKeyId.get(keyId);
+            if (!friend) {
+              return null;
+            }
+            const publicKey = await importPublicKeyExtractable(
+              toPublicJwk(friend.publicKey),
+            );
+            return { keyId, publicKey };
+          }),
         );
+
         if (cancelled) {
           return;
         }
 
-        const stillMissing = missingUsernames.filter(
-          (_, i) => loaded[i] === null,
+        const missing = selectedKeyIds.filter(
+          (_, index) => loaded[index] === null,
         );
-        if (stillMissing.length > 0) {
-          setError(`No public key found for: ${stillMissing.join(', ')}`);
+        if (missing.length > 0) {
+          setError(`No public key found for: ${missing.join(', ')}`);
           setRecipients(
-            selectedUsernames
-              .map((username) => cache.get(username) ?? null)
-              .filter(
-                (entry): entry is ManifestRecipientKeys => entry !== null,
-              ),
+            loaded.filter(
+              (entry): entry is ManifestRecipientKeys => entry !== null,
+            ),
           );
           return;
         }
 
-        missingUsernames.forEach((username, i) => {
-          cache.set(username, loaded[i]!);
-        });
-
-        setRecipients(
-          selectedUsernames.map((username) => cache.get(username)!),
-        );
+        setRecipients(loaded as ManifestRecipientKeys[]);
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -127,19 +117,21 @@ export function useFeedLabRecipients({
       }
     }
 
-    void loadMissingRecipients();
+    void loadRecipients();
 
     return () => {
       cancelled = true;
     };
-  }, [selectedUsernames]);
+  }, [selectedKeyIds, friendByKeyId]);
 
   return {
-    selectedUsernames,
-    setSelectedUsernames,
+    selectedKeyIds,
+    setSelectedKeyIds,
+    recipientOptions,
+    getOptionLabel,
     recipients,
-    loadingUsers,
+    loadingFriends,
     loadingRecipientKeys,
-    error: error ?? usersError,
+    error: error ?? friendsError,
   };
 }

@@ -13,9 +13,7 @@ import {
 } from '@/crypto/privateKeyFile.ts';
 
 async function keyIdFromPrivateJwk(jwk: JsonWebKey): Promise<string> {
-  return ecPublicJwkThumbprintSha256(
-    slimEcPublicJwk(slimEcPrivateJwk(jwk)),
-  );
+  return ecPublicJwkThumbprintSha256(slimEcPublicJwk(slimEcPrivateJwk(jwk)));
 }
 
 export function usePrivateKeySession() {

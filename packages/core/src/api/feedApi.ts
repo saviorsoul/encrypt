@@ -31,6 +31,24 @@ export type CreateMessageRequest = {
   keyManifest: KeyManifestMap;
 };
 
+export type FriendshipRequest = {
+  requesterKeyId: string;
+  targetKeyId: string;
+  status: 'pending' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Friendship = {
+  friendKeyId: string;
+  publicKey: { x: string; y: string };
+  createdAt: string;
+};
+
+export type CreateFriendshipRequestResult =
+  | { status: 'pending'; request: FriendshipRequest }
+  | { status: 'accepted' };
+
 function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/$/, '')}${path}`;
 }
@@ -164,6 +182,113 @@ export function createFeedApi(config: FeedApiConfig) {
       }
       return (await response.json()) as { id: string };
     },
+
+    async postFriendshipRequest(body: {
+      requesterKeyId: string;
+      targetKeyId: string;
+    }): Promise<CreateFriendshipRequestResult> {
+      const response = await http(
+        joinUrl(baseUrl, '/api/friendships/request'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as CreateFriendshipRequestResult;
+    },
+
+    async getIncomingFriendshipRequests(
+      targetKeyId: string,
+    ): Promise<FriendshipRequest[]> {
+      const url = new URL(
+        joinUrl(baseUrl, '/api/friendships/requests/incoming'),
+      );
+      url.searchParams.set('targetKeyId', targetKeyId);
+      const response = await http(url);
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendshipRequest[];
+    },
+
+    async getOutgoingFriendshipRequests(
+      requesterKeyId: string,
+    ): Promise<FriendshipRequest[]> {
+      const url = new URL(
+        joinUrl(baseUrl, '/api/friendships/requests/outgoing'),
+      );
+      url.searchParams.set('requesterKeyId', requesterKeyId);
+      const response = await http(url);
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendshipRequest[];
+    },
+
+    async acceptFriendshipRequest(body: {
+      requesterKeyId: string;
+      targetKeyId: string;
+    }): Promise<{ status: 'accepted' }> {
+      const response = await http(
+        joinUrl(baseUrl, '/api/friendships/requests/accept'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as { status: 'accepted' };
+    },
+
+    async rejectFriendshipRequest(body: {
+      requesterKeyId: string;
+      targetKeyId: string;
+    }): Promise<FriendshipRequest> {
+      const response = await http(
+        joinUrl(baseUrl, '/api/friendships/requests/reject'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendshipRequest;
+    },
+
+    async getFriendships(ownerKeyId: string): Promise<Friendship[]> {
+      const url = new URL(joinUrl(baseUrl, '/api/friendships'));
+      url.searchParams.set('ownerKeyId', ownerKeyId);
+      const response = await http(url);
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as Friendship[];
+    },
+
+    async deleteFriendship(body: {
+      ownerKeyId: string;
+      friendKeyId: string;
+    }): Promise<void> {
+      const response = await http(joinUrl(baseUrl, '/api/friendships'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+    },
+
     /** Inbox rows plus comments for each visible thread root. */
     async getAllFeedData(recipientKeyId: string): Promise<{
       inbox: InboxApiItem[];

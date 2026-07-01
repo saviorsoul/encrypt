@@ -10,7 +10,7 @@ COPY apps/feed-lab/package.json ./apps/feed-lab/
 COPY packages/core/package.json ./packages/core/
 COPY apps/web/package.json ./apps/web/
 
-RUN npm ci -w @encrypt/feed-lab --include-workspace-root
+RUN npm ci -w @encrypt/feed-lab --include-workspace-root --ignore-scripts
 
 COPY packages/core ./packages/core
 COPY apps/feed-lab ./apps/feed-lab
