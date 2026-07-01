@@ -48,7 +48,8 @@
     "db:migrate": "npm run migrate -w @encrypt/api",
     "db:citus:distribute": "npm run db:citus:distribute -w @encrypt/api",
     "db:seed": "npm run db:seed -w @encrypt/api",
-    "db:setup": "npm run db:setup -w @encrypt/api"
+    "db:setup": "npm run db:setup -w @encrypt/api",
+    "postinstall": "npm run postinstall -w @encrypt/api --if-present"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -166,13 +166,27 @@ export const createShareRequestSchema = {
   },
 } as const;
 
+const publicKeyWireSchema = {
+  oneOf: [
+    { type: 'string', minLength: 1, maxLength: 512 },
+    {
+      type: 'object',
+      additionalProperties: true,
+      required: ['x', 'y'],
+      properties: {
+        x: { type: 'string', minLength: 1, maxLength: 256 },
+        y: { type: 'string', minLength: 1, maxLength: 256 },
+      },
+    },
+  ],
+} as const;
+
 export const registerUserRequestSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['keyId', 'publicKey'],
+  required: ['publicKey'],
   properties: {
-    keyId: { type: 'string', minLength: 1, maxLength: 128 },
-    publicKey: ecPublicJwkSchema,
+    publicKey: publicKeyWireSchema,
   },
 } as const;
 
@@ -211,8 +225,7 @@ export type CreateShareRequest = {
 };
 
 export type RegisterUserRequest = {
-  keyId: string;
-  publicKey: Record<string, unknown>;
+  publicKey: string | Record<string, unknown>;
 };
 
 export type CommentPayloadBody = Record<string, unknown>;

@@ -50,11 +50,13 @@ model Comment {
 }
 
 model MessageKeyManifestShard {
-  messageId      String @map("message_id") @db.Uuid
-  recipientKeyId String @map("recipient_key_id") // Citus distribution key; must exist in users (app-enforced; no DB FK — Citus limitation)
-  entryJson      String @map("entry_json")
+  messageId      String  @map("message_id") @db.Uuid // thread root message id
+  recipientKeyId String  @map("recipient_key_id") // Citus distribution key; must exist in users (app-enforced; no DB FK — Citus limitation)
+  shareId        String? @map("share_id") @db.Uuid // null = original message shard; set = share delivery shard
+  entryJson      String  @map("entry_json")
 
   @@id([messageId, recipientKeyId])
   @@index([recipientKeyId])
+  @@index([shareId])
   @@map("message_key_manifest_shards")
 }

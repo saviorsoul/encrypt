@@ -1,5 +1,5 @@
 import type { StoredShare } from '@encrypt/core/feed/types';
-import { prisma } from '../lib/prisma.js';
+import { prisma, type PrismaTx } from '../lib/prisma.js';
 
 export async function getShareById(id: string): Promise<StoredShare | null> {
   const row = await prisma.share.findUnique({ where: { id } });
@@ -16,7 +16,7 @@ export async function getShareById(id: string): Promise<StoredShare | null> {
 }
 
 export async function insertShare(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: PrismaTx,
   id: string,
   messageId: string,
   payload: string,

@@ -3,16 +3,17 @@ import type { KeyManifestMap } from '@encrypt/core/types/manifest';
 import type { StoredFeedDelivery } from '@encrypt/core/feed/types';
 import {
   getManifestEntry,
-  listMessageIdsForRecipientKeyId,
+  getManifestEntryForDelivery,
+  listDeliveryIdsForRecipientKeyId,
 } from './manifestShards.js';
 import { getMessageById } from './messages.js';
 import { getShareById } from './shares.js';
 
-async function buildKeyManifestForRecipient(
-  messageId: string,
+async function buildKeyManifestForParent(
+  parentMessageId: string,
   recipientKeyId: string,
 ): Promise<KeyManifestMap> {
-  const entry = await getManifestEntry(messageId, recipientKeyId);
+  const entry = await getManifestEntry(parentMessageId, recipientKeyId);
   if (!entry) {
     return {};
   }
@@ -23,11 +24,11 @@ async function buildKeyManifestForRecipient(
 export async function listDeliveriesForRecipientKeyId(
   recipientKeyId: string,
 ): Promise<StoredFeedDelivery[]> {
-  const messageIds = await listMessageIdsForRecipientKeyId(recipientKeyId);
+  const deliveryIds = await listDeliveryIdsForRecipientKeyId(recipientKeyId);
   const deliveries: StoredFeedDelivery[] = [];
   const existingIds = new Set<string>();
 
-  for (const id of messageIds) {
+  for (const id of deliveryIds) {
     const message = await getMessageById(id);
     if (message) {
       deliveries.push(message);
@@ -69,17 +70,39 @@ export async function listInboxItemsForRecipientKeyId(
   const deliveries = await listDeliveriesForRecipientKeyId(recipientKeyId);
   const items: InboxApiItem[] = [];
 
+  const accessibleShareParentIds = new Set<string>();
   for (const delivery of deliveries) {
-    const keyManifest = await buildKeyManifestForRecipient(
-      delivery.id,
+    if (!('messageId' in delivery)) {
+      continue;
+    }
+    const shareKeyManifest = await buildKeyManifestForParent(
+      delivery.messageId,
+      recipientKeyId,
+    );
+    if (Object.keys(shareKeyManifest).length > 0) {
+      accessibleShareParentIds.add(delivery.messageId);
+    }
+  }
+
+  for (const delivery of deliveries) {
+    const parentMessageId =
+      'messageId' in delivery ? delivery.messageId : delivery.id;
+    const keyManifest = await buildKeyManifestForParent(
+      parentMessageId,
       recipientKeyId,
     );
 
-    if (Object.keys(keyManifest).length === 0) {
+    const isShare = 'messageId' in delivery;
+    const includeParentForShareAccess =
+      !isShare &&
+      Object.keys(keyManifest).length === 0 &&
+      accessibleShareParentIds.has(delivery.id);
+
+    if (Object.keys(keyManifest).length === 0 && !includeParentForShareAccess) {
       continue;
     }
 
-    if ('messageId' in delivery) {
+    if (isShare) {
       items.push({
         id: delivery.id,
         type: 'share',
@@ -96,7 +119,7 @@ export async function listInboxItemsForRecipientKeyId(
       type: 'message',
       payload: delivery.payload,
       createdAt: new Date(delivery.createdAt).toISOString(),
-      keyManifest,
+      keyManifest: includeParentForShareAccess ? {} : keyManifest,
     });
   }
 
@@ -109,10 +132,10 @@ export function createManifestLookup(
   messageId: string,
   keyId: string,
 ) => Promise<KeyManifestMap[string] | null> {
-  return async (messageId, keyId) => {
+  return async (deliveryMessageId, keyId) => {
     if (keyId !== recipientKeyId) {
       return null;
     }
-    return getManifestEntry(messageId, recipientKeyId);
+    return getManifestEntryForDelivery(deliveryMessageId, recipientKeyId);
   };
 }

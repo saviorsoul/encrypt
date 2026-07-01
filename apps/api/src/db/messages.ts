@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma.js';
+import { prisma, type PrismaTx } from '../lib/prisma.js';
 import type { StoredMessage } from '@encrypt/core/feed/types';
 
 export async function getMessageById(
@@ -22,7 +22,7 @@ export async function messageExists(id: string): Promise<boolean> {
 }
 
 export async function insertMessage(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: PrismaTx,
   id: string,
   payload: string,
 ): Promise<StoredMessage> {

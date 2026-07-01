@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:docker": "prisma generate && tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "postinstall": "prisma generate",
     "migrate": "tsx scripts/run-with-env.ts prisma migrate deploy",

@@ -24,4 +24,4 @@ WORKDIR /app
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev", "-w", "@encrypt/api"]
+CMD ["npm", "run", "dev:docker", "-w", "@encrypt/api"]

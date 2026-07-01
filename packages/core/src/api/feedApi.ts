@@ -7,8 +7,7 @@ export type FeedApiConfig = {
 };
 
 export type RegisterUserRequest = {
-  keyId: string;
-  publicKey: Record<string, unknown>;
+  publicKey: string | { x: string; y: string };
 };
 
 export type CreateShareRequest = {
