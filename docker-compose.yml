@@ -105,7 +105,29 @@ services:
       - encrypt-local
     restart: 'no'
 
+  # One-shot: Prisma migrate + Citus distribution. "Exited (0)" is expected.
+  api-migrate:
+    image: encrypt-api
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: api-migrate
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-encrypt}:${POSTGRES_PASSWORD:-encrypt}@citus-coordinator:5432/${POSTGRES_DB:-encrypt_feed}
+    volumes:
+      - ./.env.docker:/app/.env:ro
+    entrypoint: ['npm', 'run', 'db:setup', '-w', '@encrypt/api']
+    depends_on:
+      citus-bootstrap:
+        condition: service_completed_successfully
+    networks:
+      - encrypt-local
+    restart: 'no'
+
   api:
+    image: encrypt-api
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -121,6 +143,8 @@ services:
       - ./.env.docker:/app/.env:ro
     depends_on:
       citus-bootstrap:
+        condition: service_completed_successfully
+      api-migrate:
         condition: service_completed_successfully
     networks:
       - encrypt-local

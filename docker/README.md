@@ -41,7 +41,9 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
    docker compose --env-file .env.docker up -d --build
    ```
 
-7. **Wait for `citus-bootstrap`** — one-shot init; **Exited (0)** is expected.
+7. **Wait for one-shot init jobs** — **Exited (0)** is expected for:
+   - `citus-bootstrap` (registers workers)
+   - `api-migrate` (Prisma migrate + Citus distribution)
 
 8. **Open the apps**:
    - feed-lab: http://localhost:5174
@@ -76,7 +78,40 @@ docker exec -it citus-coordinator psql -U encrypt -d encrypt_feed
 
 ```sql
 SELECT * FROM citus_get_active_worker_nodes();
+SELECT logicalrelid::text, partmethod FROM pg_dist_partition ORDER BY 1;
 ```
+
+`partmethod = h` on `message_key_manifest_shards` means hash-distributed by `recipient_key_id`.
+
+## Database migrations (API)
+
+**Docker stack:** `api-migrate` runs `db:setup` once per `docker compose up` (after Citus bootstrap), before the API starts.
+
+**Host** (with `DATABASE_URL` in `.env` pointing at `localhost:POSTGRES_PORT`):
+
+```bash
+npm run db:setup
+
+# Or separately:
+npm run db:migrate
+npm run db:citus:distribute
+```
+
+Rebuild the API image after dependency changes:
+
+```bash
+npm run dev:stack:build
+```
+
+Register recipients before posting shares or messages with `keyManifest`:
+
+```bash
+curl -X POST http://localhost:3000/api/users \
+  -H 'Content-Type: application/json' \
+  -d '{"keyId":"<thumbprint>","publicKey":{"kty":"EC","crv":"P-256","x":"...","y":"..."}}'
+```
+
+Manifest shards are stored only for `keyId` values that exist in `users`.
 
 ## Running API on the host (optional)
 

@@ -7,6 +7,7 @@ export function readConfig() {
   return {
     port,
     databaseUrl: process.env.DATABASE_URL ?? '',
+    isDev: process.env.NODE_ENV !== 'production',
   } as const;
 }
 

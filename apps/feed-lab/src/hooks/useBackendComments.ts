@@ -7,12 +7,9 @@ import {
 import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment } from '@encrypt/core/feed/types';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
-import { publicKeyFromMaterial } from '@lab/hooks/usePrivateKeySession.ts';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
-type WithPrivateKey = ReturnType<
-  typeof usePrivateKeySession
->['withPrivateKey'];
+type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
 
 type CommentContext = {
   allDeliveries: Parameters<typeof resolveParentMessageAccessFromFeed>[2];
@@ -31,21 +28,21 @@ export function useBackendComments(
   const [postBusy, setPostBusy] = useState(false);
 
   const reload = useCallback(async () => {
-    if (!messageId || !recipientKeyId) {
+    if (!messageId) {
       setComments([]);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      setComments(await api.getComments(messageId, recipientKeyId));
+      setComments(await api.getComments(messageId));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load comments.');
       setComments([]);
     } finally {
       setLoading(false);
     }
-  }, [api, messageId, recipientKeyId]);
+  }, [api, messageId]);
 
   useEffect(() => {
     void reload();
@@ -72,14 +69,13 @@ export function useBackendComments(
             throw new Error('You cannot comment on this message.');
           }
 
-          const senderPublicKey = await publicKeyFromMaterial(material);
           const payloadJson = await encryptCommentWithMessageKey(
             text,
             threadId,
             access,
             material.keyId,
             material.ecdhPrivateKey,
-            senderPublicKey,
+            material.senderPublicKey,
             material.ecdsaSignPrivateKey,
             manifestLookup,
           );
@@ -93,7 +89,6 @@ export function useBackendComments(
         await reload();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to post comment.');
-        throw e;
       } finally {
         setPostBusy(false);
       }

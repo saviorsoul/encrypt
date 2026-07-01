@@ -6,8 +6,10 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { createHealthRouter } from './routes/health.js';
 import { createCommentsRouter } from './routes/comments.js';
+import { createInboxRouter } from './routes/inbox.js';
 import { createMessagesRouter } from './routes/messages.js';
 import { createSharesRouter } from './routes/shares.js';
+import { createUsersRouter } from './routes/users.js';
 
 export function createApp(): Koa {
   const app = new Koa();
@@ -38,11 +40,17 @@ export function createApp(): Koa {
   const healthRouter = createHealthRouter();
   app.use(healthRouter.routes()).use(healthRouter.allowedMethods());
 
+  const usersRouter = createUsersRouter();
+  app.use(usersRouter.routes()).use(usersRouter.allowedMethods());
+
   const messagesRouter = createMessagesRouter();
   app.use(messagesRouter.routes()).use(messagesRouter.allowedMethods());
 
   const sharesRouter = createSharesRouter();
   app.use(sharesRouter.routes()).use(sharesRouter.allowedMethods());
+
+  const inboxRouter = createInboxRouter();
+  app.use(inboxRouter.routes()).use(inboxRouter.allowedMethods());
 
   const commentsRouter = createCommentsRouter();
   app.use(commentsRouter.routes()).use(commentsRouter.allowedMethods());

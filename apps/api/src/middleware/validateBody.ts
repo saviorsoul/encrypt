@@ -53,7 +53,8 @@ export function validateBody(schemaName: SchemaName): Middleware {
         },
         'request body validation failed',
       );
-      throw badRequest(formatAjvErrors(validate.errors));
+      const formatted = formatAjvErrors(validate.errors);
+      throw badRequest(formatted.message, formatted.details);
     }
 
     logger.debug(
