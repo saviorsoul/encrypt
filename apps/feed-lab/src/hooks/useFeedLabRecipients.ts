@@ -43,7 +43,10 @@ export function useFeedLabRecipients({
     [friendByKeyId],
   );
 
-  if (friendKeyIdsKey !== prevFriendKeyIdsKey) {
+  useEffect(() => {
+    if (friendKeyIdsKey === prevFriendKeyIdsKey) {
+      return;
+    }
     setPrevFriendKeyIdsKey(friendKeyIdsKey);
     setSelectedKeyIds((prev) => {
       const stillValid = prev.filter((keyId) => friendByKeyId.has(keyId));
@@ -52,7 +55,7 @@ export function useFeedLabRecipients({
       }
       return friends.map((friend) => friend.keyId);
     });
-  }
+  }, [friendKeyIdsKey, prevFriendKeyIdsKey, friendByKeyId, friends]);
 
   useEffect(() => {
     if (friendsError) {

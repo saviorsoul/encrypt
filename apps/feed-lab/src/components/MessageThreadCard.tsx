@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Avatar,
@@ -16,10 +16,18 @@ import { nameInitial } from '@/utils/nameInitial.ts';
 import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCrypto';
 import { getSenderKeyIdFromCorePayload } from '@encrypt/core/crypto/manifestDecrypt';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
-import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
-import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
+import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { formatCommentAuthorLabel } from '@lab/lib/formatCommentAuthorLabel.ts';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
+
+type FeedContext = {
+  allDeliveries: Parameters<
+    ReturnType<typeof useBackendDecrypt>['decryptDelivery']
+  >[0]['allDeliveries'];
+  manifestLookup: Parameters<
+    ReturnType<typeof useBackendDecrypt>['decryptDelivery']
+  >[0]['manifestLookup'];
+};
 
 type MessageThreadCardProps = {
   message: StoredMessage;
@@ -27,38 +35,37 @@ type MessageThreadCardProps = {
   commentCount: number;
   comments: StoredComment[];
   commentsPostBusy: boolean;
-  commentText: string;
-  onCommentTextChange: (text: string) => void;
-  onToggle: () => void;
-  decrypt: ReturnType<typeof useBackendDecrypt>;
-  share: ReturnType<typeof useBackendShare>;
+  onToggleMessage: (messageId: string) => void;
+  onDecryptDelivery: ReturnType<typeof useBackendDecrypt>['decryptDelivery'];
+  decryptBusy: boolean;
+  decryptError: string | null;
+  decryptPlaintext: string | null;
+  decryptedComments: Record<string, string> | null;
+  shareBusy: boolean;
+  shareLastShareId: string | null;
   onOpenShare: () => void;
-  onPostComment: () => Promise<void>;
-  feedContext: {
-    allDeliveries: Parameters<
-      ReturnType<typeof useBackendDecrypt>['decryptDelivery']
-    >[0]['allDeliveries'];
-    manifestLookup: Parameters<
-      ReturnType<typeof useBackendDecrypt>['decryptDelivery']
-    >[0]['manifestLookup'];
-  };
+  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+  feedContext: FeedContext;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
 };
 
-export function MessageThreadCard({
+export const MessageThreadCard = memo(function MessageThreadCard({
   message,
   expanded,
   commentCount,
   comments,
   commentsPostBusy,
-  commentText,
-  onCommentTextChange,
-  onToggle,
-  decrypt,
-  share,
+  onToggleMessage,
+  onDecryptDelivery,
+  decryptBusy,
+  decryptError,
+  decryptPlaintext,
+  decryptedComments,
+  shareBusy,
+  shareLastShareId,
   onOpenShare,
-  onPostComment,
+  onPostCommentForMessage,
   feedContext,
   usernameByKeyId,
   viewerKeyId,
@@ -92,7 +99,10 @@ export function MessageThreadCard({
         borderColor: expanded ? 'primary.main' : undefined,
       }}
     >
-      <Box onClick={onToggle} sx={{ cursor: 'pointer' }}>
+      <Box
+        onClick={() => onToggleMessage(message.id)}
+        sx={{ cursor: 'pointer' }}
+      >
         <Stack
           direction="row"
           sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1 }}
@@ -130,7 +140,7 @@ export function MessageThreadCard({
         </Typography>
       </Box>
 
-      <Collapse in={expanded} timeout={200}>
+      <Collapse in={expanded} timeout={200} unmountOnExit>
         <Box onClick={(event) => event.stopPropagation()} sx={{ pt: 1.5 }}>
           <Divider sx={{ mb: 1.5 }} />
 
@@ -138,9 +148,9 @@ export function MessageThreadCard({
             <Button
               variant="outlined"
               size="small"
-              disabled={decrypt.busy}
+              disabled={decryptBusy}
               onClick={() =>
-                void decrypt.decryptDelivery({
+                void onDecryptDelivery({
                   delivery: message,
                   allDeliveries: feedContext.allDeliveries,
                   manifestLookup: feedContext.manifestLookup,
@@ -153,27 +163,27 @@ export function MessageThreadCard({
             <Button
               variant="outlined"
               size="small"
-              disabled={share.busy}
+              disabled={shareBusy}
               onClick={onOpenShare}
             >
               Share
             </Button>
           </Stack>
 
-          {share.lastShareId ? (
+          {shareLastShareId ? (
             <Alert severity="success" sx={{ mt: 1 }}>
-              Share created: {share.lastShareId}
+              Share created: {shareLastShareId}
             </Alert>
           ) : null}
-          {decrypt.error ? (
+          {decryptError ? (
             <Alert severity="error" sx={{ mt: 1 }}>
-              {decrypt.error}
+              {decryptError}
             </Alert>
           ) : null}
-          {decrypt.plaintext ? (
+          {decryptPlaintext ? (
             <Paper variant="outlined" sx={{ mt: 2, p: 1.5 }}>
               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {sanitizeDisplayText(decrypt.plaintext)}
+                {sanitizeDisplayText(decryptPlaintext)}
               </Typography>
             </Paper>
           ) : null}
@@ -185,10 +195,10 @@ export function MessageThreadCard({
           </Divider>
 
           <Box>
-            {decrypt.decryptedComments !== null ? (
+            {decryptedComments !== null ? (
               <Stack spacing={1}>
                 {comments.map((comment) => {
-                  const text = decrypt.decryptedComments?.[comment.id];
+                  const text = decryptedComments[comment.id];
                   if (!text) {
                     return null;
                   }
@@ -202,7 +212,7 @@ export function MessageThreadCard({
                   );
                 })}
                 {commentCount > 0 &&
-                Object.keys(decrypt.decryptedComments).length === 0 ? (
+                Object.keys(decryptedComments).length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
                     Could not decrypt comments.
                   </Typography>
@@ -211,26 +221,57 @@ export function MessageThreadCard({
             ) : null}
           </Box>
 
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label="New comment"
-            value={commentText}
-            onChange={(event) => onCommentTextChange(event.target.value)}
-            sx={{ my: 2 }}
+          <CommentComposer
+            commentsPostBusy={commentsPostBusy}
+            onPostCommentForMessage={onPostCommentForMessage}
+            messageId={message.id}
           />
-          <Button
-            variant="contained"
-            size="small"
-            disabled={commentsPostBusy || !commentText.trim()}
-            onClick={() => void onPostComment()}
-          >
-            {commentsPostBusy ? 'Posting…' : 'Add comment'}
-          </Button>
         </Box>
       </Collapse>
     </Paper>
+  );
+});
+
+function CommentComposer({
+  messageId,
+  commentsPostBusy,
+  onPostCommentForMessage,
+}: {
+  messageId: string;
+  commentsPostBusy: boolean;
+  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+}) {
+  const [commentText, setCommentText] = useState('');
+
+  const handlePostComment = useCallback(async () => {
+    const text = commentText.trim();
+    if (!text) {
+      return;
+    }
+    await onPostCommentForMessage(messageId, text);
+    setCommentText('');
+  }, [commentText, messageId, onPostCommentForMessage]);
+
+  return (
+    <>
+      <TextField
+        fullWidth
+        multiline
+        minRows={3}
+        label="New comment"
+        value={commentText}
+        onChange={(event) => setCommentText(event.target.value)}
+        sx={{ my: 2 }}
+      />
+      <Button
+        variant="contained"
+        size="small"
+        disabled={commentsPostBusy || !commentText.trim()}
+        onClick={() => void handlePostComment()}
+      >
+        {commentsPostBusy ? 'Posting…' : 'Add comment'}
+      </Button>
+    </>
   );
 }
 
