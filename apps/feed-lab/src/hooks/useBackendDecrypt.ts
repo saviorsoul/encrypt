@@ -10,13 +10,14 @@ import {
   decryptWithManifest,
 } from '@encrypt/core/crypto/manifestDecrypt';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
-import type { StoredComment, StoredFeedDelivery } from '@encrypt/core/feed/types';
+import type {
+  StoredComment,
+  StoredFeedDelivery,
+} from '@encrypt/core/feed/types';
 import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
-type WithPrivateKey = ReturnType<
-  typeof usePrivateKeySession
->['withPrivateKey'];
+type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
 
 type DecryptContext = {
   delivery: StoredFeedDelivery;

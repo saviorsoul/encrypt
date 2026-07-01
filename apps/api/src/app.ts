@@ -4,6 +4,7 @@ import { MAX_BODY_BYTES } from './constants.js';
 import { badRequest } from './lib/httpError.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { createFriendshipsRouter } from './routes/friendships.js';
 import { createHealthRouter } from './routes/health.js';
 import { createCommentsRouter } from './routes/comments.js';
 import { createInboxRouter } from './routes/inbox.js';
@@ -16,7 +17,7 @@ export function createApp(): Koa {
 
   app.use(async (ctx, next) => {
     ctx.set('Access-Control-Allow-Origin', '*');
-    ctx.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    ctx.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     ctx.set('Access-Control-Allow-Headers', 'Content-Type');
     if (ctx.method === 'OPTIONS') {
       ctx.status = 204;
@@ -54,6 +55,9 @@ export function createApp(): Koa {
 
   const commentsRouter = createCommentsRouter();
   app.use(commentsRouter.routes()).use(commentsRouter.allowedMethods());
+
+  const friendshipsRouter = createFriendshipsRouter();
+  app.use(friendshipsRouter.routes()).use(friendshipsRouter.allowedMethods());
 
   return app;
 }

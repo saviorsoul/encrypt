@@ -258,6 +258,69 @@ export const commentsQuerySchema = {
   },
 } as const;
 
+const keyIdProperty = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 128,
+} as const;
+
+export const friendshipPairRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['requesterKeyId', 'targetKeyId'],
+  properties: {
+    requesterKeyId: keyIdProperty,
+    targetKeyId: keyIdProperty,
+  },
+} as const;
+
+export const deleteFriendshipRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ownerKeyId', 'friendKeyId'],
+  properties: {
+    ownerKeyId: keyIdProperty,
+    friendKeyId: keyIdProperty,
+  },
+} as const;
+
+export const targetKeyIdQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['targetKeyId'],
+  properties: {
+    targetKeyId: keyIdProperty,
+  },
+} as const;
+
+export const requesterKeyIdQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['requesterKeyId'],
+  properties: {
+    requesterKeyId: keyIdProperty,
+  },
+} as const;
+
+export const ownerKeyIdQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ownerKeyId'],
+  properties: {
+    ownerKeyId: keyIdProperty,
+  },
+} as const;
+
+export type FriendshipPairRequest = {
+  requesterKeyId: string;
+  targetKeyId: string;
+};
+
+export type DeleteFriendshipRequest = {
+  ownerKeyId: string;
+  friendKeyId: string;
+};
+
 /** Wire schemas for AJV — replace with @encrypt/schemas imports in step 2. */
 export const schemaDefinitions = {
   createShareRequest: createShareRequestSchema,
@@ -266,6 +329,11 @@ export const schemaDefinitions = {
   registerUserRequest: registerUserRequestSchema,
   recipientKeyIdQuery: recipientKeyIdQuerySchema,
   commentsQuery: commentsQuerySchema,
+  friendshipPairRequest: friendshipPairRequestSchema,
+  deleteFriendshipRequest: deleteFriendshipRequestSchema,
+  targetKeyIdQuery: targetKeyIdQuerySchema,
+  requesterKeyIdQuery: requesterKeyIdQuerySchema,
+  ownerKeyIdQuery: ownerKeyIdQuerySchema,
 } as const;
 
 export type SchemaName = keyof typeof schemaDefinitions;

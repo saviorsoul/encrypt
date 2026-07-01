@@ -5,7 +5,11 @@ import { badRequest } from '../lib/httpError.js';
 
 export type QuerySchemaName = Extract<
   SchemaName,
-  'recipientKeyIdQuery' | 'commentsQuery'
+  | 'recipientKeyIdQuery'
+  | 'commentsQuery'
+  | 'targetKeyIdQuery'
+  | 'requesterKeyIdQuery'
+  | 'ownerKeyIdQuery'
 >;
 
 export function validateQuery(schemaName: QuerySchemaName): Middleware {

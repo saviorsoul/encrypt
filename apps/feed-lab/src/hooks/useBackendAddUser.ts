@@ -18,10 +18,7 @@ export function useBackendAddUser(
   const [lastKeyId, setLastKeyId] = useState<string | null>(null);
 
   const addUser = useCallback(
-    async (
-      username: string,
-      publicKeyText: string,
-    ): Promise<string | null> => {
+    async (username: string, publicKeyText: string): Promise<string | null> => {
       setError(null);
       setInfo(null);
       setLastKeyId(null);

@@ -13,3 +13,14 @@ export function formatCommentAuthorLabel(
 
   return authorKeyId;
 }
+
+export function formatFriendListEntry(
+  keyId: string,
+  usernameByKeyId: Record<string, string>,
+): { primary: string; secondary: string | null } {
+  const username = usernameByKeyId[keyId];
+  if (username) {
+    return { primary: username, secondary: keyId };
+  }
+  return { primary: keyId, secondary: null };
+}
