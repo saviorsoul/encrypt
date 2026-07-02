@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { FeedApiProvider } from '@lab/providers/FeedApiProvider.tsx';
 import { FeedLabSessionProvider } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -8,8 +7,8 @@ import { UsersPage } from '@lab/pages/UsersPage.tsx';
 
 export default function App() {
   return (
-    <FeedApiProvider>
-      <FeedLabSessionProvider>
+    <FeedLabSessionProvider>
+      <FeedApiProvider>
         <BrowserRouter>
           <Routes>
             <Route element={<FeedLabLayout />}>
@@ -19,7 +18,7 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
-      </FeedLabSessionProvider>
-    </FeedApiProvider>
+      </FeedApiProvider>
+    </FeedLabSessionProvider>
   );
 }

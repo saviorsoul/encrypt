@@ -34,3 +34,11 @@ export function notFound(message: string): HttpError {
 export function conflict(message: string): HttpError {
   return new HttpError(409, message);
 }
+
+export function unauthorized(message: string): HttpError {
+  return new HttpError(401, message);
+}
+
+export function forbidden(message: string): HttpError {
+  return new HttpError(403, message);
+}

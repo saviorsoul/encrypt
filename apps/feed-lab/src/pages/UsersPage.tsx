@@ -78,13 +78,11 @@ export function UsersPage() {
       }
 
       setAcceptFriendError(null);
-      const { requesterKeyId, targetKeyId } = acceptFriendRequest;
+      const { requesterKeyId } = acceptFriendRequest;
 
       const storedUser = await loadFeedLabUserByKeyId(requesterKeyId);
-      const acceptError = await friendshipRequests.acceptRequest(
-        requesterKeyId,
-        targetKeyId,
-      );
+      const acceptError =
+        await friendshipRequests.acceptRequest(requesterKeyId);
       if (acceptError) {
         setAcceptFriendError(acceptError);
         return;
@@ -94,7 +92,7 @@ export function UsersPage() {
       if (storedUser) {
         publicJwk = storedUser.publicJwk;
       } else {
-        const friendshipsList = await api.getFriendships(targetKeyId);
+        const friendshipsList = await api.getFriendships();
         const friend = friendshipsList.find(
           (entry) => entry.friendKeyId === requesterKeyId,
         );
@@ -317,7 +315,6 @@ export function UsersPage() {
                         onClick={() =>
                           void friendshipRequests.rejectRequest(
                             request.requesterKeyId,
-                            request.targetKeyId,
                           )
                         }
                       >
@@ -467,10 +464,7 @@ export function UsersPage() {
                           if (!keys.keyId) {
                             return;
                           }
-                          void friendshipRequests.unfriend(
-                            keys.keyId,
-                            friend.keyId,
-                          );
+                          void friendshipRequests.unfriend(friend.keyId);
                         }}
                       >
                         Unfriend

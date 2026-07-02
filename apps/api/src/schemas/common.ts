@@ -240,15 +240,6 @@ export type CreateMessageRequest = {
   keyManifest: Record<string, Record<string, unknown>>;
 };
 
-export const recipientKeyIdQuerySchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['recipientKeyId'],
-  properties: {
-    recipientKeyId: { type: 'string', minLength: 1, maxLength: 128 },
-  },
-} as const;
-
 export const commentsQuerySchema = {
   type: 'object',
   additionalProperties: false,
@@ -264,27 +255,7 @@ const keyIdProperty = {
   maxLength: 128,
 } as const;
 
-export const friendshipPairRequestSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['requesterKeyId', 'targetKeyId'],
-  properties: {
-    requesterKeyId: keyIdProperty,
-    targetKeyId: keyIdProperty,
-  },
-} as const;
-
-export const deleteFriendshipRequestSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['ownerKeyId', 'friendKeyId'],
-  properties: {
-    ownerKeyId: keyIdProperty,
-    friendKeyId: keyIdProperty,
-  },
-} as const;
-
-export const targetKeyIdQuerySchema = {
+export const friendshipTargetBodySchema = {
   type: 'object',
   additionalProperties: false,
   required: ['targetKeyId'],
@@ -293,7 +264,7 @@ export const targetKeyIdQuerySchema = {
   },
 } as const;
 
-export const requesterKeyIdQuerySchema = {
+export const friendshipRequesterBodySchema = {
   type: 'object',
   additionalProperties: false,
   required: ['requesterKeyId'],
@@ -302,22 +273,24 @@ export const requesterKeyIdQuerySchema = {
   },
 } as const;
 
-export const ownerKeyIdQuerySchema = {
+export const deleteFriendshipBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['ownerKeyId'],
+  required: ['friendKeyId'],
   properties: {
-    ownerKeyId: keyIdProperty,
+    friendKeyId: keyIdProperty,
   },
 } as const;
 
-export type FriendshipPairRequest = {
-  requesterKeyId: string;
+export type FriendshipTargetBody = {
   targetKeyId: string;
 };
 
-export type DeleteFriendshipRequest = {
-  ownerKeyId: string;
+export type FriendshipRequesterBody = {
+  requesterKeyId: string;
+};
+
+export type DeleteFriendshipBody = {
   friendKeyId: string;
 };
 
@@ -327,13 +300,10 @@ export const schemaDefinitions = {
   createMessageRequest: createMessageRequestSchema,
   commentPayload: commentPayloadSchema,
   registerUserRequest: registerUserRequestSchema,
-  recipientKeyIdQuery: recipientKeyIdQuerySchema,
   commentsQuery: commentsQuerySchema,
-  friendshipPairRequest: friendshipPairRequestSchema,
-  deleteFriendshipRequest: deleteFriendshipRequestSchema,
-  targetKeyIdQuery: targetKeyIdQuerySchema,
-  requesterKeyIdQuery: requesterKeyIdQuerySchema,
-  ownerKeyIdQuery: ownerKeyIdQuerySchema,
+  friendshipTargetBody: friendshipTargetBodySchema,
+  friendshipRequesterBody: friendshipRequesterBodySchema,
+  deleteFriendshipBody: deleteFriendshipBodySchema,
 } as const;
 
 export type SchemaName = keyof typeof schemaDefinitions;

@@ -31,8 +31,8 @@ async function verifyCanonicalSignature(
   const valid = await crypto.subtle.verify(
     { name: 'ECDSA', hash: 'SHA-256' },
     verifyKey,
-    signatureBytes.slice().buffer,
-    signableBytes.slice().buffer,
+    new Uint8Array(signatureBytes),
+    signableBytes,
   );
 
   if (!valid) {

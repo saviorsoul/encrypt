@@ -2,6 +2,7 @@ import Router from '@koa/router';
 import type { CreateMessageRequest } from '../schemas/common.js';
 import { validateBody } from '../middleware/validateBody.js';
 import { verifySignature } from '../middleware/verifySignature.js';
+import { requireAuthenticatedSigner } from '../middleware/requireAuthenticatedSigner.js';
 import { createMessage } from '../services/createMessage.js';
 
 export function createMessagesRouter(): Router {
@@ -9,6 +10,7 @@ export function createMessagesRouter(): Router {
 
   router.post(
     '/messages',
+    requireAuthenticatedSigner({ jwkField: 'senderPublicJwk' }),
     validateBody('createMessageRequest'),
     verifySignature('sender'),
     async (ctx) => {

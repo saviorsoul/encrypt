@@ -142,6 +142,7 @@ services:
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./apps/api/prisma:/app/apps/api/prisma
+      - ./packages/core/src:/app/packages/core/src
       - ./.env.docker:/app/.env:ro
     depends_on:
       citus-bootstrap:

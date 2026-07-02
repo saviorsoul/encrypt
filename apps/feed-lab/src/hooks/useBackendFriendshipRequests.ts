@@ -28,9 +28,9 @@ export function useBackendFriendshipRequests(
   );
 
   const sendRequest = useCallback(
-    async (requesterKeyId: string, targetKeyId: string) => {
+    async (targetKeyId: string) => {
       await run(async () => {
-        await api.postFriendshipRequest({ requesterKeyId, targetKeyId });
+        await api.postFriendshipRequest({ targetKeyId });
       });
     },
     [api, run],
@@ -38,7 +38,7 @@ export function useBackendFriendshipRequests(
 
   const sendRequestByPublicKey = useCallback(
     async (
-      requesterKeyId: string,
+      authenticatedKeyId: string,
       publicKeyText: string,
       username: string,
       existingUsernames: string[],
@@ -62,7 +62,7 @@ export function useBackendFriendshipRequests(
           return null;
         }
 
-        if (ensured.keyId === requesterKeyId) {
+        if (ensured.keyId === authenticatedKeyId) {
           setError('Cannot send a friend request to yourself.');
           return null;
         }
@@ -91,10 +91,7 @@ export function useBackendFriendshipRequests(
         });
         onLocalUserSaved?.({ keyId: ensured.keyId, username: trimmedName });
 
-        await api.postFriendshipRequest({
-          requesterKeyId,
-          targetKeyId: ensured.keyId,
-        });
+        await api.postFriendshipRequest({ targetKeyId: ensured.keyId });
         await onChanged?.();
         return ensured.keyId;
       } catch (e) {
@@ -108,14 +105,11 @@ export function useBackendFriendshipRequests(
   );
 
   const acceptRequest = useCallback(
-    async (
-      requesterKeyId: string,
-      targetKeyId: string,
-    ): Promise<string | null> => {
+    async (requesterKeyId: string): Promise<string | null> => {
       setBusy(true);
       setError(null);
       try {
-        await api.acceptFriendshipRequest({ requesterKeyId, targetKeyId });
+        await api.acceptFriendshipRequest({ requesterKeyId });
         await onChanged?.();
         return null;
       } catch (e) {
@@ -131,18 +125,18 @@ export function useBackendFriendshipRequests(
   );
 
   const rejectRequest = useCallback(
-    async (requesterKeyId: string, targetKeyId: string) => {
+    async (requesterKeyId: string) => {
       await run(async () => {
-        await api.rejectFriendshipRequest({ requesterKeyId, targetKeyId });
+        await api.rejectFriendshipRequest({ requesterKeyId });
       });
     },
     [api, run],
   );
 
   const unfriend = useCallback(
-    async (ownerKeyId: string, friendKeyId: string) => {
+    async (friendKeyId: string) => {
       await run(async () => {
-        await api.deleteFriendship({ ownerKeyId, friendKeyId });
+        await api.deleteFriendship({ friendKeyId });
       });
     },
     [api, run],
