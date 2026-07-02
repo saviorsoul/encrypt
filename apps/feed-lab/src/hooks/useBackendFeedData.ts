@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
 import { filterFeedInboxMessages } from '@encrypt/core/utils/feedInboxVisibility';
-import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
+import type { StoredMessage } from '@encrypt/core/feed/types';
 import {
   inboxApiItemsToStoredDeliveries,
   type InboxApiItem,
@@ -23,9 +23,6 @@ function cacheInboxItems(items: InboxApiItem[]) {
 export function useBackendFeedData(keyId: string | null) {
   const api = useFeedApi();
   const [rawItems, setRawItems] = useState<InboxApiItem[]>([]);
-  const [commentsByMessageId, setCommentsByMessageId] = useState<
-    Record<string, StoredComment[]>
-  >({});
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,17 +31,15 @@ export function useBackendFeedData(keyId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getAllFeedData();
-      cacheInboxItems(data.inbox);
-      setRawItems(data.inbox);
-      setCommentsByMessageId(data.commentsByMessageId);
-      const deliveries = inboxApiItemsToStoredDeliveries(data.inbox);
+      const inbox = await api.getInbox();
+      cacheInboxItems(inbox);
+      setRawItems(inbox);
+      const deliveries = inboxApiItemsToStoredDeliveries(inbox);
       setMessages(filterFeedInboxMessages(deliveries));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load feed data.');
       setRawItems([]);
       setMessages([]);
-      setCommentsByMessageId({});
     } finally {
       setLoading(false);
     }
@@ -67,21 +62,10 @@ export function useBackendFeedData(keyId: string | null) {
     [rawItems],
   );
 
-  const totalComments = useMemo(
-    () =>
-      Object.values(commentsByMessageId).reduce(
-        (sum, rows) => sum + rows.length,
-        0,
-      ),
-    [commentsByMessageId],
-  );
-
   return {
     messages,
     rawItems,
     allDeliveries,
-    commentsByMessageId,
-    totalComments,
     loading,
     error,
     reload,

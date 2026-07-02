@@ -4,6 +4,7 @@ import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import type { FeedLabFriend } from '@lab/hooks/useFeedLabFriendships.ts';
 
 type FeedLabRecipientsInput = {
+  viewerKeyId: string | null;
   friends: FeedLabFriend[];
   loadingFriends: boolean;
   friendsError: string | null;
@@ -19,6 +20,7 @@ function toPublicJwk(publicKey: { x: string; y: string }): JsonWebKey {
 }
 
 export function useFeedLabRecipients({
+  viewerKeyId,
   friends,
   loadingFriends,
   friendsError,
@@ -27,6 +29,7 @@ export function useFeedLabRecipients({
   const [recipients, setRecipients] = useState<ManifestRecipientKeys[]>([]);
   const [loadingRecipientKeys, setLoadingRecipientKeys] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prevViewerKeyId, setPrevViewerKeyId] = useState(viewerKeyId);
   const [prevFriendKeyIdsKey, setPrevFriendKeyIdsKey] = useState('');
 
   const friendKeyIdsKey = friends.map((friend) => friend.keyId).join('\0');
@@ -43,11 +46,16 @@ export function useFeedLabRecipients({
     [friendByKeyId],
   );
 
-  useEffect(() => {
-    if (friendKeyIdsKey === prevFriendKeyIdsKey) {
-      return;
-    }
+  if (viewerKeyId !== prevViewerKeyId) {
+    setPrevViewerKeyId(viewerKeyId);
     setPrevFriendKeyIdsKey(friendKeyIdsKey);
+    setSelectedKeyIds([]);
+    setRecipients([]);
+    setError(null);
+    setLoadingRecipientKeys(false);
+  } else if (friendKeyIdsKey !== prevFriendKeyIdsKey) {
+    setPrevFriendKeyIdsKey(friendKeyIdsKey);
+    setError(null);
     setSelectedKeyIds((prev) => {
       const stillValid = prev.filter((keyId) => friendByKeyId.has(keyId));
       if (stillValid.length > 0) {
@@ -55,7 +63,7 @@ export function useFeedLabRecipients({
       }
       return friends.map((friend) => friend.keyId);
     });
-  }, [friendKeyIdsKey, prevFriendKeyIdsKey, friendByKeyId, friends]);
+  }
 
   useEffect(() => {
     if (friendsError) {
@@ -67,6 +75,13 @@ export function useFeedLabRecipients({
     if (selectedKeyIds.length === 0) {
       setRecipients([]);
       setLoadingRecipientKeys(false);
+      return;
+    }
+
+    const hasStaleSelection = selectedKeyIds.some(
+      (keyId) => !friendByKeyId.has(keyId),
+    );
+    if (hasStaleSelection || loadingFriends) {
       return;
     }
 
@@ -97,7 +112,10 @@ export function useFeedLabRecipients({
           (_, index) => loaded[index] === null,
         );
         if (missing.length > 0) {
-          setError(`No public key found for: ${missing.join(', ')}`);
+          const missingLabels = missing.map(
+            (keyId) => getOptionLabel(keyId),
+          );
+          setError(`No public key found for: ${missingLabels.join(', ')}`);
           setRecipients(
             loaded.filter(
               (entry): entry is ManifestRecipientKeys => entry !== null,
@@ -125,7 +143,7 @@ export function useFeedLabRecipients({
     return () => {
       cancelled = true;
     };
-  }, [selectedKeyIds, friendByKeyId]);
+  }, [selectedKeyIds, friendByKeyId, getOptionLabel, loadingFriends]);
 
   return {
     selectedKeyIds,

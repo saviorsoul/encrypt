@@ -4,7 +4,6 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   Collapse,
   Divider,
   Paper,
@@ -32,8 +31,8 @@ type FeedContext = {
 type MessageThreadCardProps = {
   message: StoredMessage;
   expanded: boolean;
-  commentCount: number;
   comments: StoredComment[];
+  commentsLoading: boolean;
   commentsPostBusy: boolean;
   onToggleMessage: (messageId: string) => void;
   onDecryptDelivery: ReturnType<typeof useBackendDecrypt>['decryptDelivery'];
@@ -53,8 +52,8 @@ type MessageThreadCardProps = {
 export const MessageThreadCard = memo(function MessageThreadCard({
   message,
   expanded,
-  commentCount,
   comments,
+  commentsLoading,
   commentsPostBusy,
   onToggleMessage,
   onDecryptDelivery,
@@ -133,7 +132,6 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               </Typography>
             ) : null}
           </Box>
-          <Chip size="small" label={`${commentCount} comments`} />
         </Stack>
         <Typography variant="caption" color="text.secondary">
           {new Date(message.createdAt).toLocaleString()}
@@ -190,39 +188,54 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
           <Divider sx={{ my: 2 }}>
             <Typography variant="subtitle2">
-              Comments ({commentCount})
+              {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
             </Typography>
           </Divider>
 
           <Box>
-            {decryptedComments !== null ? (
-              <Stack spacing={1}>
-                {comments.map((comment) => {
-                  const text = decryptedComments[comment.id];
-                  if (!text) {
-                    return null;
-                  }
-                  return (
-                    <CommentRow
-                      key={comment.id}
-                      comment={comment}
-                      text={text}
-                      usernameByKeyId={usernameByKeyId}
-                    />
-                  );
-                })}
-                {commentCount > 0 &&
-                Object.keys(decryptedComments).length === 0 ? (
+            {commentsLoading ? (
+              <Typography variant="body2" color="text.secondary">
+                Loading comments…
+              </Typography>
+            ) : (
+              <>
+                {decryptedComments !== null ? (
+                  <Stack spacing={1}>
+                    {comments.map((comment) => {
+                      const text = decryptedComments[comment.id];
+                      if (!text) {
+                        return null;
+                      }
+                      return (
+                        <CommentRow
+                          key={comment.id}
+                          comment={comment}
+                          text={text}
+                          usernameByKeyId={usernameByKeyId}
+                          viewerKeyId={viewerKeyId}
+                        />
+                      );
+                    })}
+                    {comments.length > 0 &&
+                    Object.keys(decryptedComments).length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        Could not decrypt comments.
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                ) : null}
+                {comments.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    Could not decrypt comments.
+                    No comments yet.
                   </Typography>
                 ) : null}
-              </Stack>
-            ) : null}
+              </>
+            )}
           </Box>
 
           <CommentComposer
             commentsPostBusy={commentsPostBusy}
+            messageDecrypted={decryptPlaintext !== null}
             onPostCommentForMessage={onPostCommentForMessage}
             messageId={message.id}
           />
@@ -235,10 +248,12 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 function CommentComposer({
   messageId,
   commentsPostBusy,
+  messageDecrypted,
   onPostCommentForMessage,
 }: {
   messageId: string;
   commentsPostBusy: boolean;
+  messageDecrypted: boolean;
   onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
 }) {
   const [commentText, setCommentText] = useState('');
@@ -261,12 +276,16 @@ function CommentComposer({
         label="New comment"
         value={commentText}
         onChange={(event) => setCommentText(event.target.value)}
+        disabled={!messageDecrypted || commentsPostBusy}
+        helperText={
+          messageDecrypted ? undefined : 'Decrypt the message to add a comment.'
+        }
         sx={{ my: 2 }}
       />
       <Button
         variant="contained"
         size="small"
-        disabled={commentsPostBusy || !commentText.trim()}
+        disabled={!messageDecrypted || commentsPostBusy || !commentText.trim()}
         onClick={() => void handlePostComment()}
       >
         {commentsPostBusy ? 'Posting…' : 'Add comment'}
@@ -279,21 +298,25 @@ function CommentRow({
   comment,
   text,
   usernameByKeyId,
+  viewerKeyId,
 }: {
   comment: StoredComment;
   text: string;
   usernameByKeyId: Record<string, string>;
+  viewerKeyId: string | null;
 }) {
+  const [authorKeyId, setAuthorKeyId] = useState<string | null>(null);
   const [authorLabel, setAuthorLabel] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     void getCommentAuthorKeyIdFromPayload(comment.payload).then(
-      (authorKeyId) => {
+      (resolvedAuthorKeyId) => {
         if (!cancelled) {
+          setAuthorKeyId(resolvedAuthorKeyId);
           setAuthorLabel(
-            formatCommentAuthorLabel(authorKeyId, usernameByKeyId),
+            formatCommentAuthorLabel(resolvedAuthorKeyId, usernameByKeyId),
           );
         }
       },
@@ -304,18 +327,28 @@ function CommentRow({
     };
   }, [comment.payload, usernameByKeyId]);
 
+  const isOwnComment =
+    viewerKeyId !== null && authorKeyId !== null && authorKeyId === viewerKeyId;
+
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
       <Stack spacing={0.75}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar
-            sx={{ width: 28, height: 28, fontSize: '0.75rem', fontWeight: 600 }}
+            sx={{
+              width: 28,
+              height: 28,
+              fontSize: isOwnComment ? '0.625rem' : '0.75rem',
+              fontWeight: 600,
+            }}
           >
-            {nameInitial(authorLabel ?? '?')}
+            {isOwnComment ? 'ME' : nameInitial(authorLabel ?? '?')}
           </Avatar>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {authorLabel ?? '...'}
-          </Typography>
+          {!isOwnComment ? (
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              {authorLabel ?? '...'}
+            </Typography>
+          ) : null}
         </Box>
         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
           {text}

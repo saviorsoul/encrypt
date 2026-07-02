@@ -50,6 +50,9 @@ export function useFeedLabFriendships(
       return;
     }
 
+    setFriends([]);
+    setIncomingRequests([]);
+    setOutgoingRequests([]);
     setLoading(true);
     setError(null);
     try {
