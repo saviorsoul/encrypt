@@ -111,9 +111,7 @@ export function usePrivateKeySession() {
         return null;
       }
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Invalid private key file.';
+        error instanceof Error ? error.message : 'Invalid private key file.';
       setSessionError(message);
       return null;
     }
