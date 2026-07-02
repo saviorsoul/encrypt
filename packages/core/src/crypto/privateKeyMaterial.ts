@@ -10,6 +10,7 @@ import {
 
 export type UploadedPrivateKeyMaterial = {
   keyId: string;
+  publicKey: { x: string; y: string };
   ecdhPrivateKey: CryptoKey;
   ecdsaSignPrivateKey: CryptoKey;
   /** Extractable ECDH public key (from JWK x/y at import; not via exportKey on private key). */
@@ -20,6 +21,11 @@ export async function importUploadedPrivateKeyMaterial(
   jwk: JsonWebKey,
 ): Promise<UploadedPrivateKeyMaterial> {
   const publicJwk = slimEcPublicJwk(jwk);
+  const x = publicJwk.x;
+  const y = publicJwk.y;
+  if (!x || !y) {
+    throw new Error('Private key JWK is missing public coordinates.');
+  }
   const keyId = await ecPublicJwkThumbprintSha256(publicJwk);
   const [ecdhPrivateKey, ecdsaSignPrivateKey, senderPublicKey] =
     await Promise.all([
@@ -28,7 +34,7 @@ export async function importUploadedPrivateKeyMaterial(
       importPublicKeyExtractable(publicJwk),
     ]);
 
-  return { keyId, ecdhPrivateKey, ecdsaSignPrivateKey, senderPublicKey };
+  return { keyId, publicKey: { x, y }, ecdhPrivateKey, ecdsaSignPrivateKey, senderPublicKey };
 }
 
 export function assertUploadedPrivateKeyMatchesKeyId(

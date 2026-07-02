@@ -34,7 +34,7 @@
     "electron:run": "npm run electron:run -w @encrypt/web",
     "electron:build": "npm run electron:build -w @encrypt/web",
     "electron:package": "npm run electron:package -w @encrypt/web",
-    "test": "npm run test -w @encrypt/web",
+    "test": "npm run test -w @encrypt/web -- run && npm run test -w @encrypt/api",
     "lint": "eslint apps/web apps/api apps/feed-lab packages/core packages/schemas",
     "lint:fix": "eslint apps/web apps/api apps/feed-lab packages/core packages/schemas --fix",
     "format": "prettier --write apps/web apps/api apps/feed-lab packages/core packages/schemas",

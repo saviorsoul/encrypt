@@ -7,6 +7,7 @@ import {
   jwkWithoutKeyOps,
 } from '@encrypt/core/crypto/ecdhKeys';
 import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
+import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { registerFeedLabRecipient } from '@lab/lib/registerFeedLabRecipient.ts';
 import { loadFeedLabUserByUsername } from '@lab/services/db/storedUsers.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
@@ -54,11 +55,14 @@ export function useBackendGenerateUser(
             keyPair.privateKey,
           )) as JsonWebKey,
         );
+        const registrationMaterial =
+          await importUploadedPrivateKeyMaterial(privateJwk);
 
         const result = await registerFeedLabRecipient(
           api,
           trimmedName,
           publicJwk,
+          { auth: { authMaterial: registrationMaterial } },
         );
 
         if (result.status === 'error') {

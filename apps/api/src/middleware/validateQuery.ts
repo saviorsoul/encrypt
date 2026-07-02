@@ -3,14 +3,7 @@ import type { SchemaName } from '../schemas/common.js';
 import { formatAjvErrors, getValidator } from '../lib/ajv.js';
 import { badRequest } from '../lib/httpError.js';
 
-export type QuerySchemaName = Extract<
-  SchemaName,
-  | 'recipientKeyIdQuery'
-  | 'commentsQuery'
-  | 'targetKeyIdQuery'
-  | 'requesterKeyIdQuery'
-  | 'ownerKeyIdQuery'
->;
+export type QuerySchemaName = Extract<SchemaName, 'commentsQuery'>;
 
 export function validateQuery(schemaName: QuerySchemaName): Middleware {
   const validate = getValidator(schemaName);

@@ -53,14 +53,13 @@ export function useFeedLabFriendships(
     setLoading(true);
     setError(null);
     try {
-      const [friendships, incoming, outgoing] = await Promise.all([
-        api.getFriendships(ownerKeyId),
-        api.getIncomingFriendshipRequests(ownerKeyId),
-        api.getOutgoingFriendshipRequests(ownerKeyId),
+      const [friendships, requests] = await Promise.all([
+        api.getFriendships(),
+        api.getFriendshipRequests(),
       ]);
       setFriends(mapFriendshipsToFriends(friendships, usernameByKeyId));
-      setIncomingRequests(incoming);
-      setOutgoingRequests(outgoing);
+      setIncomingRequests(requests.incoming);
+      setOutgoingRequests(requests.outgoing);
     } catch (e) {
       setFriends([]);
       setIncomingRequests([]);

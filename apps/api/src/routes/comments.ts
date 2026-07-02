@@ -2,6 +2,7 @@ import Router from '@koa/router';
 import type { CommentPayloadBody } from '../schemas/common.js';
 import { validateBody } from '../middleware/validateBody.js';
 import { verifySignature } from '../middleware/verifySignature.js';
+import { requireAuthenticatedSigner } from '../middleware/requireAuthenticatedSigner.js';
 import { validateQuery } from '../middleware/validateQuery.js';
 import type { CommentsQuery } from '../schemas/query.js';
 import { createComment, listComments } from '../services/comments.js';
@@ -11,6 +12,7 @@ export function createCommentsRouter(): Router {
 
   router.post(
     '/comments',
+    requireAuthenticatedSigner({ jwkField: 'senderPublicJwk' }),
     validateBody('commentPayload'),
     verifySignature('comment-sender'),
     async (ctx) => {

@@ -84,19 +84,18 @@ export function FeedPage() {
   );
 
   const handleReloadFeed = useCallback(async () => {
-    let recipientKeyId = keys.keyId;
-    if (!recipientKeyId) {
-      recipientKeyId = await keys.changeKeyId();
-      if (!recipientKeyId) {
+    if (!keys.keyId) {
+      const keyId = await keys.changeKeyId();
+      if (!keyId) {
         return;
       }
     }
-    await feed.reload(recipientKeyId);
+    await feed.reload();
   }, [keys, feed]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
-      await feed.reload(keys.keyId);
+      await feed.reload();
     }
   }, [feed, keys.keyId]);
 
@@ -228,7 +227,7 @@ export function FeedPage() {
                 })
                 .then(async (shareId) => {
                   if (shareId && keys.keyId) {
-                    await feed.reload(keys.keyId);
+                    await feed.reload();
                   }
                   return shareId;
                 })

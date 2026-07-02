@@ -30,32 +30,29 @@ export function useBackendFeedData(keyId: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(
-    async (recipientKeyId: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await api.getAllFeedData(recipientKeyId);
-        cacheInboxItems(data.inbox);
-        setRawItems(data.inbox);
-        setCommentsByMessageId(data.commentsByMessageId);
-        const deliveries = inboxApiItemsToStoredDeliveries(data.inbox);
-        setMessages(filterFeedInboxMessages(deliveries));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load feed data.');
-        setRawItems([]);
-        setMessages([]);
-        setCommentsByMessageId({});
-      } finally {
-        setLoading(false);
-      }
-    },
-    [api],
-  );
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getAllFeedData();
+      cacheInboxItems(data.inbox);
+      setRawItems(data.inbox);
+      setCommentsByMessageId(data.commentsByMessageId);
+      const deliveries = inboxApiItemsToStoredDeliveries(data.inbox);
+      setMessages(filterFeedInboxMessages(deliveries));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load feed data.');
+      setRawItems([]);
+      setMessages([]);
+      setCommentsByMessageId({});
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
 
   useEffect(() => {
     if (keyId) {
-      void reload(keyId);
+      void reload();
     }
   }, [keyId, reload]);
 

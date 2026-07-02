@@ -2,7 +2,7 @@ import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
-import type { FeedApi } from '@encrypt/core/api/feedApi';
+import type { FeedApi, FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
 import {
   loadFeedLabUserByUsername,
   saveFeedLabUser,
@@ -31,6 +31,7 @@ export async function registerFeedLabRecipient(
   api: FeedApi,
   username: string,
   publicJwk: JsonWebKey,
+  options?: FeedApiRequestOptions,
 ): Promise<RegisterFeedLabRecipientResult> {
   const trimmedName = username.trim();
   const slimJwk = slimEcPublicJwk(publicJwk);
@@ -54,7 +55,7 @@ export async function registerFeedLabRecipient(
   };
 
   try {
-    await api.postUser({ publicKey: { x, y } });
+    await api.postUser({ publicKey: { x, y } }, options);
     return await saveLocally();
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Failed to register user.';

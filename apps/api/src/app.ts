@@ -2,6 +2,8 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import { MAX_BODY_BYTES } from './constants.js';
 import { badRequest } from './lib/httpError.js';
+import { authenticate } from './middleware/authenticate.js';
+import { authenticateApiUnlessPublic } from './middleware/authenticateApiUnlessPublic.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { createFriendshipsRouter } from './routes/friendships.js';
@@ -18,7 +20,10 @@ export function createApp(): Koa {
   app.use(async (ctx, next) => {
     ctx.set('Access-Control-Allow-Origin', '*');
     ctx.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    ctx.set('Access-Control-Allow-Headers', 'Content-Type');
+    ctx.set(
+      'Access-Control-Allow-Headers',
+      'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Signature',
+    );
     if (ctx.method === 'OPTIONS') {
       ctx.status = 204;
       return;
@@ -37,6 +42,7 @@ export function createApp(): Koa {
       },
     }),
   );
+  app.use(authenticateApiUnlessPublic(authenticate()));
 
   const healthRouter = createHealthRouter();
   app.use(healthRouter.routes()).use(healthRouter.allowedMethods());

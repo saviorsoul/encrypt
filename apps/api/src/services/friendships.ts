@@ -88,16 +88,16 @@ export async function createFriendshipRequest(input: FriendshipPairInput) {
   };
 }
 
-export async function listIncomingFriendshipRequests(targetKeyId: string) {
-  await assertRecipientsRegistered([targetKeyId]);
-  const rows = await listIncomingPendingRequests(targetKeyId);
-  return rows.map(serializeFriendshipRequest);
-}
-
-export async function listOutgoingFriendshipRequests(requesterKeyId: string) {
-  await assertRecipientsRegistered([requesterKeyId]);
-  const rows = await listOutgoingPendingRequests(requesterKeyId);
-  return rows.map(serializeFriendshipRequest);
+export async function listFriendshipRequests(keyId: string) {
+  await assertRecipientsRegistered([keyId]);
+  const [incomingRows, outgoingRows] = await Promise.all([
+    listIncomingPendingRequests(keyId),
+    listOutgoingPendingRequests(keyId),
+  ]);
+  return {
+    incoming: incomingRows.map(serializeFriendshipRequest),
+    outgoing: outgoingRows.map(serializeFriendshipRequest),
+  };
 }
 
 export async function acceptFriendshipRequest(input: FriendshipPairInput) {
