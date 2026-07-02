@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -38,21 +32,19 @@ export function FeedPage() {
 
   const friendships = useFeedLabFriendships(keys.keyId, usernameByKeyId);
   const recipients = useFeedLabRecipients({
+    viewerKeyId: keys.keyId,
     friends: friendships.friends,
     loadingFriends: friendships.loading,
     friendsError: friendships.error,
   });
   const decrypt = useBackendDecrypt(keys.withPrivateKey);
+  const { clear: clearDecrypt, mergeDecryptedComments } = decrypt;
   const share = useBackendShare(keys.withPrivateKey);
   const comments = useBackendComments(
     selectedMessageId,
     keys.keyId,
     keys.withPrivateKey,
   );
-  const selectedCommentIds = comments.comments
-    .map((comment) => comment.id)
-    .join('\0');
-  const prevCommentIdsRef = useRef('');
 
   const feedContext = useMemo(
     () => ({
@@ -62,25 +54,17 @@ export function FeedPage() {
     [feed.allDeliveries, feed.manifestLookup],
   );
 
-  useEffect(() => {
-    const prev = prevCommentIdsRef.current;
-    if (prev && prev !== selectedCommentIds) {
-      decrypt.clearDecryptedComments();
-    }
-    prevCommentIdsRef.current = selectedCommentIds;
-  }, [selectedCommentIds, decrypt.clearDecryptedComments]);
-
   const handleToggleMessage = useCallback(
     (messageId: string) => {
       setSelectedMessageId((current) => {
         const next = current === messageId ? null : messageId;
         if (next !== current) {
-          decrypt.clear();
+          clearDecrypt();
         }
         return next;
       });
     },
-    [decrypt.clear],
+    [clearDecrypt],
   );
 
   const handleReloadFeed = useCallback(async () => {
@@ -105,15 +89,25 @@ export function FeedPage() {
 
   const handlePostComment = useCallback(
     async (messageId: string, text: string) => {
-      await comments.postComment({
+      const newComment = await comments.postComment({
         messageId,
         allDeliveries: feed.allDeliveries,
         manifestLookup: feed.manifestLookup,
         text,
       });
-      await handleReloadFeed();
+      if (!newComment) {
+        return;
+      }
+
+      const decryptedText = await comments.decryptCommentText(newComment, {
+        allDeliveries: feed.allDeliveries,
+        manifestLookup: feed.manifestLookup,
+      });
+      if (decryptedText) {
+        mergeDecryptedComments({ [newComment.id]: decryptedText });
+      }
     },
-    [comments, feed.allDeliveries, feed.manifestLookup, handleReloadFeed],
+    [comments, feed.allDeliveries, feed.manifestLookup, mergeDecryptedComments],
   );
 
   return (
@@ -143,20 +137,20 @@ export function FeedPage() {
           </Button>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Loads inbox and comments from the backend for your keyId. Set your
-          keyId from a private JWK file; the private key is not stored. Decrypt
-          and comment actions prompt for your key each time.
+          Loads inbox from the backend for your keyId. Set your keyId from a
+          private JWK file; the private key is not stored. Comments load when
+          you expand a message.
         </Typography>
         {feed.error ? <Alert severity="warning">{feed.error}</Alert> : null}
         {feed.loading ? (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CircularProgress size={18} />
-            <Typography variant="body2">Loading inbox + comments…</Typography>
+            <Typography variant="body2">Loading inbox…</Typography>
           </Stack>
         ) : null}
         {keys.keyId && !feed.loading ? (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {feed.messages.length} message(s), {feed.totalComments} comment(s).
+            {feed.messages.length} message(s).
           </Typography>
         ) : null}
         <Stack spacing={1}>
@@ -167,11 +161,15 @@ export function FeedPage() {
                 key={message.id}
                 message={message}
                 expanded={isExpanded}
-                commentCount={feed.commentsByMessageId[message.id]?.length ?? 0}
                 comments={
-                  isExpanded
-                    ? (feed.commentsByMessageId[message.id] ?? EMPTY_COMMENTS)
+                  isExpanded && selectedMessageId === message.id
+                    ? comments.comments
                     : EMPTY_COMMENTS
+                }
+                commentsLoading={
+                  isExpanded &&
+                  selectedMessageId === message.id &&
+                  comments.loading
                 }
                 commentsPostBusy={isExpanded && comments.postBusy}
                 onToggleMessage={handleToggleMessage}

@@ -27,20 +27,27 @@ export function useBackendComments(
   const [error, setError] = useState<string | null>(null);
   const [postBusy, setPostBusy] = useState(false);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (options?: { silent?: boolean }) => {
     if (!messageId) {
       setComments([]);
-      return;
+      return [];
     }
-    setLoading(true);
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      setComments(await api.getComments(messageId));
+      const loaded = await api.getComments(messageId);
+      setComments(loaded);
+      return loaded;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load comments.');
       setComments([]);
+      return [];
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [api, messageId]);
 
@@ -58,7 +65,7 @@ export function useBackendComments(
       setPostBusy(true);
       setError(null);
       try {
-        const posted = await withPrivateKey(async (material) => {
+        const newComment = await withPrivateKey(async (material) => {
           const access = await resolveParentMessageAccessFromFeed(
             threadId,
             material.keyId,
@@ -80,20 +87,20 @@ export function useBackendComments(
             manifestLookup,
           );
           const payload = JSON.parse(payloadJson) as Record<string, unknown>;
-          await api.postComment(payload);
-          return true;
+          const { id } = await api.postComment(payload);
+          const loaded = await api.getComments(threadId);
+          setComments(loaded);
+          return loaded.find((comment) => comment.id === id) ?? null;
         });
-        if (!posted) {
-          return;
-        }
-        await reload();
+        return newComment ?? null;
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to post comment.');
+        return null;
       } finally {
         setPostBusy(false);
       }
     },
-    [api, reload, withPrivateKey],
+    [api, withPrivateKey],
   );
 
   const decryptCommentText = useCallback(

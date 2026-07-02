@@ -339,28 +339,6 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
     },
-
-    /** Inbox rows plus comments for each visible thread root. */
-    async getAllFeedData(): Promise<{
-      inbox: InboxApiItem[];
-      commentsByMessageId: Record<string, StoredComment[]>;
-    }> {
-      const inbox = await this.getInbox();
-      const threadIds = [
-        ...new Set(
-          inbox.map((item) =>
-            item.type === 'share' ? (item.messageId ?? item.id) : item.id,
-          ),
-        ),
-      ];
-      const commentsByMessageId: Record<string, StoredComment[]> = {};
-      await Promise.all(
-        threadIds.map(async (messageId) => {
-          commentsByMessageId[messageId] = await this.getComments(messageId);
-        }),
-      );
-      return { inbox, commentsByMessageId };
-    },
   };
 }
 

@@ -184,6 +184,13 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
     setDecryptedComments(null);
   }, []);
 
+  const mergeDecryptedComments = useCallback(
+    (updates: Record<string, string>) => {
+      setDecryptedComments((prev) => ({ ...(prev ?? {}), ...updates }));
+    },
+    [],
+  );
+
   return {
     decryptDelivery,
     busy,
@@ -192,5 +199,6 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
     decryptedComments,
     clear,
     clearDecryptedComments,
+    mergeDecryptedComments,
   };
 }
