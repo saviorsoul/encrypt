@@ -1,6 +1,6 @@
 # 0007. API authentication with time-slot ECDSA proofs
 
-- **Status:** Accepted
+- **Status:** Superseded by [0009](./0009-api-authentication-with-server-minted-redis-nonces.md)
 - **Date:** 2026-07-02
 
 ## Context

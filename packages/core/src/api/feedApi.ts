@@ -4,6 +4,7 @@ import {
   type FeedApiAuthProvider,
   type FeedApiPerRequestAuth,
   resolveAuthHeaderRecord,
+  captureFeedApiNextNonce,
 } from './feedApiAuth.ts';
 import { buildAuthRequestDescriptorFromParts } from '../crypto/authProof.ts';
 
@@ -13,7 +14,10 @@ export type {
 } from './feedApiAuth.ts';
 export {
   createFeedApiAuthProvider,
-  clearFeedApiAuthHeaderCache,
+  clearFeedApiAuthState,
+  releaseFeedApiAuthKeySwitch,
+  captureFeedApiNextNonce,
+  handleFeedApiAuthStorageEvent,
 } from './feedApiAuth.ts';
 
 export type FeedApiConfig = {
@@ -94,15 +98,56 @@ export function createFeedApi(config: FeedApiConfig) {
   const http = config.fetch ?? fetch;
   const baseUrl = config.baseUrl;
   const auth = config.auth;
+  const authConfig = {
+    challengeUrl: joinUrl(baseUrl, '/api/auth/challenge'),
+    fetch: http,
+  };
 
   async function authHeaders(
     method: string,
     url: string,
     body?: BodyInit | null,
-    options?: FeedApiRequestOptions,
+    options?: FeedApiRequestOptions & { forceNonceRefresh?: boolean },
   ): Promise<Record<string, string>> {
     const request = buildAuthRequestDescriptorFromParts(method, url, body);
-    return resolveAuthHeaderRecord(auth, request, options?.auth);
+    return resolveAuthHeaderRecord(
+      authConfig,
+      request,
+      { auth, perRequest: options?.auth },
+      { forceNonceRefresh: options?.forceNonceRefresh },
+    );
+  }
+
+  async function sendAuthorized(
+    url: string,
+    init: RequestInit,
+    options?: FeedApiRequestOptions,
+  ): Promise<Response> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const method = (init.method ?? 'GET').toUpperCase();
+      const proof = await authHeaders(method, url, init.body, {
+        ...options,
+        forceNonceRefresh: attempt > 0,
+      });
+      const headers = new Headers(init.headers);
+      for (const [name, value] of Object.entries(proof)) {
+        headers.set(name, value);
+      }
+      const response = await http(url, { ...init, headers });
+      const keyId = proof['X-Key-Id'];
+      if (keyId) {
+        if (auth) {
+          auth.captureNextNonceFromResponse(keyId, response);
+        } else {
+          captureFeedApiNextNonce(keyId, response);
+        }
+      }
+      if (response.status === 401 && attempt === 0) {
+        continue;
+      }
+      return response;
+    }
+    throw new Error('Authentication failed after retry.');
   }
 
   async function authorizedFetch(
@@ -110,14 +155,7 @@ export function createFeedApi(config: FeedApiConfig) {
     init: RequestInit,
     options?: FeedApiRequestOptions,
   ): Promise<Response> {
-    const url = joinUrl(baseUrl, path);
-    const method = (init.method ?? 'GET').toUpperCase();
-    const proof = await authHeaders(method, url, init.body, options);
-    const headers = new Headers(init.headers);
-    for (const [name, value] of Object.entries(proof)) {
-      headers.set(name, value);
-    }
-    return http(url, { ...init, headers });
+    return sendAuthorized(joinUrl(baseUrl, path), init, options);
   }
 
   async function authorizedFetchUrl(
@@ -125,13 +163,7 @@ export function createFeedApi(config: FeedApiConfig) {
     init: RequestInit,
     options?: FeedApiRequestOptions,
   ): Promise<Response> {
-    const method = (init.method ?? 'GET').toUpperCase();
-    const proof = await authHeaders(method, url, init.body, options);
-    const headers = new Headers(init.headers);
-    for (const [name, value] of Object.entries(proof)) {
-      headers.set(name, value);
-    }
-    return http(url, { ...init, headers });
+    return sendAuthorized(url, init, options);
   }
 
   return {

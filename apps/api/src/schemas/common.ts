@@ -181,12 +181,31 @@ const publicKeyWireSchema = {
   ],
 } as const;
 
+const keyIdProperty = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 128,
+} as const;
+
 export const registerUserRequestSchema = {
   type: 'object',
   additionalProperties: false,
   required: ['publicKey'],
   properties: {
     publicKey: publicKeyWireSchema,
+  },
+} as const;
+
+export type AuthChallengeRequest = {
+  keyId: string;
+};
+
+export const authChallengeRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['keyId'],
+  properties: {
+    keyId: keyIdProperty,
   },
 } as const;
 
@@ -249,12 +268,6 @@ export const commentsQuerySchema = {
   },
 } as const;
 
-const keyIdProperty = {
-  type: 'string',
-  minLength: 1,
-  maxLength: 128,
-} as const;
-
 export const friendshipTargetBodySchema = {
   type: 'object',
   additionalProperties: false,
@@ -300,6 +313,7 @@ export const schemaDefinitions = {
   createMessageRequest: createMessageRequestSchema,
   commentPayload: commentPayloadSchema,
   registerUserRequest: registerUserRequestSchema,
+  authChallengeRequest: authChallengeRequestSchema,
   commentsQuery: commentsQuerySchema,
   friendshipTargetBody: friendshipTargetBodySchema,
   friendshipRequesterBody: friendshipRequesterBodySchema,

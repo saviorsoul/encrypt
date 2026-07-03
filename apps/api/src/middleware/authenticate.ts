@@ -1,18 +1,22 @@
 import type { Middleware } from 'koa';
 import {
   AUTH_HEADER_KEY_ID,
+  AUTH_HEADER_NEXT_NONCE,
+  AUTH_HEADER_NONCE,
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
   assertAuthKeyIdMatchesPublicKey,
   buildAuthRequestDescriptorFromContext,
   isAuthTimeSlotAccepted,
+  parseAuthNonceHeader,
   parseAuthPublicKeyWire,
   parseAuthTimeSlotHeader,
   verifyAuthProof,
 } from '@encrypt/core/crypto/authProof';
 import { slimEcPublicJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
+import { consumeAuthNonce, mintAuthNonce } from '../services/authNonce.js';
 import { unauthorized } from '../lib/httpError.js';
 
 function readHeader(
@@ -31,8 +35,9 @@ export function authenticate(): Middleware {
     const timeSlot = parseAuthTimeSlotHeader(
       readHeader(ctx, AUTH_HEADER_TIME_SLOT),
     );
+    const nonce = parseAuthNonceHeader(readHeader(ctx, AUTH_HEADER_NONCE));
 
-    if (!keyId || !publicKeyWire || !signature || timeSlot === null) {
+    if (!keyId || !publicKeyWire || !signature || timeSlot === null || !nonce) {
       throw unauthorized('Missing or invalid API authentication headers.');
     }
 
@@ -56,13 +61,26 @@ export function authenticate(): Middleware {
     const request = buildAuthRequestDescriptorFromContext(ctx);
 
     try {
-      await verifyAuthProof(publicJwk, keyId, timeSlot, signature, request);
+      await verifyAuthProof(
+        publicJwk,
+        keyId,
+        { timeSlot, nonce },
+        signature,
+        request,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Authentication failed.';
       throw unauthorized(message);
     }
 
+    const consumed = await consumeAuthNonce(keyId, nonce);
+    if (!consumed) {
+      throw unauthorized('Authentication nonce is invalid or already used.');
+    }
+
+    const nextNonce = await mintAuthNonce(keyId);
+    ctx.set(AUTH_HEADER_NEXT_NONCE, nextNonce);
     ctx.state.authenticatedKeyId = keyId;
     await next();
   };

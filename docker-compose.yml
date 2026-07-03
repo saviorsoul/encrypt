@@ -82,6 +82,19 @@ services:
       - encrypt-local
     healthcheck: *citus-healthcheck
 
+  redis:
+    image: redis:7-alpine
+    container_name: encrypt-redis
+    ports:
+      - '6379:6379'
+    networks:
+      - encrypt-local
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # One-shot init job: registers workers then exits 0. "Exited" in Docker Desktop is normal.
   citus-bootstrap:
     image: citusdata/citus:12.1
@@ -137,6 +150,7 @@ services:
       - .env.docker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-encrypt}:${POSTGRES_PASSWORD:-encrypt}@citus-coordinator:5432/${POSTGRES_DB:-encrypt_feed}
+      REDIS_URL: redis://redis:6379
     ports:
       - '3000:3000'
     volumes:
@@ -149,6 +163,8 @@ services:
         condition: service_completed_successfully
       api-migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     networks:
       - encrypt-local
     healthcheck:

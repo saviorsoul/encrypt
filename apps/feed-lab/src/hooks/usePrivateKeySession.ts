@@ -4,9 +4,11 @@ import type { AuthPublicKeyCoords } from '@encrypt/core/crypto/authProof';
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import {
   createFeedApiAuthProvider,
-  clearFeedApiAuthHeaderCache,
+  clearFeedApiAuthState,
+  releaseFeedApiAuthKeySwitch,
   type FeedApiAuthProvider,
 } from '@encrypt/core/api/feedApiAuth';
+import { getApiBaseUrl } from '@lab/lib/feedApiClient.ts';
 import {
   cachePrivateKeyMaterial,
   clearSessionPrivateKeyStorage,
@@ -28,15 +30,19 @@ function readSessionMaterial(): UploadedPrivateKeyMaterial | null {
 }
 
 function rememberSessionMaterial(material: UploadedPrivateKeyMaterial): void {
+  const previousKeyId = sessionMaterial?.keyId;
   sessionMaterial = material;
   cachePrivateKeyMaterial(material);
-  clearFeedApiAuthHeaderCache();
+  // Keep per-keyId rotated nonces (X-Next-Nonce) so switching back reuses them.
+  if (previousKeyId && previousKeyId !== material.keyId) {
+    releaseFeedApiAuthKeySwitch(previousKeyId);
+  }
 }
 
 function clearSessionMaterial(): void {
   sessionMaterial = null;
   clearSessionPrivateKeyStorage();
-  clearFeedApiAuthHeaderCache();
+  clearFeedApiAuthState();
 }
 
 async function resolvePrivateKeyMaterial(): Promise<UploadedPrivateKeyMaterial | null> {
@@ -45,6 +51,7 @@ async function resolvePrivateKeyMaterial(): Promise<UploadedPrivateKeyMaterial |
 
 const feedLabAuthProvider = createFeedApiAuthProvider(
   resolvePrivateKeyMaterial,
+  { challengeUrl: `${getApiBaseUrl()}/api/auth/challenge` },
 );
 
 export function usePrivateKeySession() {

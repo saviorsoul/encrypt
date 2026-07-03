@@ -14,8 +14,9 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0004](./0004-main-process-owns-external-file-reads.md) | Main process owns external file reads (no path-based IPC from renderer) | Accepted |
 | [0005](./0005-feed-share-and-comments-parent-dek-model.md) | Feed share and comments: `parentMessageId`, shared DEK, and delivery isolation | Accepted |
 | [0006](./0006-known-dek-does-not-recover-recipient-private-key.md) | Known DEK and message material do not recover a recipient’s private key | Accepted |
-| [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md) | API authentication with time-slot ECDSA proofs | Accepted |
+| [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md) | API authentication with time-slot ECDSA proofs | Superseded by [0009](./0009-api-authentication-with-server-minted-redis-nonces.md) |
 | [0008](./0008-citus-sharding-by-key-id.md) | Citus sharding by cryptographic key id | Accepted |
+| [0009](./0009-api-authentication-with-server-minted-redis-nonces.md) | API authentication with server-minted Redis nonces | Accepted |
 
 ## When to write an ADR
 

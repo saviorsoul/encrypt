@@ -1,4 +1,4 @@
-import { bytesToBase64 } from '../utils/bytes.ts';
+import { bytesToBase64, base64ToBytes } from '../utils/bytes.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -10,14 +10,19 @@ import {
   verifyCanonicalSignature,
 } from './manifestSign.ts';
 
-export const AUTH_SIGNABLE_VERSION = 1;
+export const AUTH_SIGNABLE_VERSION = 2;
 export const AUTH_TIME_SLOT_SECONDS = 30;
 /** Accepted client slots: serverSlot ± AUTH_TIME_SLOT_SKEW */
 export const AUTH_TIME_SLOT_SKEW = 1;
+export const AUTH_NONCE_TTL_SECONDS = 3600;
+/** Random auth nonce length in bytes (wire form is standard base64, like manifest IVs). */
+export const AUTH_NONCE_BYTES = 12;
 
 export const AUTH_HEADER_KEY_ID = 'X-Key-Id';
 export const AUTH_HEADER_PUBLIC_KEY = 'X-Public-Key';
 export const AUTH_HEADER_TIME_SLOT = 'X-Time-Slot';
+export const AUTH_HEADER_NONCE = 'X-Nonce';
+export const AUTH_HEADER_NEXT_NONCE = 'X-Next-Nonce';
 export const AUTH_HEADER_SIGNATURE = 'X-Signature';
 
 export type AuthPublicKeyCoords = { x: string; y: string };
@@ -61,6 +66,11 @@ export type AuthRequestDescriptor = {
   body?: unknown;
 };
 
+export type AuthProofContext = {
+  timeSlot: number;
+  nonce: string;
+};
+
 export type AuthSignableGetBody = {
   v: typeof AUTH_SIGNABLE_VERSION;
   keyId: string;
@@ -68,6 +78,7 @@ export type AuthSignableGetBody = {
   path: string;
   query: Record<string, string> | null;
   timeSlot: number;
+  nonce: string;
 };
 
 export type AuthSignableMutationBody = AuthSignableGetBody & {
@@ -185,7 +196,7 @@ export async function hashAuthRequestBody(
 
 export async function buildAuthSignable(
   keyId: string,
-  timeSlot: number,
+  proof: AuthProofContext,
   request: AuthRequestDescriptor,
 ): Promise<AuthSignableBody> {
   const base: AuthSignableGetBody = {
@@ -194,7 +205,8 @@ export async function buildAuthSignable(
     method: request.method.toUpperCase(),
     path: request.path,
     query: request.query ?? null,
-    timeSlot,
+    timeSlot: proof.timeSlot,
+    nonce: proof.nonce,
   };
 
   if (!authSignableIncludesBodyHash(request.method)) {
@@ -222,24 +234,49 @@ export function isAuthTimeSlotAccepted(
   return Math.abs(clientTimeSlot - serverSlot) <= AUTH_TIME_SLOT_SKEW;
 }
 
+export function parseAuthNonceHeader(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const bytes = base64ToBytes(trimmed);
+    if (bytes.length !== AUTH_NONCE_BYTES) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return trimmed;
+}
+
+/** Mint a one-time API auth nonce (12 random bytes, standard base64). */
+export function generateAuthNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(AUTH_NONCE_BYTES));
+  return bytesToBase64(bytes);
+}
+
 export async function signAuthProof(
   signingPrivateKey: CryptoKey,
   keyId: string,
-  timeSlot: number,
+  proof: AuthProofContext,
   request: AuthRequestDescriptor,
 ): Promise<string> {
-  const signable = await buildAuthSignable(keyId, timeSlot, request);
+  const signable = await buildAuthSignable(keyId, proof, request);
   return signCanonicalBody(signingPrivateKey, signable);
 }
 
 export async function verifyAuthProof(
   publicJwk: JsonWebKey,
   keyId: string,
-  timeSlot: number,
+  proof: AuthProofContext,
   signature: string,
   request: AuthRequestDescriptor,
 ): Promise<void> {
-  const signable = await buildAuthSignable(keyId, timeSlot, request);
+  const signable = await buildAuthSignable(keyId, proof, request);
   await verifyCanonicalSignature(
     publicJwk,
     signature,
@@ -252,6 +289,7 @@ export type AuthRequestHeaders = {
   keyId: string;
   publicKey: AuthPublicKeyCoords;
   timeSlot: number;
+  nonce: string;
   signature: string;
 };
 
@@ -276,6 +314,7 @@ export function authHeadersToRecord(
     [AUTH_HEADER_KEY_ID]: headers.keyId,
     [AUTH_HEADER_PUBLIC_KEY]: formatAuthPublicKeyWire(headers.publicKey),
     [AUTH_HEADER_TIME_SLOT]: String(headers.timeSlot),
+    [AUTH_HEADER_NONCE]: headers.nonce,
     [AUTH_HEADER_SIGNATURE]: headers.signature,
   };
 }

@@ -2,6 +2,7 @@ import type { Middleware } from 'koa';
 
 const PUBLIC_API_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'GET', path: '/health' },
+  { method: 'POST', path: '/api/auth/challenge' },
 ];
 
 function isPublicApiRoute(method: string, path: string): boolean {

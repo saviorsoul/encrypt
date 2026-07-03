@@ -12,6 +12,7 @@ import { createCommentsRouter } from './routes/comments.js';
 import { createInboxRouter } from './routes/inbox.js';
 import { createMessagesRouter } from './routes/messages.js';
 import { createSharesRouter } from './routes/shares.js';
+import { createAuthRouter } from './routes/auth.js';
 import { createUsersRouter } from './routes/users.js';
 
 export function createApp(): Koa {
@@ -22,8 +23,9 @@ export function createApp(): Koa {
     ctx.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     ctx.set(
       'Access-Control-Allow-Headers',
-      'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Signature',
+      'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Nonce, X-Signature',
     );
+    ctx.set('Access-Control-Expose-Headers', 'X-Next-Nonce');
     if (ctx.method === 'OPTIONS') {
       ctx.status = 204;
       return;
@@ -46,6 +48,9 @@ export function createApp(): Koa {
 
   const healthRouter = createHealthRouter();
   app.use(healthRouter.routes()).use(healthRouter.allowedMethods());
+
+  const authRouter = createAuthRouter();
+  app.use(authRouter.routes()).use(authRouter.allowedMethods());
 
   const usersRouter = createUsersRouter();
   app.use(usersRouter.routes()).use(usersRouter.allowedMethods());
