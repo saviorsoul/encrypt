@@ -40,7 +40,7 @@ Bump `AUTH_SIGNABLE_VERSION` to **2**. Keep **`timeSlot`** (±1 clock skew) and 
 
 - **12 random bytes**, standard **base64** (same style as manifest IVs), via `generateAuthNonce()` in `@encrypt/core/crypto/authProof`
 - `parseAuthNonceHeader` rejects non-base64 and wrong lengths (legacy UUID strings are invalid)
-- TTL: `AUTH_NONCE_TTL_SECONDS` = **1 hour** (server Redis `EX` and client cache expiry)
+- TTL: `AUTH_NONCE_TTL_SECONDS` = **15 minutes** (server Redis `EX` and client cache expiry). See [Changes](#changes).
 
 ### Challenge + rotation
 
@@ -52,7 +52,7 @@ Bump `AUTH_SIGNABLE_VERSION` to **2**. Keep **`timeSlot`** (±1 clock skew) and 
 
 - Key: **`auth:nonce:{keyId}`** (one pending nonce per identity)
 - Value: nonce string (base64)
-- Mint: `SET … EX 3600` — **replaces** any previous unconsumed nonce for that `keyId`
+- Mint: `SET … EX 900` — **replaces** any previous unconsumed nonce for that `keyId`
 - Consume: Lua **compare-and-delete** (`GET` equals presented nonce → `DEL`); wrong or replayed nonce returns false
 - **TTL reclaims stale entries**; single-use is enforced at consume time; `timeSlot` still bounds when the signature is valid at request time
 
@@ -94,6 +94,14 @@ Payload `senderSignature` and the encryption model are unchanged from ADR 0007.
 - Intercepted signed request replayable once until consumed
 - Anyone may request a challenge for any `keyId` (nonce alone does not grant access; private key still required to sign)
 
+## Changes
+
+### 2026-07-04
+
+| Topic                    | As accepted (2026-07-03) | Current                   |
+| ------------------------ | ------------------------ | ------------------------- |
+| `AUTH_NONCE_TTL_SECONDS` | 1 hour (`EX 3600`)       | **15 minutes** (`EX 900`) |
+
 ## References
 
-- Related ADRs: [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0008](./0008-citus-sharding-by-key-id.md), [0002](./0002-in-memory-non-extractable-private-key-cache.md)
+- Related ADRs: [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0008](./0008-citus-sharding-by-key-id.md), [0002](./0002-in-memory-non-extractable-private-key-cache.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md)

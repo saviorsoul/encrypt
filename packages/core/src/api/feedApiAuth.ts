@@ -1,6 +1,7 @@
 import type { UploadedPrivateKeyMaterial } from '../crypto/privateKeyMaterial.ts';
 import {
   AUTH_HEADER_NEXT_NONCE,
+  AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
   authHeadersToRecord,
   computeAuthTimeSlot,
@@ -57,10 +58,14 @@ function nonceExpiresAtMs(): number {
   return Date.now() + AUTH_NONCE_TTL_SECONDS * 1000;
 }
 
-function serializeStoredNonce(nonce: string): string {
+function nonceHasMinRemaining(expiresAt: number): boolean {
+  return Date.now() + AUTH_NONCE_MIN_REMAINING_SECONDS * 1000 < expiresAt;
+}
+
+function serializeStoredNonce(nonce: string, expiresAt: number): string {
   const record: StoredAuthNonce = {
     nonce,
-    expiresAt: nonceExpiresAtMs(),
+    expiresAt,
   };
   return JSON.stringify(record);
 }
@@ -89,7 +94,7 @@ function parseNonceFromStorageValue(raw: string | null): string | null {
   if (!record) {
     return null;
   }
-  if (Date.now() >= record.expiresAt) {
+  if (!nonceHasMinRemaining(record.expiresAt)) {
     return null;
   }
   return record.nonce;
@@ -120,13 +125,20 @@ function readStoredPendingNonce(keyId: string): string | null {
   }
 }
 
-function writeStoredPendingNonce(keyId: string, nonce: string): void {
+function writeStoredPendingNonce(
+  keyId: string,
+  nonce: string,
+  expiresAt: number,
+): void {
   const storage = getNoncePersistence();
   if (!storage) {
     return;
   }
   try {
-    storage.setItem(nonceStorageKey(keyId), serializeStoredNonce(nonce));
+    storage.setItem(
+      nonceStorageKey(keyId),
+      serializeStoredNonce(nonce, expiresAt),
+    );
   } catch (error) {
     console.warn('Failed to write auth nonce to localStorage.', error);
   }
@@ -168,9 +180,13 @@ function clearAllStoredPendingNonces(): void {
   }
 }
 
-function rememberPendingNonce(keyId: string, nonce: string): void {
+function rememberPendingNonce(
+  keyId: string,
+  nonce: string,
+  expiresAt = nonceExpiresAtMs(),
+): void {
   getKeyNonceState(keyId).pending = nonce;
-  writeStoredPendingNonce(keyId, nonce);
+  writeStoredPendingNonce(keyId, nonce, expiresAt);
 }
 
 function syncPendingNonceFromStorage(keyId: string): string | null {
@@ -278,7 +294,7 @@ async function readApiError(response: Response): Promise<string> {
 async function requestChallengeNonce(
   config: FeedApiAuthProviderConfig,
   material: UploadedPrivateKeyMaterial,
-): Promise<string> {
+): Promise<{ nonce: string; expiresAt: number }> {
   const http = config.fetch ?? fetch;
   const response = await http(config.challengeUrl, {
     method: 'POST',
@@ -290,11 +306,18 @@ async function requestChallengeNonce(
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }
-  const body = (await response.json()) as { nonce?: string };
+  const body = (await response.json()) as {
+    nonce?: string;
+    expiresAt?: number;
+  };
   if (typeof body.nonce !== 'string' || !body.nonce) {
     throw new Error('Challenge response is missing a nonce.');
   }
-  return body.nonce;
+  const expiresAt =
+    typeof body.expiresAt === 'number' && Number.isFinite(body.expiresAt)
+      ? body.expiresAt
+      : nonceExpiresAtMs();
+  return { nonce: body.nonce, expiresAt };
 }
 
 async function resolvePendingNonce(
@@ -303,9 +326,13 @@ async function resolvePendingNonce(
   forceRefresh: boolean,
 ): Promise<string> {
   if (forceRefresh) {
-    const nonce = await requestChallengeNonce(config, material);
-    rememberPendingNonce(material.keyId, nonce);
-    return nonce;
+    const challenge = await requestChallengeNonce(config, material);
+    rememberPendingNonce(
+      material.keyId,
+      challenge.nonce,
+      challenge.expiresAt,
+    );
+    return challenge.nonce;
   }
 
   const state = getKeyNonceState(material.keyId);
@@ -322,9 +349,9 @@ async function resolvePendingNonce(
     }
   }
 
-  const nonce = await requestChallengeNonce(config, material);
-  rememberPendingNonce(material.keyId, nonce);
-  return nonce;
+  const challenge = await requestChallengeNonce(config, material);
+  rememberPendingNonce(material.keyId, challenge.nonce, challenge.expiresAt);
+  return challenge.nonce;
 }
 
 export async function buildAuthHeadersFromMaterial(

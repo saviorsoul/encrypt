@@ -17,6 +17,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md) | API authentication with time-slot ECDSA proofs | Superseded by [0009](./0009-api-authentication-with-server-minted-redis-nonces.md) |
 | [0008](./0008-citus-sharding-by-key-id.md) | Citus sharding by cryptographic key id | Accepted |
 | [0009](./0009-api-authentication-with-server-minted-redis-nonces.md) | API authentication with server-minted Redis nonces | Accepted |
+| [0010](./0010-challenge-reuses-pending-auth-nonce.md) | Challenge reuses pending auth nonce | Accepted |
 
 ## When to write an ADR
 

@@ -14,7 +14,9 @@ export const AUTH_SIGNABLE_VERSION = 2;
 export const AUTH_TIME_SLOT_SECONDS = 30;
 /** Accepted client slots: serverSlot ± AUTH_TIME_SLOT_SKEW */
 export const AUTH_TIME_SLOT_SKEW = 1;
-export const AUTH_NONCE_TTL_SECONDS = 3600;
+export const AUTH_NONCE_TTL_SECONDS = 15 * 60;
+/** Re-bootstrap when fewer than this many seconds remain before server/client nonce expiry. */
+export const AUTH_NONCE_MIN_REMAINING_SECONDS = 30;
 /** Random auth nonce length in bytes (wire form is standard base64, like manifest IVs). */
 export const AUTH_NONCE_BYTES = 12;
 

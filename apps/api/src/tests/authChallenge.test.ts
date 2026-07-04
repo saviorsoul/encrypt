@@ -73,8 +73,10 @@ describe('auth challenge and nonce rotation', () => {
     expect(challengeResponse.status).toBe(201);
     const challengeBody = JSON.parse(challengeResponse.body) as {
       nonce: string;
+      expiresAt: number;
     };
     expect(challengeBody.nonce).toBeTruthy();
+    expect(challengeBody.expiresAt).toBeGreaterThan(Date.now());
 
     const request = {
       method: 'GET',
@@ -166,14 +168,14 @@ describe('auth challenge and nonce rotation', () => {
     const signature = await signAuthProof(
       material.ecdsaSignPrivateKey,
       material.keyId,
-      { timeSlot, nonce: minted },
+      { timeSlot, nonce: minted.nonce },
       request,
     );
     const proof = authHeadersToRecord({
       keyId: material.keyId,
       publicKey: material.publicKey,
       timeSlot,
-      nonce: minted,
+      nonce: minted.nonce,
       signature,
     });
     const headers = {
@@ -211,7 +213,12 @@ describe('auth challenge and nonce rotation', () => {
       }),
     });
     expect(response.status).toBe(201);
-    expect(JSON.parse(response.body)).toHaveProperty('nonce');
+    const body = JSON.parse(response.body) as {
+      nonce: string;
+      expiresAt: number;
+    };
+    expect(body).toHaveProperty('nonce');
+    expect(body.expiresAt).toBeGreaterThan(Date.now());
   });
 
   it('rejects challenge requests without keyId', async () => {
@@ -225,7 +232,7 @@ describe('auth challenge and nonce rotation', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects auth when a newer challenge replaces the signed nonce', async () => {
+  it('reuses an existing nonce on repeated challenge requests', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const app = createAuthProbeApp();
     const material = await createTestMaterial();
@@ -236,15 +243,19 @@ describe('auth challenge and nonce rotation', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ keyId: material.keyId }),
     });
-    const staleNonce = (JSON.parse(firstChallenge.body) as { nonce: string })
+    const firstNonce = (JSON.parse(firstChallenge.body) as { nonce: string })
       .nonce;
 
-    await requestApp(app, {
+    const secondChallenge = await requestApp(app, {
       method: 'POST',
       path: '/api/auth/challenge',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ keyId: material.keyId }),
     });
+    const secondNonce = (JSON.parse(secondChallenge.body) as { nonce: string })
+      .nonce;
+
+    expect(secondNonce).toBe(firstNonce);
 
     const request = {
       method: 'GET',
@@ -255,14 +266,14 @@ describe('auth challenge and nonce rotation', () => {
     const signature = await signAuthProof(
       material.ecdsaSignPrivateKey,
       material.keyId,
-      { timeSlot, nonce: staleNonce },
+      { timeSlot, nonce: firstNonce },
       request,
     );
     const proof = authHeadersToRecord({
       keyId: material.keyId,
       publicKey: material.publicKey,
       timeSlot,
-      nonce: staleNonce,
+      nonce: firstNonce,
       signature,
     });
 
@@ -278,7 +289,7 @@ describe('auth challenge and nonce rotation', () => {
       },
     });
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
   });
 
   it('rejects auth with a legacy UUID nonce header', async () => {
