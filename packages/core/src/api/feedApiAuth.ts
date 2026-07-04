@@ -13,10 +13,14 @@ import {
   type AuthRequestHeaders,
 } from '../crypto/authProof.ts';
 
+export type FeedApiAuthHeaderOptions = {
+  bypassClientNonceCache?: boolean;
+};
+
 export type FeedApiAuthProvider = {
   getAuthHeaders: (
     request: AuthRequestDescriptor,
-    options?: { forceNonceRefresh?: boolean },
+    options?: FeedApiAuthHeaderOptions,
   ) => Promise<AuthRequestHeaders>;
   captureNextNonceFromResponse: (keyId: string, response: Response) => void;
 };
@@ -326,9 +330,9 @@ async function requestChallengeNonce(
 async function resolvePendingNonce(
   config: FeedApiAuthProviderConfig,
   material: UploadedPrivateKeyMaterial,
-  forceRefresh: boolean,
+  bypassClientCache: boolean,
 ): Promise<string> {
-  if (forceRefresh) {
+  if (bypassClientCache) {
     const challenge = await requestChallengeNonce(config, material);
     rememberPendingNonce(material.keyId, challenge.nonce, challenge.expiresAt);
     return challenge.nonce;
@@ -378,13 +382,13 @@ async function buildAuthHeaderRecordForMaterial(
   config: FeedApiAuthProviderConfig,
   material: UploadedPrivateKeyMaterial,
   request: AuthRequestDescriptor,
-  options?: { forceNonceRefresh?: boolean },
+  options?: FeedApiAuthHeaderOptions,
 ): Promise<Record<string, string>> {
   return withKeyAuthLock(material.keyId, async () => {
     const nonce = await resolvePendingNonce(
       config,
       material,
-      options?.forceNonceRefresh === true,
+      options?.bypassClientNonceCache === true,
     );
     commitNonceUse(material.keyId);
     const headers = await buildAuthHeadersFromMaterial(
@@ -434,7 +438,7 @@ export function createFeedApiAuthProvider(
         const nonce = await resolvePendingNonce(
           config,
           material,
-          options?.forceNonceRefresh === true,
+          options?.bypassClientNonceCache === true,
         );
         commitNonceUse(material.keyId);
         const headers = await buildAuthHeadersFromMaterial(
@@ -455,7 +459,7 @@ export async function resolveAuthHeaderRecord(
     auth?: FeedApiAuthProvider;
     perRequest?: FeedApiPerRequestAuth;
   },
-  options?: { forceNonceRefresh?: boolean },
+  options?: FeedApiAuthHeaderOptions,
 ): Promise<Record<string, string>> {
   if (credentials.perRequest) {
     return buildAuthHeaderRecordForMaterial(

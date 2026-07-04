@@ -3,6 +3,7 @@ import type { InboxApiItem, StoredComment } from '../feed/types.ts';
 import {
   type FeedApiAuthProvider,
   type FeedApiPerRequestAuth,
+  type FeedApiAuthHeaderOptions,
   resolveAuthHeaderRecord,
   captureFeedApiNextNonce,
 } from './feedApiAuth.ts';
@@ -11,6 +12,7 @@ import { buildAuthRequestDescriptorFromParts } from '../crypto/authProof.ts';
 export type {
   FeedApiAuthProvider,
   FeedApiPerRequestAuth,
+  FeedApiAuthHeaderOptions,
 } from './feedApiAuth.ts';
 export {
   createFeedApiAuthProvider,
@@ -107,14 +109,14 @@ export function createFeedApi(config: FeedApiConfig) {
     method: string,
     url: string,
     body?: BodyInit | null,
-    options?: FeedApiRequestOptions & { forceNonceRefresh?: boolean },
+    options?: FeedApiRequestOptions & FeedApiAuthHeaderOptions,
   ): Promise<Record<string, string>> {
     const request = buildAuthRequestDescriptorFromParts(method, url, body);
     return resolveAuthHeaderRecord(
       authConfig,
       request,
       { auth, perRequest: options?.auth },
-      { forceNonceRefresh: options?.forceNonceRefresh },
+      { bypassClientNonceCache: options?.bypassClientNonceCache },
     );
   }
 
@@ -127,7 +129,7 @@ export function createFeedApi(config: FeedApiConfig) {
       const method = (init.method ?? 'GET').toUpperCase();
       const proof = await authHeaders(method, url, init.body, {
         ...options,
-        forceNonceRefresh: attempt > 0,
+        bypassClientNonceCache: attempt > 0,
       });
       const headers = new Headers(init.headers);
       for (const [name, value] of Object.entries(proof)) {
