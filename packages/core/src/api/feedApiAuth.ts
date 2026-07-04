@@ -3,6 +3,7 @@ import {
   AUTH_HEADER_NEXT_NONCE,
   AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
   parseAuthNonceExpiresAtHeader,
+  parseAuthNonceHeader,
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
   authHeadersToRecord,
@@ -400,7 +401,9 @@ export function captureFeedApiNextNonce(
   response: Response,
 ): void {
   const state = getKeyNonceState(keyId);
-  const nextNonce = response.headers.get(AUTH_HEADER_NEXT_NONCE)?.trim();
+  const nextNonce = parseAuthNonceHeader(
+    response.headers.get(AUTH_HEADER_NEXT_NONCE) ?? undefined,
+  );
   if (nextNonce) {
     const expiresAt =
       parseAuthNonceExpiresAtHeader(
