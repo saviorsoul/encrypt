@@ -75,6 +75,8 @@ export function authenticate(): Middleware {
       throw unauthorized(message);
     }
 
+    // Consume before route validation (ADR 0012): valid proofs are single-use
+    // even when later middleware or the handler returns 4xx/5xx.
     const consumed = await consumeAuthNonce(keyId, nonce);
     if (!consumed) {
       throw unauthorized('Authentication nonce is invalid or already used.');
