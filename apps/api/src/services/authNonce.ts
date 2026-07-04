@@ -13,6 +13,7 @@ export type AuthNonceEntry = {
 export type AuthNonceStore = {
   mint(keyId: string): Promise<AuthNonceEntry>;
   get(keyId: string): Promise<AuthNonceEntry | null>;
+  getOrMint(keyId: string): Promise<AuthNonceEntry>;
   consume(keyId: string, nonce: string): Promise<boolean>;
 };
 
@@ -41,6 +42,34 @@ if redis.call('get', KEYS[1]) == ARGV[1] then
 end
 return 0
 `;
+
+const GET_OR_MINT_NONCE_SCRIPT = `
+local current = redis.call('GET', KEYS[1])
+if current then
+  local pttl = redis.call('PTTL', KEYS[1])
+  if pttl >= tonumber(ARGV[1]) then
+    return {current, pttl}
+  end
+end
+redis.call('SET', KEYS[1], ARGV[3], 'EX', tonumber(ARGV[2]))
+local pttl = redis.call('PTTL', KEYS[1])
+return {ARGV[3], pttl}
+`;
+
+function entryFromEvalResult(result: unknown): AuthNonceEntry {
+  if (!Array.isArray(result) || result.length !== 2) {
+    throw new Error('Unexpected Redis getOrMint script result.');
+  }
+  const [nonce, pttlMs] = result;
+  if (typeof nonce !== 'string' || typeof pttlMs !== 'number') {
+    throw new Error('Unexpected Redis getOrMint script result shape.');
+  }
+  const expiresAtMs = expiresAtMsFromPttl(pttlMs);
+  if (expiresAtMs === null) {
+    throw new Error('Redis getOrMint returned an entry without TTL.');
+  }
+  return { nonce, expiresAtMs };
+}
 
 export function createRedisAuthNonceStore(): AuthNonceStore {
   return {
@@ -83,6 +112,19 @@ export function createRedisAuthNonceStore(): AuthNonceStore {
       });
       return deleted === 1;
     },
+
+    async getOrMint(keyId: string): Promise<AuthNonceEntry> {
+      const redis = await getRedisClient();
+      const result = await redis.eval(GET_OR_MINT_NONCE_SCRIPT, {
+        keys: [nonceRedisKey(keyId)],
+        arguments: [
+          String(AUTH_NONCE_MIN_REMAINING_SECONDS * 1000),
+          String(AUTH_NONCE_TTL_SECONDS),
+          generateAuthNonce(),
+        ],
+      });
+      return entryFromEvalResult(result);
+    },
   };
 }
 
@@ -119,6 +161,23 @@ export function createMemoryAuthNonceStore(): AuthNonceStore {
       entries.delete(keyId);
       return true;
     },
+
+    async getOrMint(keyId: string): Promise<AuthNonceEntry> {
+      const existing = entries.get(keyId);
+      if (
+        existing &&
+        Date.now() < existing.expiresAtMs &&
+        hasMinRemainingTtl(existing.expiresAtMs)
+      ) {
+        return existing;
+      }
+      const entry = {
+        nonce: generateAuthNonce(),
+        expiresAtMs: nonceExpiresAtMsFromNow(),
+      };
+      entries.set(keyId, entry);
+      return entry;
+    },
   };
 }
 
@@ -143,12 +202,7 @@ export async function mintAuthNonce(keyId: string): Promise<AuthNonceEntry> {
 export async function getOrMintAuthNonce(
   keyId: string,
 ): Promise<AuthNonceEntry> {
-  const store = getAuthNonceStore();
-  const existing = await store.get(keyId);
-  if (existing && hasMinRemainingTtl(existing.expiresAtMs)) {
-    return existing;
-  }
-  return store.mint(keyId);
+  return getAuthNonceStore().getOrMint(keyId);
 }
 
 export async function consumeAuthNonce(

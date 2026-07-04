@@ -92,6 +92,20 @@ describe('authNonce', () => {
     expect(second.expiresAtMs).toBe(first.expiresAtMs);
   });
 
+  it('returns the same nonce from concurrent getOrMint calls', async () => {
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const keyId = 'test-key-id';
+    const results = await Promise.all([
+      getOrMintAuthNonce(keyId),
+      getOrMintAuthNonce(keyId),
+      getOrMintAuthNonce(keyId),
+    ]);
+
+    expect(results[0]!.nonce).toBe(results[1]!.nonce);
+    expect(results[1]!.nonce).toBe(results[2]!.nonce);
+    expect(await consumeAuthNonce(keyId, results[0]!.nonce)).toBe(true);
+  });
+
   it('mints nonces as 12-byte standard base64', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const { nonce } = await mintAuthNonce('test-key-id');
