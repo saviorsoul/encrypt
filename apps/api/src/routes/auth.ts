@@ -1,5 +1,8 @@
 import Router from '@koa/router';
-import type { AuthChallengeRequest } from '../schemas/common.js';
+import type {
+  AuthChallengeRequest,
+  AuthChallengeResponse,
+} from '../schemas/common.js';
 import { validateBody } from '../middleware/validateBody.js';
 import { getOrMintAuthNonce } from '../services/authNonce.js';
 
@@ -13,7 +16,8 @@ export function createAuthRouter(): Router {
       const { keyId } = ctx.request.body as AuthChallengeRequest;
       const { nonce, expiresAtMs } = await getOrMintAuthNonce(keyId);
       ctx.status = 201;
-      ctx.body = { nonce, expiresAt: expiresAtMs };
+      const body: AuthChallengeResponse = { nonce, expiresAt: expiresAtMs };
+      ctx.body = body;
     },
   );
 

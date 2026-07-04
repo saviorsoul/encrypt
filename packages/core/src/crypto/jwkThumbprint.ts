@@ -38,6 +38,13 @@ export async function ecPublicJwkThumbprintSha256(
   return bytesToBase64Url(new Uint8Array(digest));
 }
 
+/** SHA-256 digest (32 bytes) as base64url without padding. */
+export const JWK_THUMBPRINT_SHA256_BYTES = 32;
+
+export const JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH = Math.ceil(
+  (JWK_THUMBPRINT_SHA256_BYTES * 4) / 3,
+);
+
 /**
  * RFC 7638 thumbprint from a Web Crypto public key, using the same exported `x`/`y`
  * encoding as manifest `keyManifest` entries (avoids mismatches with pasted key text).

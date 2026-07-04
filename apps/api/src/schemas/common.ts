@@ -7,6 +7,19 @@ import {
   MANIFEST_WRAP,
   MAX_BASE64_FIELD_LENGTH,
 } from '../constants.js';
+import { AUTH_NONCE_BYTES } from '@encrypt/core/crypto/authProof';
+import { JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH } from '@encrypt/core/crypto/jwkThumbprint';
+
+/** Standard base64 length for a 12-byte auth nonce (no padding). */
+const AUTH_NONCE_WIRE_LENGTH = Math.ceil((AUTH_NONCE_BYTES * 4) / 3);
+
+/** RFC 7638 SHA-256 JWK thumbprint (base64url, no padding). */
+const keyIdProperty = {
+  type: 'string',
+  minLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
+  maxLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
+  pattern: '^[A-Za-z0-9_-]+$',
+} as const;
 
 export const ecPublicJwkSchema = {
   type: 'object',
@@ -97,7 +110,7 @@ export const keyManifestRecipientSchema = {
   additionalProperties: false,
   required: ['keyId', 'iv', 'salt', 'encryptedDek'],
   properties: {
-    keyId: { type: 'string', minLength: 1, maxLength: 128 },
+    keyId: keyIdProperty,
     publicKey: ecPublicJwkSchema,
     iv: {
       type: 'string',
@@ -181,12 +194,6 @@ const publicKeyWireSchema = {
   ],
 } as const;
 
-const keyIdProperty = {
-  type: 'string',
-  minLength: 1,
-  maxLength: 128,
-} as const;
-
 export const registerUserRequestSchema = {
   type: 'object',
   additionalProperties: false,
@@ -206,6 +213,25 @@ export const authChallengeRequestSchema = {
   required: ['keyId'],
   properties: {
     keyId: keyIdProperty,
+  },
+} as const;
+
+export type AuthChallengeResponse = {
+  nonce: string;
+  expiresAt: number;
+};
+
+export const authChallengeResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['nonce', 'expiresAt'],
+  properties: {
+    nonce: {
+      type: 'string',
+      minLength: AUTH_NONCE_WIRE_LENGTH,
+      maxLength: AUTH_NONCE_WIRE_LENGTH,
+    },
+    expiresAt: { type: 'integer', minimum: 1 },
   },
 } as const;
 
@@ -314,6 +340,7 @@ export const schemaDefinitions = {
   commentPayload: commentPayloadSchema,
   registerUserRequest: registerUserRequestSchema,
   authChallengeRequest: authChallengeRequestSchema,
+  authChallengeResponse: authChallengeResponseSchema,
   commentsQuery: commentsQuerySchema,
   friendshipTargetBody: friendshipTargetBodySchema,
   friendshipRequesterBody: friendshipRequesterBodySchema,

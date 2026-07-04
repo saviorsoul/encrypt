@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import {
@@ -9,6 +9,8 @@ import {
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
+  AUTH_NONCE_MIN_REMAINING_SECONDS,
+  AUTH_NONCE_TTL_SECONDS,
   authHeadersToRecord,
   computeAuthTimeSlot,
   formatAuthPublicKeyWire,
@@ -17,6 +19,8 @@ import {
 import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { bytesToBase64 } from '@encrypt/core/utils/bytes';
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
+import { getValidator } from '../lib/ajv.js';
+import type { AuthChallengeResponse } from '../schemas/common.js';
 import { createApp } from '../app.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { errorHandler } from '../middleware/errorHandler.js';
@@ -26,6 +30,27 @@ import {
   setAuthNonceStoreForTests,
 } from '../services/authNonce.js';
 import { requestApp } from './requestApp.js';
+
+function parseChallengeBody(body: string): AuthChallengeResponse {
+  const parsed: unknown = JSON.parse(body);
+  const validate = getValidator('authChallengeResponse');
+  expect(validate(parsed)).toBe(true);
+  return parsed as AuthChallengeResponse;
+}
+
+async function postChallenge(
+  app: Koa,
+  keyId: string,
+): Promise<AuthChallengeResponse> {
+  const response = await requestApp(app, {
+    method: 'POST',
+    path: '/api/auth/challenge',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ keyId }),
+  });
+  expect(response.status).toBe(201);
+  return parseChallengeBody(response.body);
+}
 
 async function createTestMaterial() {
   const keyPair = await crypto.subtle.generateKey(
@@ -62,20 +87,7 @@ describe('auth challenge and nonce rotation', () => {
     const app = createAuthProbeApp();
     const material = await createTestMaterial();
 
-    const challengeResponse = await requestApp(app, {
-      method: 'POST',
-      path: '/api/auth/challenge',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        keyId: material.keyId,
-      }),
-    });
-
-    expect(challengeResponse.status).toBe(201);
-    const challengeBody = JSON.parse(challengeResponse.body) as {
-      nonce: string;
-      expiresAt: number;
-    };
+    const challengeBody = await postChallenge(app, material.keyId);
     expect(challengeBody.nonce).toBeTruthy();
     expect(challengeBody.expiresAt).toBeGreaterThan(Date.now());
 
@@ -209,20 +221,7 @@ describe('auth challenge and nonce rotation', () => {
   it('exposes challenge on the full app router', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const material = await createTestMaterial();
-    const response = await requestApp(createApp(), {
-      method: 'POST',
-      path: '/api/auth/challenge',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        keyId: material.keyId,
-      }),
-    });
-    expect(response.status).toBe(201);
-    const body = JSON.parse(response.body) as {
-      nonce: string;
-      expiresAt: number;
-    };
-    expect(body).toHaveProperty('nonce');
+    const body = await postChallenge(createApp(), material.keyId);
     expect(body.expiresAt).toBeGreaterThan(Date.now());
   });
 
@@ -237,37 +236,27 @@ describe('auth challenge and nonce rotation', () => {
     expect(response.status).toBe(400);
   });
 
+  it('rejects challenge requests with an invalid keyId', async () => {
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const response = await requestApp(createAuthProbeApp(), {
+      method: 'POST',
+      path: '/api/auth/challenge',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ keyId: 'not-a-jwk-thumbprint' }),
+    });
+    expect(response.status).toBe(400);
+  });
+
   it('reuses an existing nonce on repeated challenge requests', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const app = createAuthProbeApp();
     const material = await createTestMaterial();
 
-    const firstChallenge = await requestApp(app, {
-      method: 'POST',
-      path: '/api/auth/challenge',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ keyId: material.keyId }),
-    });
-    const firstNonce = (JSON.parse(firstChallenge.body) as { nonce: string })
-      .nonce;
+    const firstBody = await postChallenge(app, material.keyId);
+    const secondBody = await postChallenge(app, material.keyId);
 
-    const secondChallenge = await requestApp(app, {
-      method: 'POST',
-      path: '/api/auth/challenge',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ keyId: material.keyId }),
-    });
-    const secondNonce = (JSON.parse(secondChallenge.body) as { nonce: string })
-      .nonce;
-    const firstExpiresAt = (
-      JSON.parse(firstChallenge.body) as { expiresAt: number }
-    ).expiresAt;
-    const secondExpiresAt = (
-      JSON.parse(secondChallenge.body) as { expiresAt: number }
-    ).expiresAt;
-
-    expect(secondNonce).toBe(firstNonce);
-    expect(secondExpiresAt).toBe(firstExpiresAt);
+    expect(secondBody.nonce).toBe(firstBody.nonce);
+    expect(secondBody.expiresAt).toBe(firstBody.expiresAt);
 
     const request = {
       method: 'GET',
@@ -278,14 +267,14 @@ describe('auth challenge and nonce rotation', () => {
     const signature = await signAuthProof(
       material.ecdsaSignPrivateKey,
       material.keyId,
-      { timeSlot, nonce: firstNonce },
+      { timeSlot, nonce: firstBody.nonce },
       request,
     );
     const proof = authHeadersToRecord({
       keyId: material.keyId,
       publicKey: material.publicKey,
       timeSlot,
-      nonce: firstNonce,
+      nonce: firstBody.nonce,
       signature,
     });
 
@@ -302,6 +291,59 @@ describe('auth challenge and nonce rotation', () => {
     });
 
     expect(response.status).toBe(200);
+  });
+
+  it('remints via challenge when the pending nonce is near expiry', async () => {
+    vi.useFakeTimers();
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const app = createAuthProbeApp();
+    const material = await createTestMaterial();
+
+    const firstBody = await postChallenge(app, material.keyId);
+
+    vi.advanceTimersByTime(
+      AUTH_NONCE_TTL_SECONDS * 1000 -
+        (AUTH_NONCE_MIN_REMAINING_SECONDS - 1) * 1000,
+    );
+
+    const secondBody = await postChallenge(app, material.keyId);
+    expect(secondBody.nonce).not.toBe(firstBody.nonce);
+    expect(secondBody.expiresAt).toBeGreaterThan(Date.now());
+
+    const request = {
+      method: 'GET',
+      path: '/api/probe',
+      query: null,
+    };
+    const timeSlot = computeAuthTimeSlot();
+    const signature = await signAuthProof(
+      material.ecdsaSignPrivateKey,
+      material.keyId,
+      { timeSlot, nonce: secondBody.nonce },
+      request,
+    );
+    const proof = authHeadersToRecord({
+      keyId: material.keyId,
+      publicKey: material.publicKey,
+      timeSlot,
+      nonce: secondBody.nonce,
+      signature,
+    });
+
+    const response = await requestApp(app, {
+      method: 'GET',
+      path: '/api/probe',
+      headers: {
+        [AUTH_HEADER_KEY_ID]: proof[AUTH_HEADER_KEY_ID]!,
+        [AUTH_HEADER_PUBLIC_KEY]: proof[AUTH_HEADER_PUBLIC_KEY]!,
+        [AUTH_HEADER_TIME_SLOT]: proof[AUTH_HEADER_TIME_SLOT]!,
+        [AUTH_HEADER_NONCE]: proof[AUTH_HEADER_NONCE]!,
+        [AUTH_HEADER_SIGNATURE]: proof[AUTH_HEADER_SIGNATURE]!,
+      },
+    });
+
+    expect(response.status).toBe(200);
+    vi.useRealTimers();
   });
 
   it('rejects auth with a legacy UUID nonce header', async () => {
