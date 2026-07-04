@@ -2,6 +2,7 @@ import type { Middleware } from 'koa';
 import {
   AUTH_HEADER_KEY_ID,
   AUTH_HEADER_NEXT_NONCE,
+  AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
   AUTH_HEADER_NONCE,
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
@@ -80,7 +81,8 @@ export function authenticate(): Middleware {
     }
 
     const nextNonce = await mintAuthNonce(keyId);
-    ctx.set(AUTH_HEADER_NEXT_NONCE, nextNonce);
+    ctx.set(AUTH_HEADER_NEXT_NONCE, nextNonce.nonce);
+    ctx.set(AUTH_HEADER_NEXT_NONCE_EXPIRES_AT, String(nextNonce.expiresAtMs));
     ctx.state.authenticatedKeyId = keyId;
     await next();
   };

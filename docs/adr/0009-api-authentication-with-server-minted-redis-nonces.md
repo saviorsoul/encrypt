@@ -40,7 +40,7 @@ Bump `AUTH_SIGNABLE_VERSION` to **2**. Keep **`timeSlot`** (±1 clock skew) and 
 
 - **12 random bytes**, standard **base64** (same style as manifest IVs), via `generateAuthNonce()` in `@encrypt/core/crypto/authProof`
 - `parseAuthNonceHeader` rejects non-base64 and wrong lengths (legacy UUID strings are invalid)
-- TTL: `AUTH_NONCE_TTL_SECONDS` = **15 minutes** (server Redis `EX` and client cache expiry). See [Changes](#changes).
+- TTL: `AUTH_NONCE_TTL_SECONDS` = **1 hour** (server Redis `EX` and client cache expiry). See [Changes](#changes).
 
 ### Challenge + rotation
 
@@ -96,12 +96,21 @@ Payload `senderSignature` and the encryption model are unchanged from ADR 0007.
 
 ## Changes
 
-### 2026-07-04
+### 2026-07-04 — [0010](./0010-challenge-reuses-pending-auth-nonce.md)
 
-| Topic                    | As accepted (2026-07-03) | Current                   |
-| ------------------------ | ------------------------ | ------------------------- |
-| `AUTH_NONCE_TTL_SECONDS` | 1 hour (`EX 3600`)       | **15 minutes** (`EX 900`) |
+| Topic                    | As accepted (2026-07-03) | Current                                      |
+| ------------------------ | ------------------------ | -------------------------------------------- |
+| `AUTH_NONCE_TTL_SECONDS` | 1 hour (`EX 3600`)       | **15 minutes** (`EX 900`)                    |
+| Challenge response body  | `{ nonce }`              | `{ nonce, expiresAt }` (server Unix ms)      |
+| Challenge route          | always `mint`            | `getOrMint` — reuse pending nonce when valid |
+
+### 2026-07-04 — [0011](./0011-auth-nonce-expires-at-on-rotation.md)
+
+| Topic                   | As accepted (2026-07-03) | Current                                                          |
+| ----------------------- | ------------------------ | ---------------------------------------------------------------- |
+| Rotation response       | `X-Next-Nonce` only      | `X-Next-Nonce` + `X-Next-Nonce-Expires-At` (Unix ms)           |
+| CORS `Expose-Headers`   | `X-Next-Nonce`           | `X-Next-Nonce`, `X-Next-Nonce-Expires-At`                      |
 
 ## References
 
-- Related ADRs: [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0008](./0008-citus-sharding-by-key-id.md), [0002](./0002-in-memory-non-extractable-private-key-cache.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md)
+- Related ADRs: [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0008](./0008-citus-sharding-by-key-id.md), [0002](./0002-in-memory-non-extractable-private-key-cache.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md)

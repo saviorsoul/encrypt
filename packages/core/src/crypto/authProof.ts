@@ -25,6 +25,7 @@ export const AUTH_HEADER_PUBLIC_KEY = 'X-Public-Key';
 export const AUTH_HEADER_TIME_SLOT = 'X-Time-Slot';
 export const AUTH_HEADER_NONCE = 'X-Nonce';
 export const AUTH_HEADER_NEXT_NONCE = 'X-Next-Nonce';
+export const AUTH_HEADER_NEXT_NONCE_EXPIRES_AT = 'X-Next-Nonce-Expires-At';
 export const AUTH_HEADER_SIGNATURE = 'X-Signature';
 
 export type AuthPublicKeyCoords = { x: string; y: string };
@@ -234,6 +235,23 @@ export function isAuthTimeSlotAccepted(
   }
   const serverSlot = computeAuthTimeSlot(unixSeconds);
   return Math.abs(clientTimeSlot - serverSlot) <= AUTH_TIME_SLOT_SKEW;
+}
+
+export function parseAuthNonceExpiresAtHeader(
+  value: string | null | undefined,
+): number | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
 }
 
 export function parseAuthNonceHeader(value: string | undefined): string | null {

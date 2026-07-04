@@ -1,6 +1,8 @@
 import type { UploadedPrivateKeyMaterial } from '../crypto/privateKeyMaterial.ts';
 import {
   AUTH_HEADER_NEXT_NONCE,
+  AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
+  parseAuthNonceExpiresAtHeader,
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
   authHeadersToRecord,
@@ -327,11 +329,7 @@ async function resolvePendingNonce(
 ): Promise<string> {
   if (forceRefresh) {
     const challenge = await requestChallengeNonce(config, material);
-    rememberPendingNonce(
-      material.keyId,
-      challenge.nonce,
-      challenge.expiresAt,
-    );
+    rememberPendingNonce(material.keyId, challenge.nonce, challenge.expiresAt);
     return challenge.nonce;
   }
 
@@ -404,7 +402,11 @@ export function captureFeedApiNextNonce(
   const state = getKeyNonceState(keyId);
   const nextNonce = response.headers.get(AUTH_HEADER_NEXT_NONCE)?.trim();
   if (nextNonce) {
-    rememberPendingNonce(keyId, nextNonce);
+    const expiresAt =
+      parseAuthNonceExpiresAtHeader(
+        response.headers.get(AUTH_HEADER_NEXT_NONCE_EXPIRES_AT),
+      ) ?? nonceExpiresAtMs();
+    rememberPendingNonce(keyId, nextNonce, expiresAt);
   }
   if (state.inFlightCount > 0) {
     state.inFlightCount -= 1;

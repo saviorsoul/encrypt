@@ -25,7 +25,10 @@ export function createApp(): Koa {
       'Access-Control-Allow-Headers',
       'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Nonce, X-Signature',
     );
-    ctx.set('Access-Control-Expose-Headers', 'X-Next-Nonce');
+    ctx.set(
+      'Access-Control-Expose-Headers',
+      'X-Next-Nonce, X-Next-Nonce-Expires-At',
+    );
     if (ctx.method === 'OPTIONS') {
       ctx.status = 204;
       return;

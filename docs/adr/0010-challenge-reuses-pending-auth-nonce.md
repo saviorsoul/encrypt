@@ -74,7 +74,17 @@ Split nonce acquisition into two server paths:
 
 - Contradicts the bootstrap purpose — the client has no nonce yet with which to authenticate.
 
+## Changes
+
+### 2026-07-04 — [0011](./0011-auth-nonce-expires-at-on-rotation.md)
+
+| Topic                     | As accepted (2026-07-04) | Current                                                                 |
+| ------------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| Redis expiry read         | `TTL` (seconds)          | `PTTL` (ms) — stable `expiresAt` on repeated challenge reuse            |
+| Rotation response         | `X-Next-Nonce` only      | `X-Next-Nonce` + `X-Next-Nonce-Expires-At`; client stores server expiry |
+| Steady-state client cache | `X-Next-Nonce` only      | nonce + `expiresAt` from rotation header (same contract as challenge)   |
+
 ## References
 
 - Tests: `apps/api/src/tests/authChallenge.test.ts`, `apps/api/src/tests/authNonce.test.ts`
-- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md)
+- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md)

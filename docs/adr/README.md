@@ -2,7 +2,7 @@
 
 This folder documents significant architectural and security decisions for the Encrypt app.
 
-An ADR captures **why** a decision was made, not only **what** was implemented. Records are immutable once accepted: if a decision changes, add a new ADR that supersedes the old one.
+An ADR captures **why** a decision was made, not only **what** was implemented. Accepted ADRs are not rewritten in place: add a new ADR for the change, and record deltas in a **`## Changes`** section on the older ADR (see [0001](./0001-use-architecture-decision-records.md)). Fully replaced decisions get status **Superseded by NNNN**.
 
 ## Index
 
@@ -18,6 +18,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0008](./0008-citus-sharding-by-key-id.md) | Citus sharding by cryptographic key id | Accepted |
 | [0009](./0009-api-authentication-with-server-minted-redis-nonces.md) | API authentication with server-minted Redis nonces | Accepted |
 | [0010](./0010-challenge-reuses-pending-auth-nonce.md) | Challenge reuses pending auth nonce | Accepted |
+| [0011](./0011-auth-nonce-expires-at-on-rotation.md) | Auth nonce `expiresAt` on rotation and stable Redis expiry | Accepted |
 
 ## When to write an ADR
 
@@ -87,6 +88,16 @@ What we chose to do.
 
 - …
 
+## Changes
+
+(optional — append when later ADRs refine this one; do not rewrite **Decision** above)
+
+### YYYY-MM-DD — [NNNN](./NNNN-short-title.md)
+
+| Topic | As accepted | Current |
+| ----- | ----------- | ------- |
+| …     | …           | …       |
+
 ## References
 
 - Code: `src/…`
@@ -98,4 +109,4 @@ What we chose to do.
 1. Copy the template into `docs/adr/NNNN-your-title.md`.
 2. Set status to **Proposed** while reviewing.
 3. After implementation (or explicit agreement), set status to **Accepted** and add a row to the index table above.
-4. To change a past decision, add a new ADR and mark the old one **Superseded by NNNN**.
+4. To change a past decision, add a new ADR. Append a dated **`## Changes`** subsection on the older ADR (minimal edits to the original text). Mark **Superseded by NNNN** only when the old ADR is fully replaced.

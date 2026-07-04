@@ -21,7 +21,7 @@ describe('authNonce', () => {
   it('mints and consumes a nonce once', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const keyId = 'test-key-id';
-    const nonce = await mintAuthNonce(keyId);
+    const { nonce } = await mintAuthNonce(keyId);
 
     expect(await consumeAuthNonce(keyId, nonce)).toBe(true);
     expect(await consumeAuthNonce(keyId, nonce)).toBe(false);
@@ -29,7 +29,7 @@ describe('authNonce', () => {
 
   it('isolates nonces by keyId', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
-    const nonce = await mintAuthNonce('key-a');
+    const { nonce } = await mintAuthNonce('key-a');
 
     expect(await consumeAuthNonce('key-b', nonce)).toBe(false);
     expect(await consumeAuthNonce('key-a', nonce)).toBe(true);
@@ -41,8 +41,8 @@ describe('authNonce', () => {
     const first = await mintAuthNonce(keyId);
     const second = await mintAuthNonce(keyId);
 
-    expect(await consumeAuthNonce(keyId, first)).toBe(false);
-    expect(await consumeAuthNonce(keyId, second)).toBe(true);
+    expect(await consumeAuthNonce(keyId, first.nonce)).toBe(false);
+    expect(await consumeAuthNonce(keyId, second.nonce)).toBe(true);
   });
 
   it('returns an existing nonce from getOrMint without replacing it', async () => {
@@ -51,8 +51,8 @@ describe('authNonce', () => {
     const minted = await mintAuthNonce(keyId);
     const reused = await getOrMintAuthNonce(keyId);
 
-    expect(reused.nonce).toBe(minted);
-    expect(await consumeAuthNonce(keyId, minted)).toBe(true);
+    expect(reused.nonce).toBe(minted.nonce);
+    expect(await consumeAuthNonce(keyId, minted.nonce)).toBe(true);
   });
 
   it('mints a nonce from getOrMint when none exists', async () => {
@@ -82,9 +82,19 @@ describe('authNonce', () => {
     vi.useRealTimers();
   });
 
+  it('returns the same expiresAt from getOrMint on repeated reads', async () => {
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const keyId = 'test-key-id';
+    const first = await getOrMintAuthNonce(keyId);
+    const second = await getOrMintAuthNonce(keyId);
+
+    expect(second.nonce).toBe(first.nonce);
+    expect(second.expiresAtMs).toBe(first.expiresAtMs);
+  });
+
   it('mints nonces as 12-byte standard base64', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
-    const nonce = await mintAuthNonce('test-key-id');
+    const { nonce } = await mintAuthNonce('test-key-id');
     expect(base64ToBytes(nonce).length).toBe(AUTH_NONCE_BYTES);
   });
 });

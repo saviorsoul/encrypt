@@ -28,6 +28,13 @@ function hasMinRemainingTtl(expiresAtMs: number): boolean {
   return expiresAtMs - Date.now() >= AUTH_NONCE_MIN_REMAINING_SECONDS * 1000;
 }
 
+function expiresAtMsFromPttl(pttlMs: number): number | null {
+  if (pttlMs <= 0) {
+    return null;
+  }
+  return Date.now() + pttlMs;
+}
+
 const CONSUME_NONCE_SCRIPT = `
 if redis.call('get', KEYS[1]) == ARGV[1] then
   return redis.call('del', KEYS[1])
@@ -40,10 +47,14 @@ export function createRedisAuthNonceStore(): AuthNonceStore {
     async mint(keyId: string): Promise<AuthNonceEntry> {
       const redis = await getRedisClient();
       const nonce = generateAuthNonce();
-      await redis.set(nonceRedisKey(keyId), nonce, {
+      const key = nonceRedisKey(keyId);
+      await redis.set(key, nonce, {
         EX: AUTH_NONCE_TTL_SECONDS,
       });
-      return { nonce, expiresAtMs: nonceExpiresAtMsFromNow() };
+      const pttlMs = await redis.pTTL(key);
+      const expiresAtMs =
+        expiresAtMsFromPttl(pttlMs) ?? nonceExpiresAtMsFromNow();
+      return { nonce, expiresAtMs };
     },
 
     async get(keyId: string): Promise<AuthNonceEntry | null> {
@@ -53,13 +64,14 @@ export function createRedisAuthNonceStore(): AuthNonceStore {
       if (!nonce) {
         return null;
       }
-      const ttlSeconds = await redis.ttl(key);
-      if (ttlSeconds <= 0) {
+      const pttlMs = await redis.pTTL(key);
+      const expiresAtMs = expiresAtMsFromPttl(pttlMs);
+      if (expiresAtMs === null) {
         return null;
       }
       return {
         nonce,
-        expiresAtMs: Date.now() + ttlSeconds * 1000,
+        expiresAtMs,
       };
     },
 
@@ -124,9 +136,8 @@ export function setAuthNonceStoreForTests(store: AuthNonceStore | null): void {
   defaultStore = store;
 }
 
-export async function mintAuthNonce(keyId: string): Promise<string> {
-  const entry = await getAuthNonceStore().mint(keyId);
-  return entry.nonce;
+export async function mintAuthNonce(keyId: string): Promise<AuthNonceEntry> {
+  return getAuthNonceStore().mint(keyId);
 }
 
 export async function getOrMintAuthNonce(

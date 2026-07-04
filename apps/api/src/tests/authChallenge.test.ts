@@ -4,6 +4,7 @@ import bodyParser from 'koa-bodyparser';
 import {
   AUTH_HEADER_KEY_ID,
   AUTH_HEADER_NEXT_NONCE,
+  AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
   AUTH_HEADER_NONCE,
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
@@ -115,6 +116,10 @@ describe('auth challenge and nonce rotation', () => {
       firstResponse.headers[AUTH_HEADER_NEXT_NONCE.toLowerCase()];
     expect(nextNonce).toBeTruthy();
     expect(nextNonce).not.toBe(challengeBody.nonce);
+    const nextNonceExpiresAt = Number(
+      firstResponse.headers[AUTH_HEADER_NEXT_NONCE_EXPIRES_AT.toLowerCase()],
+    );
+    expect(nextNonceExpiresAt).toBeGreaterThan(Date.now());
 
     const secondSignature = await signAuthProof(
       material.ecdsaSignPrivateKey,
@@ -254,8 +259,15 @@ describe('auth challenge and nonce rotation', () => {
     });
     const secondNonce = (JSON.parse(secondChallenge.body) as { nonce: string })
       .nonce;
+    const firstExpiresAt = (
+      JSON.parse(firstChallenge.body) as { expiresAt: number }
+    ).expiresAt;
+    const secondExpiresAt = (
+      JSON.parse(secondChallenge.body) as { expiresAt: number }
+    ).expiresAt;
 
     expect(secondNonce).toBe(firstNonce);
+    expect(secondExpiresAt).toBe(firstExpiresAt);
 
     const request = {
       method: 'GET',
