@@ -11,6 +11,7 @@ export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
 /** Set when the user explicitly signs in during this tab session. */
 export const FRESH_LOGIN_STORAGE_KEY = 'social-fe-fresh-login';
 export const ONBOARDING_COMPLETE_STORAGE_KEY = 'social-fe-onboarding-complete';
+export const STORAGE_AT_RISK_STORAGE_KEY = 'social-fe-storage-at-risk';
 
 function persistLoginStorage(username: string): void {
   try {
@@ -28,6 +29,7 @@ function clearSessionAuthStorage(): void {
     sessionStorage.removeItem(SESSION_USER_STORAGE_KEY);
     sessionStorage.removeItem(FRESH_LOGIN_STORAGE_KEY);
     sessionStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_AT_RISK_STORAGE_KEY);
   } catch {
     /* ignore quota / privacy mode */
   }

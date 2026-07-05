@@ -29,6 +29,8 @@ import { clearAppLocalData } from '@/utils/clearAppLocalData';
 import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 import { SessionPrivateKeyNavSwitch } from '@/components/layout/SessionPrivateKeyNavSwitch.tsx';
+import { StoragePersistenceWarningNavIcon } from '@/components/layout/StoragePersistenceWarningNavIcon.tsx';
+import { useStoragePersistence } from '@/components/providers/StoragePersistenceProvider.tsx';
 
 const NAV_ITEMS = [
   { label: '1:1', to: '/' },
@@ -40,6 +42,7 @@ const EXISTING_USER_LOGIN_SNACKBAR_MS = 5000;
 
 export function AppLayout() {
   const { user, logout, loginNotice, clearLoginNotice } = useAuth();
+  const { storagePersistenceAtRisk } = useStoragePersistence();
   const { publicKeyJwk } = useKeysContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -127,6 +130,9 @@ export function AppLayout() {
             )}
             {user ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {storagePersistenceAtRisk ? (
+                  <StoragePersistenceWarningNavIcon />
+                ) : null}
                 <SessionPrivateKeyNavSwitch />
                 <Tooltip title="Clean local data">
                   <span>

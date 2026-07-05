@@ -26,6 +26,7 @@ import { ExternalFileProvider } from '@/components/providers/ExternalFileProvide
 import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
 import { ElectronTrayEncryptHandler } from '@/components/providers/ElectronTrayEncryptHandler.tsx';
 import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivateKeyProvider.tsx';
+import { StoragePersistenceProvider } from '@/components/providers/StoragePersistenceProvider.tsx';
 import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 
 const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
@@ -40,68 +41,70 @@ function App() {
       <CssBaseline />
       <Router {...routerProps}>
         <AuthProvider>
-          <SessionPrivateKeyProvider>
-            <KeysProvider>
-              {import.meta.env.VITE_ELECTRON ? (
-                <>
-                  <ElectronTraySync />
-                  <ElectronTrayEncryptHandler />
-                </>
-              ) : null}
-              <ExternalFileProvider>
-                <Routes>
-                  <Route element={<AppLayout />}>
-                    <Route path="login" element={<LoginPage />} />
-                    <Route element={<ProtectedRoute />}>
-                      <Route
-                        path="save-private-key"
-                        element={<PrivateKeyDownloadPage />}
-                      />
-                      <Route
-                        path="recover-local-data"
-                        element={<LocalDataRecoveryPage />}
-                      />
-                      <Route element={<OnboardedRoute />}>
-                        <Route index element={<OneToOnePage />} />
-                        <Route path="feed" element={<FeedPage />} />
+          <StoragePersistenceProvider>
+            <SessionPrivateKeyProvider>
+              <KeysProvider>
+                {import.meta.env.VITE_ELECTRON ? (
+                  <>
+                    <ElectronTraySync />
+                    <ElectronTrayEncryptHandler />
+                  </>
+                ) : null}
+                <ExternalFileProvider>
+                  <Routes>
+                    <Route element={<AppLayout />}>
+                      <Route path="login" element={<LoginPage />} />
+                      <Route element={<ProtectedRoute />}>
                         <Route
-                          path="proof-of-concept"
-                          element={
-                            <Navigate
-                              to="/proof-of-concepts/encrypt-decrypt"
-                              replace
-                            />
-                          }
+                          path="save-private-key"
+                          element={<PrivateKeyDownloadPage />}
                         />
                         <Route
-                          path="proof-of-concepts/encrypt-decrypt"
-                          element={<ProofOfConceptEncryptDecryptPage />}
+                          path="recover-local-data"
+                          element={<LocalDataRecoveryPage />}
                         />
-                        <Route
-                          path="proof-of-concepts/feed-comment"
-                          element={<ProofOfConceptFeedCommentPage />}
-                        />
-                        <Route
-                          path="proof-of-concepts/feed-share"
-                          element={<ProofOfConceptFeedSharePage />}
-                        />
-                        <Route
-                          path="proof-of-concepts/1-1"
-                          element={<Navigate to="/" replace />}
-                        />
-                        <Route
-                          path="1-1"
-                          element={<Navigate to="/" replace />}
-                        />
-                        <Route path="glossary" element={<GlossaryPage />} />
+                        <Route element={<OnboardedRoute />}>
+                          <Route index element={<OneToOnePage />} />
+                          <Route path="feed" element={<FeedPage />} />
+                          <Route
+                            path="proof-of-concept"
+                            element={
+                              <Navigate
+                                to="/proof-of-concepts/encrypt-decrypt"
+                                replace
+                              />
+                            }
+                          />
+                          <Route
+                            path="proof-of-concepts/encrypt-decrypt"
+                            element={<ProofOfConceptEncryptDecryptPage />}
+                          />
+                          <Route
+                            path="proof-of-concepts/feed-comment"
+                            element={<ProofOfConceptFeedCommentPage />}
+                          />
+                          <Route
+                            path="proof-of-concepts/feed-share"
+                            element={<ProofOfConceptFeedSharePage />}
+                          />
+                          <Route
+                            path="proof-of-concepts/1-1"
+                            element={<Navigate to="/" replace />}
+                          />
+                          <Route
+                            path="1-1"
+                            element={<Navigate to="/" replace />}
+                          />
+                          <Route path="glossary" element={<GlossaryPage />} />
+                        </Route>
                       </Route>
+                      <Route path="*" element={<NotFoundPage />} />
                     </Route>
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Route>
-                </Routes>
-              </ExternalFileProvider>
-            </KeysProvider>
-          </SessionPrivateKeyProvider>
+                  </Routes>
+                </ExternalFileProvider>
+              </KeysProvider>
+            </SessionPrivateKeyProvider>
+          </StoragePersistenceProvider>
         </AuthProvider>
       </Router>
     </ThemeProvider>
