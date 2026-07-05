@@ -53,6 +53,17 @@ function StoragePersistenceState({ children }: { children: ReactNode }) {
   );
   const [warningSnackbarOpen, setWarningSnackbarOpen] = useState(false);
 
+  const applyPersistenceResult = (
+    granted: boolean,
+    { showSnackbarOnDenial = false }: { showSnackbarOnDenial?: boolean } = {},
+  ) => {
+    writeStorageAtRiskFlag(!granted);
+    setStoragePersistenceAtRisk(!granted);
+    if (!granted && showSnackbarOnDenial) {
+      setWarningSnackbarOpen(true);
+    }
+  };
+
   useEffect(() => {
     if (!user || !isFreshLogin()) {
       return;
@@ -65,17 +76,45 @@ function StoragePersistenceState({ children }: { children: ReactNode }) {
         return;
       }
 
-      writeStorageAtRiskFlag(!granted);
-      setStoragePersistenceAtRisk(!granted);
-      if (!granted) {
-        setWarningSnackbarOpen(true);
-      }
+      applyPersistenceResult(granted, { showSnackbarOnDenial: true });
     });
 
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !storagePersistenceAtRisk) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const recheckPersistence = () => {
+      void requestPersistentStorage().then((granted) => {
+        if (cancelled || !granted) {
+          return;
+        }
+
+        applyPersistenceResult(true);
+      });
+    };
+
+    recheckPersistence();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        recheckPersistence();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user, storagePersistenceAtRisk]);
 
   const value = useMemo(
     () => ({ storagePersistenceAtRisk }),
