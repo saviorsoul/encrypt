@@ -63,11 +63,12 @@ model MessageKeyManifestShard {
 }
 
 model FriendshipRequest {
-  requesterKeyId String   @map("requester_key_id")
-  targetKeyId    String   @map("target_key_id")
-  status         String
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  requesterKeyId   String   @map("requester_key_id")
+  targetKeyId      String   @map("target_key_id")
+  invitationToken  String?  @map("invitation_token")
+  status           String
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@id([requesterKeyId, targetKeyId])
   @@index([targetKeyId, status])
@@ -75,10 +76,23 @@ model FriendshipRequest {
 }
 
 model UserFriendship {
-  ownerKeyId  String   @map("owner_key_id")
-  friendKeyId String   @map("friend_key_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  ownerKeyId      String   @map("owner_key_id")
+  friendKeyId     String   @map("friend_key_id")
+  invitationToken String?  @map("invitation_token")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   @@id([ownerKeyId, friendKeyId])
   @@map("user_friendships")
+}
+
+model FriendInvitation {
+  token        String    @id
+  inviterKeyId String    @map("inviter_key_id")
+  status       String
+  inviteeKeyId String?   @map("invitee_key_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  consumedAt   DateTime? @map("consumed_at")
+
+  @@index([inviterKeyId, status])
+  @@map("friend_invitations")
 }

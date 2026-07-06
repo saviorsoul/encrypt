@@ -6,9 +6,15 @@ const PUBLIC_API_ROUTES: Array<{ method: string; path: string }> = [
 ];
 
 function isPublicApiRoute(method: string, path: string): boolean {
-  return PUBLIC_API_ROUTES.some(
-    (route) => route.method === method && route.path === path,
-  );
+  if (
+    PUBLIC_API_ROUTES.some(
+      (route) => route.method === method && route.path === path,
+    )
+  ) {
+    return true;
+  }
+
+  return method === 'GET' && /^\/api\/friend-invitations\/[^/]+$/.test(path);
 }
 
 /** Apply authentication to all /api routes except health. */

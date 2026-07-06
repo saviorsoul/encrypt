@@ -23,7 +23,11 @@ export async function areFriends(
 export async function listFriendshipsForOwner(ownerKeyId: string) {
   return prisma.userFriendship.findMany({
     where: { ownerKeyId },
-    select: { friendKeyId: true, createdAt: true },
+    select: {
+      friendKeyId: true,
+      createdAt: true,
+      invitationToken: true,
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -39,6 +43,7 @@ export async function listFriendshipsWithPublicKeys(ownerKeyId: string) {
     where: { keyId: { in: friendKeyIds } },
     select: { keyId: true, publicKey: true },
   });
+
   const publicKeyByKeyId = new Map(
     users.map((user) => [user.keyId, user.publicKey]),
   );
@@ -57,6 +62,7 @@ export async function listFriendshipsWithPublicKeys(ownerKeyId: string) {
         friendKeyId: friendship.friendKeyId,
         publicKey: { x: wire.x, y: wire.y },
         createdAt: friendship.createdAt,
+        invitationToken: friendship.invitationToken,
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -76,14 +82,36 @@ export async function findFriendshipRequest(
 
 export async function listIncomingPendingRequests(targetKeyId: string) {
   return prisma.friendshipRequest.findMany({
-    where: { targetKeyId, status: FRIENDSHIP_REQUEST_PENDING },
+    where: {
+      targetKeyId,
+      status: FRIENDSHIP_REQUEST_PENDING,
+      invitationToken: { not: null },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
 
+export async function serializeFriendshipRequests(
+  rows: Prisma.FriendshipRequestGetPayload<object>[],
+) {
+  const validRows = rows.filter(
+    (
+      row,
+    ): row is Prisma.FriendshipRequestGetPayload<object> & {
+      invitationToken: string;
+    } => row.invitationToken != null && row.invitationToken !== '',
+  );
+
+  return validRows.map((row) => serializeFriendshipRequest(row));
+}
+
 export async function listOutgoingPendingRequests(requesterKeyId: string) {
   return prisma.friendshipRequest.findMany({
-    where: { requesterKeyId, status: FRIENDSHIP_REQUEST_PENDING },
+    where: {
+      requesterKeyId,
+      status: FRIENDSHIP_REQUEST_PENDING,
+      invitationToken: { not: null },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -92,11 +120,12 @@ export async function insertFriendshipPair(
   tx: PrismaTx,
   keyIdA: string,
   keyIdB: string,
+  invitationToken: string,
 ): Promise<void> {
   await tx.userFriendship.createMany({
     data: [
-      { ownerKeyId: keyIdA, friendKeyId: keyIdB },
-      { ownerKeyId: keyIdB, friendKeyId: keyIdA },
+      { ownerKeyId: keyIdA, friendKeyId: keyIdB, invitationToken },
+      { ownerKeyId: keyIdB, friendKeyId: keyIdA, invitationToken },
     ],
     skipDuplicates: true,
   });
@@ -133,11 +162,14 @@ export async function deletePendingRequestsBetween(
 }
 
 export function serializeFriendshipRequest(
-  row: Prisma.FriendshipRequestGetPayload<object>,
+  row: Prisma.FriendshipRequestGetPayload<object> & {
+    invitationToken: string;
+  },
 ) {
   return {
     requesterKeyId: row.requesterKeyId,
     targetKeyId: row.targetKeyId,
+    invitationToken: row.invitationToken,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

@@ -17,8 +17,9 @@ export function formatCommentAuthorLabel(
 export function formatFriendListEntry(
   keyId: string,
   usernameByKeyId: Record<string, string>,
+  invitationLabel?: string | null,
 ): { primary: string; secondary: string | null } {
-  const username = usernameByKeyId[keyId];
+  const username = invitationLabel?.trim() || usernameByKeyId[keyId];
   if (username) {
     return { primary: username, secondary: keyId };
   }

@@ -27,6 +27,16 @@ export async function registerUser(input: RegisterUserInput) {
   }
 }
 
+export async function registerUserIfAbsent(
+  input: RegisterUserInput,
+): Promise<void> {
+  const registered = await findRegisteredKeyIds([input.keyId]);
+  if (registered.has(input.keyId)) {
+    return;
+  }
+  await registerUser(input);
+}
+
 export async function listUsers() {
   return prisma.user.findMany({
     select: { keyId: true, publicKey: true },

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listFeedLabStoredUsers } from '@lab/services/db/storedUsers.ts';
 
-export function useFeedLabUsers() {
+export function useFeedLabUsers(ownerKeyId: string | null) {
   const [usernames, setUsernames] = useState<string[]>([]);
   const [usernameByKeyId, setUsernameByKeyId] = useState<
     Record<string, string>
@@ -9,8 +9,15 @@ export function useFeedLabUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    const storedUsers = await listFeedLabStoredUsers();
+  const refresh = useCallback(async (overrideOwnerKeyId?: string | null) => {
+    const activeOwnerKeyId = overrideOwnerKeyId ?? ownerKeyId;
+    if (!activeOwnerKeyId) {
+      setUsernames([]);
+      setUsernameByKeyId({});
+      return;
+    }
+
+    const storedUsers = await listFeedLabStoredUsers(activeOwnerKeyId);
 
     setUsernames(storedUsers.map((user) => user.username));
     setUsernameByKeyId(
@@ -18,14 +25,19 @@ export function useFeedLabUsers() {
         storedUsers.map((user) => [user.keyId, user.username]),
       ),
     );
-  }, []);
+  }, [ownerKeyId]);
 
   const addLocalUser = useCallback(
     (input: { keyId: string; username: string }) => {
-      setUsernameByKeyId((prev) => ({
-        ...prev,
-        [input.keyId]: input.username,
-      }));
+      setUsernameByKeyId((prev) => {
+        if (prev[input.keyId] === input.username) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [input.keyId]: input.username,
+        };
+      });
       setUsernames((prev) => {
         if (prev.includes(input.username)) {
           return prev;

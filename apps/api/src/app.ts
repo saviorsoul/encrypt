@@ -7,6 +7,7 @@ import { authenticateApiUnlessPublic } from './middleware/authenticateApiUnlessP
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { createFriendshipsRouter } from './routes/friendships.js';
+import { createFriendInvitationsRouter } from './routes/friendInvitations.js';
 import { createHealthRouter } from './routes/health.js';
 import { createCommentsRouter } from './routes/comments.js';
 import { createInboxRouter } from './routes/inbox.js';
@@ -72,6 +73,11 @@ export function createApp(): Koa {
 
   const friendshipsRouter = createFriendshipsRouter();
   app.use(friendshipsRouter.routes()).use(friendshipsRouter.allowedMethods());
+
+  const friendInvitationsRouter = createFriendInvitationsRouter();
+  app
+    .use(friendInvitationsRouter.routes())
+    .use(friendInvitationsRouter.allowedMethods());
 
   return app;
 }

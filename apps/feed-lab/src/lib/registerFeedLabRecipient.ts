@@ -2,7 +2,6 @@ import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
-import type { FeedApi, FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
 import {
   loadFeedLabUserByUsername,
   saveFeedLabUser,
@@ -27,11 +26,17 @@ function isUserAlreadyExistsError(message: string): boolean {
   return message.startsWith('User already exists');
 }
 
+export { isUserAlreadyExistsError };
+
+export type RegisterFeedLabRecipientOptions = {
+  acceptedInvitationToken?: string;
+};
+
 export async function registerFeedLabRecipient(
-  api: FeedApi,
+  ownerKeyId: string,
   username: string,
   publicJwk: JsonWebKey,
-  options?: FeedApiRequestOptions,
+  options?: RegisterFeedLabRecipientOptions,
 ): Promise<RegisterFeedLabRecipientResult> {
   const trimmedName = username.trim();
   const slimJwk = slimEcPublicJwk(publicJwk);
@@ -49,30 +54,23 @@ export async function registerFeedLabRecipient(
     publicKey: { x, y },
   };
 
-  const saveLocally = async (): Promise<RegisterFeedLabRecipientResult> => {
-    await saveFeedLabUser(trimmedName, slimJwk);
-    return { status: 'registered', keyId, user };
-  };
-
-  try {
-    await api.postUser({ publicKey: { x, y } }, options);
-    return await saveLocally();
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Failed to register user.';
-
-    if (!isUserAlreadyExistsError(message)) {
-      return { status: 'error', message };
-    }
-
-    const existing = await loadFeedLabUserByUsername(trimmedName);
-    if (existing) {
+  const existing = await loadFeedLabUserByUsername(ownerKeyId, trimmedName);
+  if (existing) {
+    if (existing.keyId === keyId) {
       return {
         status: 'already_saved',
         keyId,
         username: existing.username,
       };
     }
-
-    return await saveLocally();
+    return {
+      status: 'error',
+      message: `"${trimmedName}" already exists. Choose a unique name.`,
+    };
   }
+
+  await saveFeedLabUser(ownerKeyId, trimmedName, slimJwk, {
+    acceptedInvitationToken: options?.acceptedInvitationToken,
+  });
+  return { status: 'registered', keyId, user };
 }

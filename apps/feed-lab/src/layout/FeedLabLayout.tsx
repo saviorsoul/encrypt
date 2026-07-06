@@ -17,6 +17,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
 import { getApiBaseUrl } from '@lab/lib/feedApiClient.ts';
+import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
 type FeedLabTab = 'feed' | 'users';
@@ -65,7 +66,11 @@ function CopyableChip({
 
 export function FeedLabLayout() {
   const apiUrl = getApiBaseUrl();
-  const { keys } = useFeedLabSession();
+  const { keys, feedLabUsers } = useFeedLabSession();
+  const friendships = useFeedLabFriendships(
+    keys.keyId,
+    feedLabUsers.usernameByKeyId,
+  );
   const location = useLocation();
   const navigate = useNavigate();
   const activeTab = tabFromPathname(location.pathname);
@@ -173,6 +178,29 @@ export function FeedLabLayout() {
             <Alert severity="error" onClose={() => keys.clearSessionError()}>
               {keys.sessionError}
             </Alert>
+          ) : null}
+
+          {friendships.incomingRequests.length > 0 ? (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => navigate('/users')}
+                >
+                  View
+                </Button>
+              }
+            >
+              {friendships.incomingRequests.length === 1
+                ? 'You have 1 incoming friend request.'
+                : `You have ${friendships.incomingRequests.length} incoming friend requests.`}
+            </Alert>
+          ) : null}
+
+          {friendships.error ? (
+            <Alert severity="warning">{friendships.error}</Alert>
           ) : null}
 
           <Outlet />

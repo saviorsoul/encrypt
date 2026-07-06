@@ -8,12 +8,17 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./api": "./src/api/index.ts",
+    "./api/*": "./src/api/*.ts",
     "./crypto/*": "./src/crypto/*.ts",
     "./types/*": "./src/types/*.ts",
+    "./utils": "./src/utils/index.ts",
     "./utils/*": "./src/utils/*.ts",
     "./constants/*": "./src/constants/*.ts",
+    "./feed": "./src/feed/index.ts",
     "./feed/*": "./src/feed/*.ts",
-    "./api/*": "./src/api/*.ts"
+    "./invite": "./src/invite/index.ts",
+    "./invite/*": "./src/invite/*.ts"
   },
   "scripts": {
     "lint": "eslint .",

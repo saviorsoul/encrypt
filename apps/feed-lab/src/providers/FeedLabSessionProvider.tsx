@@ -18,7 +18,7 @@ const FeedLabSessionContext = createContext<FeedLabSessionContextValue | null>(
 
 export function FeedLabSessionProvider({ children }: { children: ReactNode }) {
   const keys = usePrivateKeySession();
-  const feedLabUsers = useFeedLabUsers();
+  const feedLabUsers = useFeedLabUsers(keys.keyId);
   const value = useMemo(() => ({ keys, feedLabUsers }), [keys, feedLabUsers]);
 
   return (

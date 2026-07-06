@@ -132,6 +132,22 @@ export function usePrivateKeySession() {
     setSessionError(null);
   }, []);
 
+  const adoptPrivateKeyJwk = useCallback(async (jwk: JsonWebKey) => {
+    setSessionError(null);
+    try {
+      const material = await importUploadedPrivateKeyMaterial(jwk);
+      rememberSessionMaterial(material);
+      setKeyId(material.keyId);
+      setPublicKey(material.publicKey);
+      return material;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Invalid private key file.';
+      setSessionError(message);
+      throw error;
+    }
+  }, []);
+
   return {
     keyId,
     publicKey,
@@ -141,6 +157,7 @@ export function usePrivateKeySession() {
     getPrivateKeyMaterial: resolvePrivateKeyMaterial,
     withPrivateKey,
     changeKeyId,
+    adoptPrivateKeyJwk,
     clearSession,
     clearSessionError,
   };

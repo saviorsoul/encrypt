@@ -86,6 +86,7 @@ export function authenticate(): Middleware {
     ctx.set(AUTH_HEADER_NEXT_NONCE, nextNonce.nonce);
     ctx.set(AUTH_HEADER_NEXT_NONCE_EXPIRES_AT, String(nextNonce.expiresAtMs));
     ctx.state.authenticatedKeyId = keyId;
+    ctx.state.authenticatedPublicKey = publicKeyCoords;
     await next();
   };
 }
@@ -93,5 +94,6 @@ export function authenticate(): Middleware {
 declare module 'koa' {
   interface DefaultState {
     authenticatedKeyId?: string;
+    authenticatedPublicKey?: { x: string; y: string };
   }
 }

@@ -112,9 +112,7 @@ export function useFeedLabRecipients({
           (_, index) => loaded[index] === null,
         );
         if (missing.length > 0) {
-          const missingLabels = missing.map(
-            (keyId) => getOptionLabel(keyId),
-          );
+          const missingLabels = missing.map((keyId) => getOptionLabel(keyId));
           setError(`No public key found for: ${missingLabels.join(', ')}`);
           setRecipients(
             loaded.filter(

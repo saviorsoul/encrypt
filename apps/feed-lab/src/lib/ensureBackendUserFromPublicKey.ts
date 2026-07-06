@@ -2,7 +2,7 @@ import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
-import type { FeedApi } from '@encrypt/core/api/feedApi';
+import type { FeedApi, FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
 import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
 
 export type EnsureBackendUserResult =
@@ -10,17 +10,13 @@ export type EnsureBackendUserResult =
       ok: true;
       keyId: string;
       publicKey: { x: string; y: string };
-      createdOnBackend: boolean;
     }
   | { ok: false; error: string };
-
-function isUserAlreadyExistsError(message: string): boolean {
-  return message.startsWith('User already exists');
-}
 
 export async function ensureBackendUserFromPublicKey(
   api: FeedApi,
   publicKeyText: string,
+  options?: FeedApiRequestOptions,
 ): Promise<EnsureBackendUserResult> {
   const trimmed = publicKeyText.trim();
   if (!trimmed) {
@@ -42,14 +38,14 @@ export async function ensureBackendUserFromPublicKey(
   const keyId = await ecPublicJwkThumbprintSha256(slimJwk);
   const publicKey = { x, y };
 
-  try {
-    await api.postUser({ publicKey });
-    return { ok: true, keyId, publicKey, createdOnBackend: true };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Failed to register user.';
-    if (!isUserAlreadyExistsError(message)) {
-      return { ok: false, error: message };
-    }
-    return { ok: true, keyId, publicKey, createdOnBackend: false };
+  const users = await api.getUsers(options);
+  if (!users.some((user) => user.keyId === keyId)) {
+    return {
+      ok: false,
+      error:
+        'This person must join via an invitation link before you can send a request.',
+    };
   }
+
+  return { ok: true, keyId, publicKey };
 }

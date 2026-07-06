@@ -4,17 +4,19 @@ import {
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
-import {
-  openFeedLabDb,
-  USERS_STORE,
-  USERS_USERNAME_INDEX,
-} from './feedLabDb.ts';
+
+const STORAGE_KEY_PREFIX = 'feed-lab-stored-users:';
 
 export type FeedLabStoredUser = {
   keyId: string;
   username: string;
   publicJwk: JsonWebKey;
+  acceptedInvitationToken?: string;
 };
+
+function storageKeyForOwner(ownerKeyId: string): string {
+  return `${STORAGE_KEY_PREFIX}${ownerKeyId}`;
+}
 
 function parseStoredUser(value: unknown): FeedLabStoredUser | null {
   if (
@@ -30,6 +32,7 @@ function parseStoredUser(value: unknown): FeedLabStoredUser | null {
     keyId: string;
     username: string;
     publicJwk?: unknown;
+    acceptedInvitationToken?: unknown;
   };
 
   if (
@@ -42,91 +45,136 @@ function parseStoredUser(value: unknown): FeedLabStoredUser | null {
   }
 
   try {
-    return {
+    const user: FeedLabStoredUser = {
       keyId: record.keyId,
       username: record.username,
       publicJwk: slimEcPublicJwk(record.publicJwk as JsonWebKey),
     };
+    if (typeof record.acceptedInvitationToken === 'string') {
+      user.acceptedInvitationToken = record.acceptedInvitationToken;
+    }
+    return user;
   } catch {
     return null;
   }
 }
 
+function readStoredUsers(ownerKeyId: string): FeedLabStoredUser[] {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return [];
+    }
+    const raw = localStorage.getItem(storageKeyForOwner(ownerKeyId));
+    if (!raw) {
+      return [];
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map(parseStoredUser)
+      .filter((row): row is FeedLabStoredUser => row !== null)
+      .sort((a, b) => a.username.localeCompare(b.username));
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredUsers(
+  ownerKeyId: string,
+  users: FeedLabStoredUser[],
+): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  try {
+    const key = storageKeyForOwner(ownerKeyId);
+    if (users.length === 0) {
+      localStorage.removeItem(key);
+      return;
+    }
+    localStorage.setItem(
+      key,
+      JSON.stringify(
+        users.sort((a, b) => a.username.localeCompare(b.username)),
+      ),
+    );
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
+export type SaveFeedLabUserOptions = {
+  acceptedInvitationToken?: string;
+};
+
 export async function saveFeedLabUser(
+  ownerKeyId: string,
   username: string,
   publicJwk: JsonWebKey,
+  options?: SaveFeedLabUserOptions,
 ): Promise<string> {
   const slimJwk = slimEcPublicJwk(publicJwk);
   const keyId = await ecPublicJwkThumbprintSha256(slimJwk);
-  const db = await openFeedLabDb();
+  const users = readStoredUsers(ownerKeyId);
+  const existing = users.find((user) => user.keyId === keyId);
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(USERS_STORE, 'readwrite');
-    const store = tx.objectStore(USERS_STORE);
-    store.put({ keyId, username, publicJwk: slimJwk });
-    tx.oncomplete = () => resolve(keyId);
-    tx.onerror = () => reject(tx.error);
-  });
+  const usernameConflict = users.find(
+    (user) => user.username === username && user.keyId !== keyId,
+  );
+  if (usernameConflict) {
+    throw new Error('Username already taken.');
+  }
+
+  const record: FeedLabStoredUser = {
+    keyId,
+    username,
+    publicJwk: slimJwk,
+    ...(options?.acceptedInvitationToken
+      ? { acceptedInvitationToken: options.acceptedInvitationToken }
+      : existing?.acceptedInvitationToken
+        ? { acceptedInvitationToken: existing.acceptedInvitationToken }
+        : {}),
+  };
+
+  const nextUsers = users.filter((user) => user.keyId !== keyId);
+  nextUsers.push(record);
+  writeStoredUsers(ownerKeyId, nextUsers);
+
+  return keyId;
 }
 
-export async function listFeedLabStoredUsers(): Promise<FeedLabStoredUser[]> {
-  const db = await openFeedLabDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(USERS_STORE, 'readonly');
-    const store = tx.objectStore(USERS_STORE);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const users = (request.result ?? [])
-        .map(parseStoredUser)
-        .filter((row): row is FeedLabStoredUser => row !== null)
-        .sort((a, b) => a.username.localeCompare(b.username));
-      resolve(users);
-    };
-    request.onerror = () => reject(request.error);
-  });
+export async function listFeedLabStoredUsers(
+  ownerKeyId: string,
+): Promise<FeedLabStoredUser[]> {
+  return readStoredUsers(ownerKeyId);
 }
 
 export async function loadFeedLabUserByKeyId(
+  ownerKeyId: string,
   keyId: string,
 ): Promise<FeedLabStoredUser | null> {
-  const db = await openFeedLabDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(USERS_STORE, 'readonly');
-    const store = tx.objectStore(USERS_STORE);
-    const request = store.get(keyId);
-
-    request.onsuccess = () => {
-      resolve(parseStoredUser(request.result ?? null));
-    };
-    request.onerror = () => reject(request.error);
-  });
+  return (
+    readStoredUsers(ownerKeyId).find((user) => user.keyId === keyId) ?? null
+  );
 }
 
 export async function loadFeedLabUserByUsername(
+  ownerKeyId: string,
   username: string,
 ): Promise<FeedLabStoredUser | null> {
-  const db = await openFeedLabDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(USERS_STORE, 'readonly');
-    const store = tx.objectStore(USERS_STORE);
-    const index = store.index(USERS_USERNAME_INDEX);
-    const request = index.get(username);
-
-    request.onsuccess = () => {
-      resolve(parseStoredUser(request.result ?? null));
-    };
-    request.onerror = () => reject(request.error);
-  });
+  return (
+    readStoredUsers(ownerKeyId).find((user) => user.username === username) ??
+    null
+  );
 }
 
 export async function loadRecipientKeysForUsername(
+  ownerKeyId: string,
   username: string,
 ): Promise<ManifestRecipientKeys | null> {
-  const stored = await loadFeedLabUserByUsername(username);
+  const stored = await loadFeedLabUserByUsername(ownerKeyId, username);
 
   if (!stored) {
     return null;

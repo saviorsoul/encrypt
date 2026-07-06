@@ -6,11 +6,14 @@ import {
   generateExtractableEcdhKeyPair,
   jwkWithoutKeyOps,
 } from '@encrypt/core/crypto/ecdhKeys';
-import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
+import {
+  ecPublicJwkThumbprintSha256,
+  slimEcPrivateJwk,
+  slimEcPublicJwk,
+} from '@encrypt/core/crypto/jwkThumbprint';
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { registerFeedLabRecipient } from '@lab/lib/registerFeedLabRecipient.ts';
 import { loadFeedLabUserByUsername } from '@lab/services/db/storedUsers.ts';
-import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 
 export function useBackendGenerateUser(
   onRegistered?: (input: {
@@ -18,8 +21,13 @@ export function useBackendGenerateUser(
     username: string;
     publicKey: { x: string; y: string };
   }) => void,
+  options?: {
+    adoptSession?: boolean;
+    adoptPrivateKeyJwk?: (jwk: JsonWebKey) => Promise<unknown>;
+  },
 ) {
-  const api = useFeedApi();
+  const adoptSession = options?.adoptSession;
+  const adoptPrivateKeyJwk = options?.adoptPrivateKeyJwk;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -39,30 +47,34 @@ export function useBackendGenerateUser(
         return null;
       }
 
-      const existing = await loadFeedLabUserByUsername(trimmedName);
-      if (existing) {
-        setError(`"${trimmedName}" already exists. Choose a unique name.`);
-        return null;
-      }
-
       setBusy(true);
       try {
         const keyPair = await generateExtractableEcdhKeyPair();
         const publicJwk = await exportPublicKeyJwk(keyPair);
+        const ownerKeyId = await ecPublicJwkThumbprintSha256(
+          slimEcPublicJwk(publicJwk),
+        );
         const privateJwk = slimEcPrivateJwk(
           (await crypto.subtle.exportKey(
             'jwk',
             keyPair.privateKey,
           )) as JsonWebKey,
         );
-        const registrationMaterial =
-          await importUploadedPrivateKeyMaterial(privateJwk);
+        await importUploadedPrivateKeyMaterial(privateJwk);
+
+        const existing = await loadFeedLabUserByUsername(
+          ownerKeyId,
+          trimmedName,
+        );
+        if (existing) {
+          setError(`"${trimmedName}" already exists. Choose a unique name.`);
+          return null;
+        }
 
         const result = await registerFeedLabRecipient(
-          api,
+          ownerKeyId,
           trimmedName,
           publicJwk,
-          { auth: { authMaterial: registrationMaterial } },
         );
 
         if (result.status === 'error') {
@@ -82,6 +94,10 @@ export function useBackendGenerateUser(
           privateKeyDownloadFilename(trimmedName),
         );
 
+        if (adoptSession && adoptPrivateKeyJwk) {
+          await adoptPrivateKeyJwk(privateJwk);
+        }
+
         setLastKeyId(result.keyId);
         setLastUsername(trimmedName);
         onRegistered?.(result.user);
@@ -95,7 +111,7 @@ export function useBackendGenerateUser(
         setBusy(false);
       }
     },
-    [api, onRegistered],
+    [onRegistered, adoptSession, adoptPrivateKeyJwk],
   );
 
   const clearError = useCallback(() => {

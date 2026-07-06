@@ -4,6 +4,7 @@ import { FeedLabSessionProvider } from '@lab/providers/FeedLabSessionProvider.ts
 import { FeedLabLayout } from '@lab/layout/FeedLabLayout.tsx';
 import { FeedPage } from '@lab/pages/FeedPage.tsx';
 import { UsersPage } from '@lab/pages/UsersPage.tsx';
+import { InvitePage } from '@lab/pages/InvitePage.tsx';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
               <Route path="feed" element={<FeedPage />} />
               <Route path="users" element={<UsersPage />} />
             </Route>
+            <Route path="invite/:token" element={<InvitePage />} />
           </Routes>
         </BrowserRouter>
       </FeedApiProvider>

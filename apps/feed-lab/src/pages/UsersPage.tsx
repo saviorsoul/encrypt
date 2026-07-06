@@ -6,19 +6,17 @@ import {
   CircularProgress,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
-import { GenerateRecipientDialog } from '@/components/one-to-one/GenerateRecipientDialog.tsx';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
-import { useBackendAddUser } from '@lab/hooks/useBackendAddUser.ts';
-import { useBackendGenerateUser } from '@lab/hooks/useBackendGenerateUser.ts';
 import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
 import { useBackendFriendshipRequests } from '@lab/hooks/useBackendFriendshipRequests.ts';
 import {
   AcceptFriendRequestDialog,
   type PendingFriendRequest,
 } from '@lab/components/AcceptFriendRequestDialog.tsx';
+import { AddFriendDialog } from '@lab/components/AddFriendDialog.tsx';
+import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
 import {
   saveFeedLabUser,
   loadFeedLabUserByKeyId,
@@ -34,18 +32,23 @@ export function UsersPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
   const { addLocalUser, usernameByKeyId, usernames } = feedLabUsers;
 
-  const [addUserName, setAddUserName] = useState('');
-  const [addUserPublicKey, setAddUserPublicKey] = useState('');
-  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
-  const [friendRequestPublicKey, setFriendRequestPublicKey] = useState('');
-  const [friendRequestName, setFriendRequestName] = useState('');
   const [acceptFriendRequest, setAcceptFriendRequest] =
     useState<PendingFriendRequest | null>(null);
   const [acceptFriendError, setAcceptFriendError] = useState<string | null>(
     null,
   );
+  const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);
 
-  const friendships = useFeedLabFriendships(keys.keyId, usernameByKeyId);
+  const friendships = useFeedLabFriendships(
+    keys.keyId,
+    usernameByKeyId,
+    addLocalUser,
+  );
+
+  const friendInvitations = useBackendFriendInvitations(() =>
+    friendships.refresh(),
+  );
+
   const friendshipRequests = useBackendFriendshipRequests(
     () => friendships.refresh(),
     (user) => {
@@ -53,34 +56,19 @@ export function UsersPage() {
     },
   );
 
-  const handleUserRegistered = useCallback(
-    (input: {
-      keyId: string;
-      username: string;
-      publicKey: { x: string; y: string };
-    }) => {
-      addLocalUser({
-        keyId: input.keyId,
-        username: input.username,
-      });
-    },
-    [addLocalUser],
-  );
-
-  const addUser = useBackendAddUser(handleUserRegistered);
-  const generateUser = useBackendGenerateUser(handleUserRegistered);
-  const registerBusy = addUser.busy || generateUser.busy;
-
   const handleAcceptFriendWithName = useCallback(
     async (username: string) => {
-      if (!acceptFriendRequest) {
+      if (!acceptFriendRequest || !keys.keyId) {
         return;
       }
 
       setAcceptFriendError(null);
       const { requesterKeyId } = acceptFriendRequest;
 
-      const storedUser = await loadFeedLabUserByKeyId(requesterKeyId);
+      const storedUser = await loadFeedLabUserByKeyId(
+        keys.keyId,
+        requesterKeyId,
+      );
       const acceptError =
         await friendshipRequests.acceptRequest(requesterKeyId);
       if (acceptError) {
@@ -109,7 +97,7 @@ export function UsersPage() {
       }
 
       try {
-        await saveFeedLabUser(username, publicJwk);
+        await saveFeedLabUser(keys.keyId, username, publicJwk);
         addLocalUser({ keyId: requesterKeyId, username });
         setAcceptFriendRequest(null);
       } catch (e) {
@@ -118,146 +106,43 @@ export function UsersPage() {
         );
       }
     },
-    [acceptFriendRequest, addLocalUser, api, friendshipRequests],
+    [acceptFriendRequest, addLocalUser, api, friendshipRequests, keys.keyId],
+  );
+
+  const openAddFriendDialog = useCallback(() => {
+    friendInvitations.clearError();
+    friendInvitations.clearLastInvitationHref();
+    friendshipRequests.clearError();
+    friendshipRequests.clearInfo();
+    setAddFriendDialogOpen(true);
+  }, [friendInvitations, friendshipRequests]);
+
+  const handleSendRequestByPublicKey = useCallback(
+    async (publicKeyText: string, name: string) => {
+      if (!keys.keyId) {
+        return { ok: false };
+      }
+      return friendshipRequests.sendRequestByPublicKey(
+        keys.keyId,
+        publicKeyText,
+        name,
+        usernames,
+        usernameByKeyId,
+      );
+    },
+    [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
   );
 
   return (
     <>
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Register user
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Register a recipient with a local name and public key, or generate a
-          new key pair. Names are stored in this browser only; the backend
-          stores keyId and publicKey.
-        </Typography>
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="Name"
-            placeholder="Recipient name"
-            value={addUserName}
-            disabled={registerBusy}
-            onChange={(event) => {
-              setAddUserName(event.target.value);
-              addUser.clearError();
-              addUser.clearInfo();
-              addUser.clearLastKeyId();
-              generateUser.clearInfo();
-              generateUser.clearLastKeyId();
-            }}
-          />
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label="Public key"
-            placeholder='x;y or {"x":"…","y":"…"}'
-            value={addUserPublicKey}
-            disabled={registerBusy}
-            onChange={(event) => {
-              setAddUserPublicKey(event.target.value);
-              addUser.clearError();
-              addUser.clearInfo();
-              addUser.clearLastKeyId();
-              generateUser.clearInfo();
-              generateUser.clearLastKeyId();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault();
-                void addUser.addUser(
-                  addUserName.trim(),
-                  addUserPublicKey.trim(),
-                );
-              }
-            }}
-          />
-        </Stack>
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          <Button
-            variant="outlined"
-            disabled={registerBusy}
-            onClick={() => {
-              generateUser.clearError();
-              generateUser.clearInfo();
-              generateUser.clearLastKeyId();
-              addUser.clearInfo();
-              addUser.clearLastKeyId();
-              setGenerateDialogOpen(true);
-            }}
-          >
-            Generate user
-          </Button>
-          <Button
-            variant="contained"
-            disabled={
-              registerBusy || !addUserName.trim() || !addUserPublicKey.trim()
-            }
-            onClick={() =>
-              void addUser.addUser(addUserName.trim(), addUserPublicKey.trim())
-            }
-          >
-            {addUser.busy ? 'Registering…' : 'Add user'}
-          </Button>
-        </Stack>
-        {generateUser.info ? (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {generateUser.info}
-          </Alert>
-        ) : null}
-        {addUser.info ? (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {addUser.info}
-          </Alert>
-        ) : null}
-        {addUser.error ? (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {addUser.error}
-          </Alert>
-        ) : null}
-        {generateUser.lastKeyId && generateUser.lastUsername ? (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            {generateUser.lastUsername} generated, private key downloaded,
-            registered with keyId: {generateUser.lastKeyId}
-          </Alert>
-        ) : null}
-        {addUser.lastKeyId ? (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            {addUserName.trim()} registered with keyId: {addUser.lastKeyId}
-          </Alert>
-        ) : null}
-      </Paper>
-
-      <GenerateRecipientDialog
-        open={generateDialogOpen}
-        onClose={() => setGenerateDialogOpen(false)}
-        existingUsernames={usernames}
-        generating={generateUser.busy}
-        error={generateUser.error}
-        onNameChange={generateUser.clearError}
-        onGenerate={(username) =>
-          void generateUser.generateUser(username).then((keyId) => {
-            if (keyId) {
-              setGenerateDialogOpen(false);
-            }
-          })
-        }
-      />
-
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
           Friends
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Mutual friendships are required before you can message someone. Set
-          your keyId above, then send or accept friend requests.
         </Typography>
 
         {!keys.keyId ? (
           <Typography variant="body2" color="text.secondary">
-            Set your keyId to manage friendships.
+            Authenticate with your private key to manage friendships.
           </Typography>
         ) : friendships.loading ? (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -326,75 +211,6 @@ export function UsersPage() {
               </Stack>
             ) : null}
 
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Add friend</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Enter a local name and the friend&apos;s public key. If they are
-                not registered on the backend yet, they will be registered
-                automatically before the request is sent.
-              </Typography>
-              <TextField
-                fullWidth
-                label="Name"
-                placeholder="Friend name"
-                value={friendRequestName}
-                disabled={friendshipRequests.busy}
-                onChange={(event) => {
-                  setFriendRequestName(event.target.value);
-                  friendshipRequests.clearError();
-                }}
-              />
-              <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                label="Public key"
-                placeholder='x;y or {"x":"…","y":"…"}'
-                value={friendRequestPublicKey}
-                disabled={friendshipRequests.busy}
-                onChange={(event) => {
-                  setFriendRequestPublicKey(event.target.value);
-                  friendshipRequests.clearError();
-                }}
-              />
-              <Box>
-                <Button
-                  variant="contained"
-                  disabled={
-                    friendshipRequests.busy ||
-                    !friendRequestPublicKey.trim() ||
-                    !friendRequestName.trim() ||
-                    !keys.keyId
-                  }
-                  onClick={() => {
-                    if (
-                      !keys.keyId ||
-                      !friendRequestPublicKey.trim() ||
-                      !friendRequestName.trim()
-                    ) {
-                      return;
-                    }
-                    void friendshipRequests
-                      .sendRequestByPublicKey(
-                        keys.keyId,
-                        friendRequestPublicKey.trim(),
-                        friendRequestName.trim(),
-                        usernames,
-                        usernameByKeyId,
-                      )
-                      .then((keyId) => {
-                        if (keyId) {
-                          setFriendRequestPublicKey('');
-                          setFriendRequestName('');
-                        }
-                      });
-                  }}
-                >
-                  {friendshipRequests.busy ? 'Sending…' : 'Send request'}
-                </Button>
-              </Box>
-            </Stack>
-
             {friendships.outgoingRequests.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Outgoing requests</Typography>
@@ -402,6 +218,7 @@ export function UsersPage() {
                   const entry = formatFriendListEntry(
                     request.targetKeyId,
                     usernameByKeyId,
+                    friendships.invitationLabelByToken[request.invitationToken],
                   );
                   return (
                     <Box
@@ -424,19 +241,29 @@ export function UsersPage() {
             ) : null}
 
             <Stack spacing={1}>
-              <Typography variant="subtitle2">
-                Your friends ({friendships.friends.length})
-              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <Typography variant="subtitle2">
+                  Your friends ({friendships.friends.length})
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={!keys.keyId || friendInvitations.busy}
+                  onClick={openAddFriendDialog}
+                >
+                  Add friend
+                </Button>
+              </Stack>
               {friendships.friends.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No friends yet. Send or accept a request to start messaging.
+                  No friends yet.
                 </Typography>
               ) : (
                 friendships.friends.map((friend) => {
-                  const entry = formatFriendListEntry(
-                    friend.keyId,
-                    usernameByKeyId,
-                  );
                   return (
                     <Stack
                       key={friend.keyId}
@@ -445,16 +272,14 @@ export function UsersPage() {
                       sx={{ alignItems: 'center' }}
                     >
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2">{entry.primary}</Typography>
-                        {entry.secondary ? (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block' }}
-                          >
-                            {entry.secondary}
-                          </Typography>
-                        ) : null}
+                        <Typography variant="body2">{friend.label}</Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block' }}
+                        >
+                          {friend.keyId}
+                        </Typography>
                       </Box>
                       <Button
                         size="small"
@@ -482,12 +307,25 @@ export function UsersPage() {
             {friendships.error}
           </Alert>
         ) : null}
-        {friendshipRequests.error ? (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {friendshipRequests.error}
-          </Alert>
-        ) : null}
       </Paper>
+
+      <AddFriendDialog
+        open={addFriendDialogOpen}
+        authenticated={keys.keyId != null}
+        invitationBusy={friendInvitations.busy}
+        invitationError={friendInvitations.error}
+        invitationHref={friendInvitations.lastInvitationHref}
+        requestBusy={friendshipRequests.busy}
+        requestError={friendshipRequests.error}
+        requestInfo={friendshipRequests.info}
+        onClose={() => setAddFriendDialogOpen(false)}
+        onClearInvitationError={friendInvitations.clearError}
+        onClearRequestError={friendshipRequests.clearError}
+        onCreateInvitation={(name) =>
+          void friendInvitations.createInvitation(name)
+        }
+        onSendRequestByPublicKey={handleSendRequestByPublicKey}
+      />
 
       <AcceptFriendRequestDialog
         open={acceptFriendRequest != null}

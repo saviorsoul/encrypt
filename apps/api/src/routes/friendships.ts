@@ -25,6 +25,16 @@ function readAuthenticatedKeyId(ctx: {
   return keyId;
 }
 
+function readAuthenticatedPublicKey(ctx: {
+  state: { authenticatedPublicKey?: { x: string; y: string } };
+}): { x: string; y: string } {
+  const publicKey = ctx.state.authenticatedPublicKey;
+  if (!publicKey) {
+    throw unauthorized('Authentication is required.');
+  }
+  return publicKey;
+}
+
 export function createFriendshipsRouter(): Router {
   const router = new Router({ prefix: '/api' });
 
@@ -33,10 +43,14 @@ export function createFriendshipsRouter(): Router {
     validateBody('friendshipTargetBody'),
     async (ctx) => {
       const requesterKeyId = readAuthenticatedKeyId(ctx);
-      const { targetKeyId } = ctx.request.body as FriendshipTargetBody;
+      const requesterPublicKey = readAuthenticatedPublicKey(ctx);
+      const { targetKeyId, invitationToken } = ctx.request
+        .body as FriendshipTargetBody;
       const result = await createFriendshipRequest({
         requesterKeyId,
+        requesterPublicKey,
         targetKeyId,
+        invitationToken,
       });
       ctx.status = result.status === 'accepted' ? 200 : 201;
       ctx.body = result;
@@ -45,7 +59,8 @@ export function createFriendshipsRouter(): Router {
 
   router.get('/friendships/requests', async (ctx) => {
     const keyId = readAuthenticatedKeyId(ctx);
-    ctx.body = await listFriendshipRequests(keyId);
+    const publicKey = readAuthenticatedPublicKey(ctx);
+    ctx.body = await listFriendshipRequests(keyId, publicKey);
   });
 
   router.post(
@@ -53,8 +68,13 @@ export function createFriendshipsRouter(): Router {
     validateBody('friendshipRequesterBody'),
     async (ctx) => {
       const targetKeyId = readAuthenticatedKeyId(ctx);
+      const targetPublicKey = readAuthenticatedPublicKey(ctx);
       const { requesterKeyId } = ctx.request.body as FriendshipRequesterBody;
-      ctx.body = await acceptFriendshipRequest({ requesterKeyId, targetKeyId });
+      ctx.body = await acceptFriendshipRequest({
+        requesterKeyId,
+        targetKeyId,
+        targetPublicKey,
+      });
     },
   );
 
@@ -63,8 +83,13 @@ export function createFriendshipsRouter(): Router {
     validateBody('friendshipRequesterBody'),
     async (ctx) => {
       const targetKeyId = readAuthenticatedKeyId(ctx);
+      const targetPublicKey = readAuthenticatedPublicKey(ctx);
       const { requesterKeyId } = ctx.request.body as FriendshipRequesterBody;
-      ctx.body = await rejectFriendshipRequest({ requesterKeyId, targetKeyId });
+      ctx.body = await rejectFriendshipRequest({
+        requesterKeyId,
+        targetKeyId,
+        targetPublicKey,
+      });
     },
   );
 

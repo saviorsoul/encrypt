@@ -297,9 +297,10 @@ export const commentsQuerySchema = {
 export const friendshipTargetBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['targetKeyId'],
+  required: ['targetKeyId', 'invitationToken'],
   properties: {
     targetKeyId: keyIdProperty,
+    invitationToken: { type: 'string', format: 'uuid' },
   },
 } as const;
 
@@ -321,8 +322,21 @@ export const deleteFriendshipBodySchema = {
   },
 } as const;
 
+export const createFriendInvitationBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {},
+} as const;
+
+export const acceptFriendInvitationBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {},
+} as const;
+
 export type FriendshipTargetBody = {
   targetKeyId: string;
+  invitationToken: string;
 };
 
 export type FriendshipRequesterBody = {
@@ -332,6 +346,10 @@ export type FriendshipRequesterBody = {
 export type DeleteFriendshipBody = {
   friendKeyId: string;
 };
+
+export type CreateFriendInvitationBody = Record<string, never>;
+
+export type AcceptFriendInvitationBody = Record<string, never>;
 
 /** Wire schemas for AJV — replace with @encrypt/schemas imports in step 2. */
 export const schemaDefinitions = {
@@ -345,6 +363,8 @@ export const schemaDefinitions = {
   friendshipTargetBody: friendshipTargetBodySchema,
   friendshipRequesterBody: friendshipRequesterBodySchema,
   deleteFriendshipBody: deleteFriendshipBodySchema,
+  createFriendInvitationBody: createFriendInvitationBodySchema,
+  acceptFriendInvitationBody: acceptFriendInvitationBodySchema,
 } as const;
 
 export type SchemaName = keyof typeof schemaDefinitions;

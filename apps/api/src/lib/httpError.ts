@@ -42,3 +42,7 @@ export function unauthorized(message: string): HttpError {
 export function forbidden(message: string): HttpError {
   return new HttpError(403, message);
 }
+
+export function gone(message: string, details?: unknown): HttpError {
+  return new HttpError(410, message, details);
+}

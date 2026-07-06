@@ -27,29 +27,32 @@ export function useBackendComments(
   const [error, setError] = useState<string | null>(null);
   const [postBusy, setPostBusy] = useState(false);
 
-  const reload = useCallback(async (options?: { silent?: boolean }) => {
-    if (!messageId) {
-      setComments([]);
-      return [];
-    }
-    if (!options?.silent) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const loaded = await api.getComments(messageId);
-      setComments(loaded);
-      return loaded;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load comments.');
-      setComments([]);
-      return [];
-    } finally {
-      if (!options?.silent) {
-        setLoading(false);
+  const reload = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!messageId) {
+        setComments([]);
+        return [];
       }
-    }
-  }, [api, messageId]);
+      if (!options?.silent) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const loaded = await api.getComments(messageId);
+        setComments(loaded);
+        return loaded;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load comments.');
+        setComments([]);
+        return [];
+      } finally {
+        if (!options?.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [api, messageId],
+  );
 
   useEffect(() => {
     void reload();

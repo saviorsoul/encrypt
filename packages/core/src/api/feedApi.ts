@@ -32,10 +32,6 @@ export type FeedApiRequestOptions = {
   auth?: FeedApiPerRequestAuth;
 };
 
-export type RegisterUserRequest = {
-  publicKey: string | { x: string; y: string };
-};
-
 export type BackendUser = {
   keyId: string;
   publicKey: { x: string; y: string };
@@ -60,6 +56,7 @@ export type CreateMessageRequest = {
 export type FriendshipRequest = {
   requesterKeyId: string;
   targetKeyId: string;
+  invitationToken: string;
   status: 'pending' | 'rejected';
   createdAt: string;
   updatedAt: string;
@@ -68,6 +65,7 @@ export type FriendshipRequest = {
 export type Friendship = {
   friendKeyId: string;
   publicKey: { x: string; y: string };
+  invitationToken: string | null;
   createdAt: string;
 };
 
@@ -78,6 +76,23 @@ export type CreateFriendshipRequestResult =
 export type FriendshipRequests = {
   incoming: FriendshipRequest[];
   outgoing: FriendshipRequest[];
+};
+
+export type FriendInvitation = {
+  token: string;
+  inviterKeyId: string;
+  status: 'pending' | 'consumed';
+  inviteeKeyId: string | null;
+  createdAt: string;
+  consumedAt: string | null;
+};
+
+export type FriendInvitationPublic = {
+  token: string;
+  status: 'pending';
+  inviterKeyId: string;
+  inviterPublicKey: { x: string; y: string };
+  createdAt: string;
 };
 
 function joinUrl(baseUrl: string, path: string): string {
@@ -188,34 +203,16 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as InboxApiItem[];
     },
 
-    async getUsers(): Promise<BackendUser[]> {
+    async getUsers(options?: FeedApiRequestOptions): Promise<BackendUser[]> {
       const response = await authorizedFetchUrl(
         joinUrl(baseUrl, '/api/users'),
         {},
-      );
-      if (!response.ok) {
-        throw new Error(await readApiError(response));
-      }
-      return (await response.json()) as BackendUser[];
-    },
-
-    async postUser(
-      body: RegisterUserRequest,
-      options?: FeedApiRequestOptions,
-    ): Promise<{ keyId: string }> {
-      const response = await authorizedFetch(
-        '/api/users',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
         options,
       );
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
-      return (await response.json()) as { keyId: string };
+      return (await response.json()) as BackendUser[];
     },
 
     async postMessage(body: CreateMessageRequest): Promise<{ id: string }> {
@@ -295,6 +292,7 @@ export function createFeedApi(config: FeedApiConfig) {
 
     async postFriendshipRequest(body: {
       targetKeyId: string;
+      invitationToken: string;
     }): Promise<CreateFriendshipRequestResult> {
       const response = await authorizedFetch('/api/friendships/request', {
         method: 'POST',
@@ -372,6 +370,48 @@ export function createFeedApi(config: FeedApiConfig) {
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
+    },
+
+    async postFriendInvitation(): Promise<FriendInvitation> {
+      const response = await authorizedFetch('/api/friend-invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendInvitation;
+    },
+
+    async getFriendInvitation(token: string): Promise<FriendInvitationPublic> {
+      const response = await http(
+        joinUrl(
+          baseUrl,
+          `/api/friend-invitations/${encodeURIComponent(token)}`,
+        ),
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendInvitationPublic;
+    },
+
+    async acceptFriendInvitation(
+      token: string,
+    ): Promise<{ status: 'accepted' }> {
+      const response = await authorizedFetch(
+        `/api/friend-invitations/${encodeURIComponent(token)}/accept`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as { status: 'accepted' };
     },
   };
 }

@@ -23,14 +23,18 @@ const EMPTY_COMMENTS: StoredComment[] = [];
 
 export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
-  const { usernameByKeyId } = feedLabUsers;
+  const { usernameByKeyId, addLocalUser } = feedLabUsers;
   const feed = useBackendFeedData(keys.keyId);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null,
   );
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  const friendships = useFeedLabFriendships(keys.keyId, usernameByKeyId);
+  const friendships = useFeedLabFriendships(
+    keys.keyId,
+    usernameByKeyId,
+    addLocalUser,
+  );
   const recipients = useFeedLabRecipients({
     viewerKeyId: keys.keyId,
     friends: friendships.friends,
