@@ -9,11 +9,23 @@ import {
 import { getMessageById } from './messages.js';
 import { getShareById } from './shares.js';
 
-async function buildKeyManifestForParent(
+async function buildDirectKeyManifestForParent(
   parentMessageId: string,
   recipientKeyId: string,
 ): Promise<KeyManifestMap> {
   const entry = await getManifestEntry(parentMessageId, recipientKeyId);
+  if (!entry) {
+    return {};
+  }
+
+  return { [recipientKeyId]: entry };
+}
+
+async function buildKeyManifestForDelivery(
+  deliveryId: string,
+  recipientKeyId: string,
+): Promise<KeyManifestMap> {
+  const entry = await getManifestEntryForDelivery(deliveryId, recipientKeyId);
   if (!entry) {
     return {};
   }
@@ -75,8 +87,8 @@ export async function listInboxItemsForRecipientKeyId(
     if (!('messageId' in delivery)) {
       continue;
     }
-    const shareKeyManifest = await buildKeyManifestForParent(
-      delivery.messageId,
+    const shareKeyManifest = await buildKeyManifestForDelivery(
+      delivery.id,
       recipientKeyId,
     );
     if (Object.keys(shareKeyManifest).length > 0) {
@@ -85,14 +97,10 @@ export async function listInboxItemsForRecipientKeyId(
   }
 
   for (const delivery of deliveries) {
-    const parentMessageId =
-      'messageId' in delivery ? delivery.messageId : delivery.id;
-    const keyManifest = await buildKeyManifestForParent(
-      parentMessageId,
-      recipientKeyId,
-    );
-
     const isShare = 'messageId' in delivery;
+    const keyManifest = isShare
+      ? await buildKeyManifestForDelivery(delivery.id, recipientKeyId)
+      : await buildDirectKeyManifestForParent(delivery.id, recipientKeyId);
     const includeParentForShareAccess =
       !isShare &&
       Object.keys(keyManifest).length === 0 &&

@@ -33,6 +33,7 @@ export async function filterRecipientsWithoutMessageAccess(
   return recipientKeyIds.filter((keyId) => !hasAccess.has(keyId));
 }
 
+/** Original message shard only (`shareId` is null). */
 export async function getManifestEntry(
   parentMessageId: string,
   recipientKeyId: string,
@@ -43,7 +44,7 @@ export async function getManifestEntry(
     },
   });
 
-  if (!row) {
+  if (!row || row.shareId !== null) {
     return null;
   }
 
