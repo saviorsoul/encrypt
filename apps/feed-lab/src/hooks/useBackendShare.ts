@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { buildManifestShareWithAccess } from '@encrypt/core/crypto/manifestShare';
+import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import {
   recipientHasAccessToParentFromFeed,
   resolveParentMessageAccessFromFeed,
@@ -15,11 +16,17 @@ type ShareContext = {
   manifestLookup: Parameters<typeof resolveParentMessageAccessFromFeed>[3];
 };
 
-export function useBackendShare(withPrivateKey: WithPrivateKey) {
+export function useBackendShare(
+  withPrivateKey: WithPrivateKey,
+  expectedKeyId: string | null,
+) {
   const api = useFeedApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastShareId, setLastShareId] = useState<string | null>(null);
+  const [lastShare, setLastShare] = useState<{
+    messageId: string;
+    shareId: string;
+  } | null>(null);
 
   const shareMessage = useCallback(
     async ({
@@ -31,11 +38,30 @@ export function useBackendShare(withPrivateKey: WithPrivateKey) {
       messageId: string;
       recipients: ManifestRecipientKeys[];
     }) => {
-      setBusy(true);
       setError(null);
-      setLastShareId(null);
+      setLastShare(null);
+
+      if (!messageId) {
+        setError('No message selected.');
+        return null;
+      }
+
+      if (recipients.length === 0) {
+        setError('Select at least one recipient.');
+        return null;
+      }
+
+      setBusy(true);
       try {
         const shareId = await withPrivateKey(async (material) => {
+          if (expectedKeyId) {
+            assertUploadedPrivateKeyMatchesKeyId(
+              material,
+              expectedKeyId,
+              'Uploaded private key does not match your keyId.',
+            );
+          }
+
           const access = await resolveParentMessageAccessFromFeed(
             messageId,
             material.keyId,
@@ -85,9 +111,10 @@ export function useBackendShare(withPrivateKey: WithPrivateKey) {
           return result.id;
         });
         if (!shareId) {
+          setError('Sharing cancelled or private key was not provided.');
           return null;
         }
-        setLastShareId(shareId);
+        setLastShare({ messageId, shareId });
         return shareId;
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to share message.');
@@ -96,18 +123,23 @@ export function useBackendShare(withPrivateKey: WithPrivateKey) {
         setBusy(false);
       }
     },
-    [api, withPrivateKey],
+    [api, expectedKeyId, withPrivateKey],
   );
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
+  const clearLastShare = useCallback(() => {
+    setLastShare(null);
+  }, []);
+
   return {
     busy,
     error,
-    lastShareId,
+    lastShare,
     shareMessage,
     clearError,
+    clearLastShare,
   };
 }

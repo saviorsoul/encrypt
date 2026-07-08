@@ -29,6 +29,9 @@ export function FeedPage() {
     null,
   );
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareTargetMessageId, setShareTargetMessageId] = useState<
+    string | null
+  >(null);
 
   const friendships = useFeedLabFriendships(
     keys.keyId,
@@ -43,7 +46,8 @@ export function FeedPage() {
   });
   const decrypt = useBackendDecrypt(keys.withPrivateKey);
   const { clear: clearDecrypt, mergeDecryptedComments } = decrypt;
-  const share = useBackendShare(keys.withPrivateKey);
+  const share = useBackendShare(keys.withPrivateKey, keys.keyId);
+  const { clearLastShare, clearError: clearShareError } = share;
   const comments = useBackendComments(
     selectedMessageId,
     keys.keyId,
@@ -64,11 +68,12 @@ export function FeedPage() {
         const next = current === messageId ? null : messageId;
         if (next !== current) {
           clearDecrypt();
+          clearLastShare();
         }
         return next;
       });
     },
-    [clearDecrypt],
+    [clearDecrypt, clearLastShare],
   );
 
   const handleReloadFeed = useCallback(async () => {
@@ -87,9 +92,20 @@ export function FeedPage() {
     }
   }, [feed, keys.keyId]);
 
-  const handleOpenShare = useCallback(() => {
-    setShareDialogOpen(true);
-  }, []);
+  const handleOpenShare = useCallback(
+    (messageId: string) => {
+      clearShareError();
+      setShareTargetMessageId(messageId);
+      setShareDialogOpen(true);
+    },
+    [clearShareError],
+  );
+
+  const handleCloseShareDialog = useCallback(() => {
+    setShareDialogOpen(false);
+    setShareTargetMessageId(null);
+    clearShareError();
+  }, [clearShareError]);
 
   const handlePostComment = useCallback(
     async (messageId: string, text: string) => {
@@ -185,7 +201,11 @@ export function FeedPage() {
                   isExpanded ? decrypt.decryptedComments : null
                 }
                 shareBusy={share.busy}
-                shareLastShareId={isExpanded ? share.lastShareId : null}
+                shareLastShareId={
+                  isExpanded && share.lastShare?.messageId === message.id
+                    ? share.lastShare.shareId
+                    : null
+                }
                 onOpenShare={handleOpenShare}
                 onPostCommentForMessage={handlePostComment}
                 feedContext={feedContext}
@@ -204,7 +224,7 @@ export function FeedPage() {
 
       <ShareMessageDialog
         open={shareDialogOpen}
-        messageId={selectedMessageId}
+        messageId={shareTargetMessageId}
         busy={share.busy}
         error={share.error}
         recipientOptions={recipients.recipientOptions}
@@ -216,24 +236,22 @@ export function FeedPage() {
           recipients.loadingFriends || recipients.loadingRecipientKeys
         }
         recipientsError={recipients.error}
-        onClose={() => setShareDialogOpen(false)}
-        onClearError={share.clearError}
+        onClose={handleCloseShareDialog}
+        onClearError={clearShareError}
         onShare={(shareRecipients) =>
-          selectedMessageId
-            ? share
-                .shareMessage({
-                  messageId: selectedMessageId,
-                  recipients: shareRecipients,
-                  allDeliveries: feed.allDeliveries,
-                  manifestLookup: feed.manifestLookup,
-                })
-                .then(async (shareId) => {
-                  if (shareId && keys.keyId) {
-                    await feed.reload();
-                  }
-                  return shareId;
-                })
-            : Promise.resolve(null)
+          share
+            .shareMessage({
+              messageId: shareTargetMessageId ?? '',
+              recipients: shareRecipients,
+              allDeliveries: feed.allDeliveries,
+              manifestLookup: feed.manifestLookup,
+            })
+            .then(async (shareId) => {
+              if (shareId && keys.keyId) {
+                await feed.reload();
+              }
+              return shareId;
+            })
         }
       />
     </>

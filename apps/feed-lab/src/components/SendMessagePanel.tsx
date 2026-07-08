@@ -5,6 +5,7 @@ import {
   Button,
   CircularProgress,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   ToggleButton,
@@ -66,12 +67,13 @@ export function SendMessagePanel({
       if (sendMessage.error) {
         sendMessage.clearError();
       }
-      if (sendMessage.lastMessageId) {
-        sendMessage.clearLastMessageId();
-      }
     },
     [sendMessage],
   );
+
+  const handleCloseSentSnackbar = useCallback(() => {
+    sendMessage.clearLastMessageId();
+  }, [sendMessage]);
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -177,11 +179,6 @@ export function SendMessagePanel({
           {sendMessage.error ? (
             <Alert severity="error">{sendMessage.error}</Alert>
           ) : null}
-          {sendMessage.lastMessageId ? (
-            <Alert severity="success">
-              Message sent: {sendMessage.lastMessageId}
-            </Alert>
-          ) : null}
         </Stack>
       ) : (
         <>
@@ -229,6 +226,23 @@ export function SendMessagePanel({
           ) : null}
         </>
       )}
+
+      <Snackbar
+        key={sendMessage.lastMessageId ?? 'message-sent'}
+        open={sendMessage.lastMessageId !== null}
+        autoHideDuration={5000}
+        onClose={handleCloseSentSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={handleCloseSentSnackbar}
+          sx={{ width: '100%' }}
+        >
+          Message sent: {sendMessage.lastMessageId}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 }

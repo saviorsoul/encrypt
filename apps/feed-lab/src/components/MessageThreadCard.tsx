@@ -42,7 +42,7 @@ type MessageThreadCardProps = {
   decryptedComments: Record<string, string> | null;
   shareBusy: boolean;
   shareLastShareId: string | null;
-  onOpenShare: () => void;
+  onOpenShare: (messageId: string) => void;
   onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
   feedContext: FeedContext;
   usernameByKeyId: Record<string, string>;
@@ -162,7 +162,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               variant="outlined"
               size="small"
               disabled={shareBusy}
-              onClick={onOpenShare}
+              onClick={() => onOpenShare(message.id)}
             >
               Share
             </Button>

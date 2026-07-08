@@ -56,15 +56,18 @@ export function ShareMessageDialog({
   }, [busy, onClearError, onClose]);
 
   const handleShare = useCallback(async () => {
-    onClearError();
+    if (!messageId) {
+      return;
+    }
     if (recipients.length === 0) {
       return;
     }
+    onClearError();
     const shareId = await onShare(recipients);
     if (shareId) {
       onClose();
     }
-  }, [onClearError, onClose, onShare, recipients]);
+  }, [messageId, onClearError, onClose, onShare, recipients]);
 
   return (
     <AppDialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
@@ -116,8 +119,14 @@ export function ShareMessageDialog({
           Cancel
         </Button>
         <Button
+          type="button"
           variant="contained"
-          disabled={busy || recipients.length === 0 || loadingRecipients}
+          disabled={
+            busy ||
+            !messageId ||
+            recipients.length === 0 ||
+            loadingRecipients
+          }
           onClick={() => void handleShare()}
         >
           {busy ? 'Sharing…' : 'Share'}
