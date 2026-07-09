@@ -238,6 +238,7 @@ export const authChallengeResponseSchema = {
 export const createMessageRequestSchema = {
   type: 'object',
   additionalProperties: false,
+  stripAfterValidation: ['messageId'],
   required: [
     'version',
     'wrap',
@@ -259,6 +260,8 @@ export const createMessageRequestSchema = {
       maxLength: MAX_BASE64_FIELD_LENGTH,
     },
     keyManifest: keyManifestSchema,
+    /** Feed copy exports include the source row id; stripped before create. */
+    messageId: { type: 'string', format: 'uuid' },
   },
 } as const;
 

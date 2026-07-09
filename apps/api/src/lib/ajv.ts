@@ -12,6 +12,24 @@ const ajv = new Ajv2020({
 
 addFormats(ajv);
 
+ajv.addKeyword({
+  keyword: 'stripAfterValidation',
+  schemaType: 'array',
+  modifying: true,
+  post: true,
+  metaSchema: {
+    type: 'array',
+    items: { type: 'string' },
+    minItems: 1,
+  },
+  validate(properties: string[], data: Record<string, unknown>) {
+    for (const property of properties) {
+      delete data[property];
+    }
+    return true;
+  },
+});
+
 const validators = new Map<SchemaName, ValidateFunction>();
 
 for (const [name, schema] of Object.entries(schemaDefinitions) as Array<
