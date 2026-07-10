@@ -73,4 +73,8 @@ export function useBackendFeedData(keyId: string | null) {
   };
 }
 
+export function getCachedKeyManifest(messageId: string) {
+  return manifestCache.get(messageId) ?? null;
+}
+
 export { manifestCache };

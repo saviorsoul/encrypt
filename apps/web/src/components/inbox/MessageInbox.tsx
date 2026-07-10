@@ -24,6 +24,7 @@ import { useExternalImportDestination } from '@/hooks/useExternalImportDestinati
 import type { PendingExternalImport } from '@/components/providers/ExternalFileProvider.tsx';
 import { useMessageCommentCounts } from '@/hooks/useMessageCommentCounts.ts';
 import { getCommentThreadMessageId } from '@/crypto/manifestShare.ts';
+import type { FeedMessageImportResult } from '@/crypto/importFeedMessage.ts';
 import type {
   StoredFeedDelivery,
   StoredMessage,
@@ -119,6 +120,9 @@ export function MessageInbox({
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [externalImportSession, setExternalImportSession] =
     useState<PendingExternalImport | null>(null);
+  const [commentsRefreshByThreadId, setCommentsRefreshByThreadId] = useState<
+    Record<string, number>
+  >({});
 
   const handlePendingExternalImport = useCallback(
     (consumed: PendingExternalImport) => {
@@ -149,8 +153,29 @@ export function MessageInbox({
     [messages],
   );
   const senderLabelsById = useInboxSenderLabels(messages, recipientKeyId);
-  const { commentCountByMessageId, incrementCommentCount } =
-    useMessageCommentCounts(commentThreadIds, recipientKeyId);
+  const {
+    commentCountByMessageId,
+    incrementCommentCount,
+    reloadCommentCounts,
+  } = useMessageCommentCounts(commentThreadIds, recipientKeyId);
+
+  const handleFeedMessageImported = useCallback(
+    (result: FeedMessageImportResult) => {
+      onMessageImported?.(result.message);
+
+      if (result.importedComments.length === 0) {
+        return;
+      }
+
+      const threadId = getCommentThreadMessageId(result.message);
+      setCommentsRefreshByThreadId((prev) => ({
+        ...prev,
+        [threadId]: (prev[threadId] ?? 0) + 1,
+      }));
+      void reloadCommentCounts();
+    },
+    [onMessageImported, reloadCommentCounts],
+  );
 
   const handleAnimationDone = useCallback((messageId: string) => {
     setKnownMessageIds((prev) => {
@@ -417,6 +442,10 @@ export function MessageInbox({
               commentCount={
                 commentCountByMessageId[getCommentThreadMessageId(message)] ?? 0
               }
+              commentsRefreshKey={
+                commentsRefreshByThreadId[getCommentThreadMessageId(message)] ??
+                0
+              }
               onCommentPosted={() =>
                 incrementCommentCount(getCommentThreadMessageId(message))
               }
@@ -453,9 +482,7 @@ export function MessageInbox({
           setImportDialogOpen(false);
           setExternalImportSession(null);
         }}
-        onImported={(message) => {
-          onMessageImported?.(message);
-        }}
+        onImported={handleFeedMessageImported}
       />
     </Stack>
   );

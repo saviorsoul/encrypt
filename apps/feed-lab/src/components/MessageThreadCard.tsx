@@ -11,12 +11,16 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import { nameInitial } from '@/utils/nameInitial.ts';
+import type { CopyState } from '@/types/copyState.ts';
 import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCrypto';
 import { getSenderKeyIdFromCorePayload } from '@encrypt/core/crypto/manifestDecrypt';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { formatCommentAuthorLabel } from '@lab/lib/formatCommentAuthorLabel.ts';
+import { assembleStoredMessageCopyPayload } from '@lab/lib/assembleMessageCopyPayload.ts';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
 
 type FeedContext = {
@@ -71,6 +75,8 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 }: MessageThreadCardProps) {
   const [senderKeyId, setSenderKeyId] = useState<string | null>(null);
   const [senderLabel, setSenderLabel] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [copyBusy, setCopyBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +95,24 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
   const isOwnMessage =
     viewerKeyId !== null && senderKeyId !== null && senderKeyId === viewerKeyId;
+
+  const handleCopy = useCallback(async () => {
+    setCopyBusy(true);
+    try {
+      const payloadJson = assembleStoredMessageCopyPayload(
+        message,
+        comments,
+        feedContext.allDeliveries,
+      );
+      await navigator.clipboard.writeText(payloadJson);
+      setCopyState('ok');
+    } catch {
+      setCopyState('err');
+    } finally {
+      setCopyBusy(false);
+      window.setTimeout(() => setCopyState('idle'), 2000);
+    }
+  }, [comments, feedContext.allDeliveries, message]);
 
   return (
     <Paper
@@ -161,12 +185,30 @@ export const MessageThreadCard = memo(function MessageThreadCard({
             <Button
               variant="outlined"
               size="small"
+              disabled={copyBusy || commentsLoading}
+              color={copyState === 'ok' ? 'success' : 'primary'}
+              startIcon={
+                copyState === 'ok' ? <CheckIcon /> : <ContentCopyOutlinedIcon />
+              }
+              onClick={() => void handleCopy()}
+            >
+              Copy
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
               disabled={shareBusy}
               onClick={() => onOpenShare(message.id)}
             >
               Share
             </Button>
           </Stack>
+
+          {copyState === 'err' ? (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              Failed to copy message. Reload the feed and try again.
+            </Alert>
+          ) : null}
 
           {shareLastShareId ? (
             <Alert severity="success" sx={{ mt: 1 }}>

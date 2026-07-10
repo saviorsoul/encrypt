@@ -16,19 +16,19 @@ import {
   useImportFeedValidation,
 } from '@/hooks/useImportFeedMessage.ts';
 import { useImportMessagePreview } from '@/hooks/useImportMessagePreview.ts';
+import { useCommentsOnlyImportPreview } from '@/hooks/useCommentsOnlyImportPreview.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
-import type {
-  StoredFeedDelivery,
-  StoredMessage,
-} from '@/services/db/storedMessages.ts';
+import { parseImportPayloadText } from '@/utils/parseImportPayloadText.ts';
+import type { FeedMessageImportResult } from '@/crypto/importFeedMessage.ts';
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 type ImportFeedMessageDialogProps = {
   open: boolean;
   recipientKeyId: string | null;
   existingMessages: StoredMessage[];
   onClose: () => void;
-  onImported?: (message: StoredFeedDelivery) => void;
+  onImported?: (result: FeedMessageImportResult) => void;
   initialPayload?: string | null;
   initialFileName?: string | null;
   externalImport?: boolean;
@@ -60,8 +60,8 @@ export function ImportFeedMessageDialog({
   const displayPayload = externalPayload ?? payload;
 
   const handleImported = useCallback(
-    (message: StoredFeedDelivery) => {
-      onImported?.(message);
+    (result: FeedMessageImportResult) => {
+      onImported?.(result);
       onClose();
     },
     [onClose, onImported],
@@ -191,6 +191,23 @@ export function ImportFeedMessageDialog({
 
   const previewBusy = previewLoading || busy;
 
+  const bundledCommentCount = useMemo(() => {
+    if (!previewManifest) {
+      return 0;
+    }
+    const parsed = parseImportPayloadText(previewManifest);
+    if (parsed.ok === false || parsed.payload.kind !== 'original') {
+      return 0;
+    }
+    return parsed.payload.comments?.length ?? 0;
+  }, [previewManifest]);
+
+  const commentsOnlyImport = useCommentsOnlyImportPreview(
+    previewManifest,
+    existingMessages,
+    recipientKeyId,
+  );
+
   return (
     <AppDialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
@@ -262,6 +279,11 @@ export function ImportFeedMessageDialog({
             <>
               <Typography variant="body2" color="text.secondary">
                 This is how the message will appear in your feed.
+                {commentsOnlyImport
+                  ? ` The message is already in your feed; ${commentsOnlyImport.missingCount} missing comment${commentsOnlyImport.missingCount === 1 ? '' : 's'} will be added.`
+                  : bundledCommentCount > 0
+                    ? ` ${bundledCommentCount} bundled comment${bundledCommentCount === 1 ? '' : 's'} will also be imported.`
+                    : ''}
               </Typography>
 
               {previewLoading ? (
@@ -328,7 +350,11 @@ export function ImportFeedMessageDialog({
               disabled={previewBusy || !previewMessage}
               onClick={handleConfirmImport}
             >
-              {busy ? 'Adding…' : 'Add to feed'}
+              {busy
+                ? 'Adding…'
+                : commentsOnlyImport
+                  ? `Add ${commentsOnlyImport.missingCount} comment${commentsOnlyImport.missingCount === 1 ? '' : 's'}`
+                  : 'Add to feed'}
             </Button>
           </>
         )}

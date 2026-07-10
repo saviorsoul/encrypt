@@ -30,6 +30,54 @@ function parseStoredComment(value: unknown): StoredComment | null {
   return value as StoredComment;
 }
 
+export async function getStoredCommentById(
+  id: string,
+): Promise<StoredComment | null> {
+  const db = await openCryptoDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(COMMENTS_STORE, 'readonly');
+    const store = tx.objectStore(COMMENTS_STORE);
+    const request = store.get(id);
+
+    request.onsuccess = () => {
+      resolve(parseStoredComment(request.result));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function saveStoredCommentWithId(
+  id: string,
+  messageId: string,
+  payload: string,
+  createdAt?: number,
+): Promise<StoredComment> {
+  const parentMessage = await getStoredMessageById(messageId);
+  if (!parentMessage) {
+    throw new Error(`Message not found: ${messageId}`);
+  }
+
+  const comment: StoredComment = {
+    id,
+    messageId,
+    payload,
+    createdAt: createdAt ?? Date.now(),
+  };
+
+  const db = await openCryptoDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(COMMENTS_STORE, 'readwrite');
+    const store = tx.objectStore(COMMENTS_STORE);
+
+    store.put(comment);
+
+    tx.oncomplete = () => resolve(comment);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function saveStoredComment(
   messageId: string,
   payload: string,

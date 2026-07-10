@@ -41,6 +41,7 @@ export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: KeyManifestMap;
   messageId?: string;
+  parentMessage?: Record<string, unknown>;
 };
 
 export type CreateMessageRequest = {

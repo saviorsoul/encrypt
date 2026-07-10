@@ -39,6 +39,7 @@ export type MessageFeedCardProps = {
   onDecrypt?: () => void;
   recipientKeyId?: string;
   commentCount?: number;
+  commentsRefreshKey?: number;
   onCommentPosted?: () => void;
   commentDecryptionById?: Record<string, MessageDecryptionResult>;
   decryptingCommentId?: string | null;
@@ -56,6 +57,7 @@ export const MessageFeedCard = memo(function MessageFeedCard({
   onDecrypt,
   recipientKeyId,
   commentCount = 0,
+  commentsRefreshKey = 0,
   onCommentPosted,
   commentDecryptionById = {},
   decryptingCommentId = null,
@@ -182,6 +184,7 @@ export const MessageFeedCard = memo(function MessageFeedCard({
                 <MessageCommentsPanel
                   messageId={commentThreadId}
                   recipientKeyId={recipientKeyId}
+                  commentsRefreshKey={commentsRefreshKey}
                   commentDecryptionById={commentDecryptionById}
                   decryptingCommentId={decryptingCommentId}
                   onDecryptComment={onDecryptComment}

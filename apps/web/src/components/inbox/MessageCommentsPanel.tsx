@@ -7,6 +7,7 @@ import type { MessageDecryptionResult } from '@/crypto/messageDecrypt.ts';
 type MessageCommentsPanelProps = {
   messageId: string;
   recipientKeyId: string;
+  commentsRefreshKey?: number;
   commentDecryptionById: Record<string, MessageDecryptionResult>;
   decryptingCommentId: string | null;
   onDecryptComment: (commentId: string) => void;
@@ -17,6 +18,7 @@ type MessageCommentsPanelProps = {
 export function MessageCommentsPanel({
   messageId,
   recipientKeyId,
+  commentsRefreshKey = 0,
   commentDecryptionById,
   decryptingCommentId,
   onDecryptComment,
@@ -26,6 +28,7 @@ export function MessageCommentsPanel({
   const { comments, loading, error, prependComment } = useMessageComments(
     messageId,
     recipientKeyId,
+    commentsRefreshKey,
   );
 
   const handleCommentPosted = (comment: StoredComment) => {

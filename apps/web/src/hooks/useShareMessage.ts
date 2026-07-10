@@ -13,7 +13,7 @@ import {
 } from '@/crypto/manifestShare.ts';
 import type { ManifestRecipientKeys } from '@/crypto/manifestEncrypt.ts';
 import {
-  assembleShareExportPayloadJson,
+  assembleShareCopyPayloadJson,
   shareExportFilename,
 } from '@/crypto/exportFeedMessage.ts';
 import {
@@ -36,6 +36,7 @@ type ShareDeliveryPayload = {
   shareCoreJson: string;
   keyManifest: Awaited<ReturnType<typeof buildManifestShare>>['keyManifest'];
   parentMessageId: string;
+  parentCoreJson: string;
 };
 
 export function useShareMessage({
@@ -136,6 +137,7 @@ export function useShareMessage({
           shareCoreJson,
           keyManifest,
           parentMessageId,
+          parentCoreJson: parentMessage.payload,
         };
       });
     },
@@ -185,10 +187,12 @@ export function useShareMessage({
           return;
         }
 
-        const payloadJson = assembleShareExportPayloadJson(
-          delivery.shareCoreJson,
-          delivery.keyManifest,
-        );
+        const payloadJson = assembleShareCopyPayloadJson({
+          messageId: crypto.randomUUID(),
+          shareCoreJson: delivery.shareCoreJson,
+          keyManifest: delivery.keyManifest,
+          parentCoreJson: delivery.parentCoreJson,
+        });
         const filename = shareExportFilename();
 
         downloadTextFile(payloadJson, filename);

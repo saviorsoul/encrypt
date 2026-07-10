@@ -11,6 +11,12 @@ export type InboxComment = StoredComment & {
   authorLabel: string;
 };
 
+type ResolvedComments = {
+  key: string;
+  comments: InboxComment[];
+  error: string | null;
+};
+
 async function enrichComments(
   comments: StoredComment[],
   recipientKeyId: string,
@@ -53,29 +59,17 @@ async function enrichComments(
 export function useMessageComments(
   messageId: string | null,
   recipientKeyId: string | null,
+  refreshKey = 0,
 ) {
-  const [comments, setComments] = useState<InboxComment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [prevLoadKey, setPrevLoadKey] = useState<string | null>(null);
+  const queryKey =
+    messageId && recipientKeyId
+      ? `${messageId}\0${recipientKeyId}\0${refreshKey}`
+      : null;
 
-  const loadKey =
-    messageId && recipientKeyId ? `${messageId}\0${recipientKeyId}` : null;
-
-  if (loadKey !== prevLoadKey) {
-    setPrevLoadKey(loadKey);
-    if (!loadKey) {
-      setComments([]);
-      setLoading(false);
-      setError(null);
-    } else {
-      setLoading(true);
-      setError(null);
-    }
-  }
+  const [resolved, setResolved] = useState<ResolvedComments | null>(null);
 
   useEffect(() => {
-    if (!messageId || !recipientKeyId) {
+    if (!queryKey || !messageId || !recipientKeyId) {
       return;
     }
 
@@ -86,16 +80,15 @@ export function useMessageComments(
         const stored = await listCommentsForMessage(messageId);
         const enriched = await enrichComments(stored, recipientKeyId);
         if (!cancelled) {
-          setComments(enriched);
+          setResolved({ key: queryKey, comments: enriched, error: null });
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load comments.');
-          setComments([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+          setResolved({
+            key: queryKey,
+            comments: [],
+            error: e instanceof Error ? e.message : 'Failed to load comments.',
+          });
         }
       }
     })();
@@ -103,32 +96,35 @@ export function useMessageComments(
     return () => {
       cancelled = true;
     };
-  }, [messageId, recipientKeyId]);
+  }, [queryKey, messageId, recipientKeyId]);
+
+  const loading = Boolean(queryKey && resolved?.key !== queryKey);
+  const comments =
+    queryKey && resolved?.key === queryKey ? resolved.comments : [];
+  const error = queryKey && resolved?.key === queryKey ? resolved.error : null;
 
   const loadComments = useCallback(async () => {
-    if (!messageId || !recipientKeyId) {
-      setComments([]);
+    if (!queryKey || !messageId || !recipientKeyId) {
+      setResolved(null);
       return;
     }
-
-    setLoading(true);
-    setError(null);
 
     try {
       const stored = await listCommentsForMessage(messageId);
       const enriched = await enrichComments(stored, recipientKeyId);
-      setComments(enriched);
+      setResolved({ key: queryKey, comments: enriched, error: null });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load comments.');
-      setComments([]);
-    } finally {
-      setLoading(false);
+      setResolved({
+        key: queryKey,
+        comments: [],
+        error: e instanceof Error ? e.message : 'Failed to load comments.',
+      });
     }
-  }, [messageId, recipientKeyId]);
+  }, [queryKey, messageId, recipientKeyId]);
 
   const prependComment = useCallback(
     async (comment: StoredComment) => {
-      if (!recipientKeyId || comment.messageId !== messageId) {
+      if (!recipientKeyId || comment.messageId !== messageId || !queryKey) {
         return;
       }
 
@@ -137,14 +133,20 @@ export function useMessageComments(
         return;
       }
 
-      setComments((prev) => {
-        if (prev.some((existing) => existing.id === inboxComment.id)) {
+      setResolved((prev) => {
+        if (!prev || prev.key !== queryKey) {
           return prev;
         }
-        return [...prev, inboxComment];
+        if (prev.comments.some((existing) => existing.id === inboxComment.id)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          comments: [...prev.comments, inboxComment],
+        };
       });
     },
-    [messageId, recipientKeyId],
+    [messageId, recipientKeyId, queryKey],
   );
 
   return {

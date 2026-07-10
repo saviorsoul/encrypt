@@ -13,8 +13,10 @@ import {
   Typography,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
+import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { validateJsonSyntaxText } from '@lab/lib/validateJsonSyntax.ts';
 import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendSendMessage } from '@lab/hooks/useBackendSendMessage.ts';
@@ -39,6 +41,11 @@ export function SendMessagePanel({
   const importSend = useSendImportToBackend();
   const sendMessage = useBackendSendMessage(withPrivateKey, keyId);
   const [importPayload, setImportPayload] = useState('');
+  const [copyNotice, setCopyNotice] = useState<{
+    open: boolean;
+    severity: 'success' | 'error';
+    key: number;
+  }>({ open: false, severity: 'success', key: 0 });
   const [sendMode, setSendMode] = useState<SendMode>('message');
   const [messageText, setMessageText] = useState('');
 
@@ -74,6 +81,31 @@ export function SendMessagePanel({
   const handleCloseSentSnackbar = useCallback(() => {
     sendMessage.clearLastMessageId();
   }, [sendMessage]);
+
+  const handleCopySentMessage = useCallback(async () => {
+    if (!sendMessage.lastMessageCopyPayload) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(sendMessage.lastMessageCopyPayload);
+      setCopyNotice((prev) => ({
+        open: true,
+        severity: 'success',
+        key: prev.key + 1,
+      }));
+    } catch {
+      setCopyNotice((prev) => ({
+        open: true,
+        severity: 'error',
+        key: prev.key + 1,
+      }));
+    }
+  }, [sendMessage.lastMessageCopyPayload]);
+
+  const handleCloseCopyNotice = useCallback(() => {
+    setCopyNotice((prev) => ({ ...prev, open: false }));
+  }, []);
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -238,11 +270,28 @@ export function SendMessagePanel({
           severity="success"
           variant="filled"
           onClose={handleCloseSentSnackbar}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<ContentCopyOutlinedIcon />}
+              onClick={() => void handleCopySentMessage()}
+            >
+              Copy
+            </Button>
+          }
           sx={{ width: '100%' }}
         >
           Message sent: {sendMessage.lastMessageId}
         </Alert>
       </Snackbar>
+
+      <CopiedToClipboardSnackbar
+        open={copyNotice.open}
+        severity={copyNotice.severity}
+        snackbarKey={copyNotice.key}
+        onClose={handleCloseCopyNotice}
+      />
     </Paper>
   );
 }

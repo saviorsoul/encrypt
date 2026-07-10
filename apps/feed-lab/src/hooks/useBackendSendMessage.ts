@@ -3,6 +3,7 @@ import { encryptWithManifest } from '@encrypt/core/crypto/manifestEncrypt';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { isPrivateKeyFileSelectionCancelled } from '@/crypto/privateKeyFile.ts';
+import { assembleMessageCopyPayloadFromWire } from '@lab/lib/assembleMessageCopyPayload.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
@@ -16,6 +17,9 @@ export function useBackendSendMessage(
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+  const [lastMessageCopyPayload, setLastMessageCopyPayload] = useState<
+    string | null
+  >(null);
 
   const sendMessage = useCallback(
     async (
@@ -24,6 +28,7 @@ export function useBackendSendMessage(
     ): Promise<string | null> => {
       setError(null);
       setLastMessageId(null);
+      setLastMessageCopyPayload(null);
 
       if (!plaintext.trim()) {
         setError('Enter a message.');
@@ -37,7 +42,7 @@ export function useBackendSendMessage(
 
       setBusy(true);
       try {
-        const messageId = await withPrivateKey(async (material) => {
+        const sent = await withPrivateKey(async (material) => {
           if (expectedKeyId) {
             assertUploadedPrivateKeyMatchesKeyId(
               material,
@@ -56,15 +61,19 @@ export function useBackendSendMessage(
           const result = await api.postMessage(
             body as Parameters<typeof api.postMessage>[0],
           );
-          return result.id;
+          return {
+            id: result.id,
+            copyPayload: assembleMessageCopyPayloadFromWire(result.id, body),
+          };
         });
 
-        if (!messageId) {
+        if (!sent) {
           return null;
         }
 
-        setLastMessageId(messageId);
-        return messageId;
+        setLastMessageId(sent.id);
+        setLastMessageCopyPayload(sent.copyPayload);
+        return sent.id;
       } catch (e) {
         if (isPrivateKeyFileSelectionCancelled(e)) {
           return null;
@@ -84,12 +93,14 @@ export function useBackendSendMessage(
 
   const clearLastMessageId = useCallback(() => {
     setLastMessageId(null);
+    setLastMessageCopyPayload(null);
   }, []);
 
   return {
     busy,
     error,
     lastMessageId,
+    lastMessageCopyPayload,
     sendMessage,
     clearError,
     clearLastMessageId,

@@ -2,13 +2,25 @@ import {
   MANIFEST_SHARE_VERSION,
   MANIFEST_SHARE_WRAP,
 } from '../constants/manifestShare.ts';
+import { validateCommentPayload } from '../crypto/commentCrypto.ts';
 import { validateManifestShareWirePayload } from '../crypto/manifestShare.ts';
+import type { CommentPayload } from '../types/comment.ts';
 import type { KeyManifestMap } from '../types/manifest.ts';
 import type { ManifestShareWirePayload } from '../types/manifestShare.ts';
+import {
+  manifestCorePayloadJsonFromWire,
+  parseManifestCorePayload,
+} from '../crypto/manifestStorage.ts';
 import {
   parseJsonObjectText,
   parseManifestPayloadText,
 } from '../utils/parseManifestPayloadText.ts';
+
+export type ParsedBundledCommentImport = {
+  id: string;
+  createdAt: number;
+  payload: CommentPayload;
+};
 
 export type ParsedOriginalImportPayload = {
   kind: 'original';
@@ -16,6 +28,7 @@ export type ParsedOriginalImportPayload = {
   keyManifest: KeyManifestMap;
   /** Present when the export included a local IndexedDB message id. */
   exportedMessageId?: string;
+  comments?: ParsedBundledCommentImport[];
 };
 
 export type ParsedShareImportPayload = {
@@ -23,8 +36,10 @@ export type ParsedShareImportPayload = {
   share: ManifestShareWirePayload;
   keyManifest: KeyManifestMap;
   parentMessageId: string;
+  parentMessageJson: string;
   /** Share delivery row id when the export included one. */
   messageId?: string;
+  comments?: ParsedBundledCommentImport[];
 };
 
 export type ParsedImportPayload =
@@ -68,6 +83,10 @@ function normalizeShareImport(
     keyManifest: parsed.keyManifest as KeyManifestMap | undefined,
     messageId:
       typeof parsed.messageId === 'string' ? parsed.messageId : undefined,
+    parentMessage: isRecord(parsed.parentMessage)
+      ? parsed.parentMessage
+      : undefined,
+    comments: parsed.comments,
   };
 }
 
@@ -75,6 +94,8 @@ type ShareImport = {
   share: ManifestShareWirePayload;
   keyManifest?: KeyManifestMap;
   messageId?: string;
+  parentMessage?: Record<string, unknown>;
+  comments?: unknown;
 };
 
 function parseShareImportPayload(wire: ShareImport): ParseImportPayloadResult {
@@ -99,6 +120,34 @@ function parseShareImportPayload(wire: ShareImport): ParseImportPayloadResult {
     };
   }
 
+  if (!wire.parentMessage) {
+    return {
+      ok: false,
+      error: 'Share import is missing parentMessage.',
+    };
+  }
+
+  let parentMessageJson: string;
+  try {
+    parentMessageJson = manifestCorePayloadJsonFromWire(
+      JSON.stringify(wire.parentMessage),
+    );
+    parseManifestCorePayload(parentMessageJson);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Invalid parentMessage.',
+    };
+  }
+
+  const commentsResult = parseBundledComments(
+    wire.comments,
+    share.parentMessageId,
+  );
+  if (commentsResult.ok === false) {
+    return commentsResult;
+  }
+
   return {
     ok: true,
     payload: {
@@ -106,9 +155,109 @@ function parseShareImportPayload(wire: ShareImport): ParseImportPayloadResult {
       share,
       keyManifest,
       parentMessageId: share.parentMessageId,
+      parentMessageJson,
       messageId: wire.messageId,
+      comments:
+        commentsResult.comments.length > 0
+          ? commentsResult.comments
+          : undefined,
     },
   };
+}
+
+type ParseBundledCommentsResult =
+  | { ok: true; comments: ParsedBundledCommentImport[] }
+  | { ok: false; error: string };
+
+type ParsedBundledCommentEntry =
+  | { comment: ParsedBundledCommentImport }
+  | { error: string };
+
+function bundledCommentEntryError(
+  index: number,
+  detail: string,
+): { error: string } {
+  return { error: `comments[${index}]${detail}` };
+}
+
+function parseBundledCommentEntry(
+  entry: unknown,
+  index: number,
+  parentMessageId: string | undefined,
+): ParsedBundledCommentEntry {
+  if (!isRecord(entry)) {
+    return bundledCommentEntryError(index, ' must be an object.');
+  }
+
+  if (typeof entry.id !== 'string' || !entry.id) {
+    return bundledCommentEntryError(index, ' is missing id.');
+  }
+
+  if (
+    typeof entry.createdAt !== 'number' ||
+    !Number.isFinite(entry.createdAt)
+  ) {
+    return bundledCommentEntryError(index, ' is missing createdAt.');
+  }
+
+  if (!isRecord(entry.payload)) {
+    return bundledCommentEntryError(index, ' is missing payload.');
+  }
+
+  const commentError = validateCommentPayload(
+    entry.payload as unknown as CommentPayload,
+  );
+  if (commentError) {
+    return bundledCommentEntryError(index, `: ${commentError}`);
+  }
+
+  const commentPayload = entry.payload as unknown as CommentPayload;
+  if (
+    parentMessageId !== undefined &&
+    commentPayload.messageId !== parentMessageId
+  ) {
+    return bundledCommentEntryError(
+      index,
+      ` references messageId ${commentPayload.messageId}, expected ${parentMessageId}.`,
+    );
+  }
+
+  return {
+    comment: {
+      id: entry.id,
+      createdAt: entry.createdAt,
+      payload: commentPayload,
+    },
+  };
+}
+
+function parseBundledComments(
+  value: unknown,
+  parentMessageId: string | undefined,
+): ParseBundledCommentsResult {
+  if (value === undefined) {
+    return { ok: true, comments: [] };
+  }
+
+  if (!Array.isArray(value)) {
+    return { ok: false, error: 'comments must be an array when present.' };
+  }
+
+  const comments: ParsedBundledCommentImport[] = [];
+
+  for (let index = 0; index < value.length; index += 1) {
+    const parsedEntry = parseBundledCommentEntry(
+      value[index],
+      index,
+      parentMessageId,
+    );
+    if ('error' in parsedEntry) {
+      return { ok: false, error: parsedEntry.error };
+    }
+    comments.push(parsedEntry.comment);
+  }
+
+  return { ok: true, comments };
 }
 
 function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
@@ -117,9 +266,22 @@ function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
     return json;
   }
 
-  const { messageId, ...manifestRecord } = json.parsed;
+  const { messageId, comments: commentsWire, ...manifestRecord } = json.parsed;
   const exportedMessageId =
     typeof messageId === 'string' ? messageId : undefined;
+
+  const commentsResult = parseBundledComments(commentsWire, exportedMessageId);
+  if (commentsResult.ok === false) {
+    return commentsResult;
+  }
+
+  if (commentsResult.comments.length > 0 && !exportedMessageId) {
+    return {
+      ok: false,
+      error: 'Bundled comment imports require messageId at the top level.',
+    };
+  }
+
   const manifestText = JSON.stringify(manifestRecord);
 
   const manifestResult = parseManifestPayloadText(manifestText);
@@ -142,6 +304,10 @@ function parseOriginalImportPayload(text: string): ParseImportPayloadResult {
       fullPayloadJson: manifestText,
       keyManifest,
       exportedMessageId,
+      comments:
+        commentsResult.comments.length > 0
+          ? commentsResult.comments
+          : undefined,
     },
   };
 }

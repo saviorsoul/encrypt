@@ -1,5 +1,6 @@
 import { verifyManifestShareSignature } from '../crypto/manifestShare.ts';
 import { parseManifestPayload } from '../crypto/manifestDecrypt.ts';
+import { parseManifestCorePayload } from '../crypto/manifestStorage.ts';
 import { verifyManifestSignature } from '../crypto/manifestSign.ts';
 import type { CreateMessageRequest, FeedApi } from '../api/feedApi.ts';
 import type { ParsedImportPayload } from './parseImportPayloadText.ts';
@@ -19,6 +20,8 @@ export async function verifyParsedImportPayload(
   }
 
   await verifyManifestShareSignature(payload.share);
+  const parentCore = parseManifestCorePayload(payload.parentMessageJson);
+  await verifyManifestSignature(parentCore);
 }
 
 export function buildMessagePostBody(
@@ -37,6 +40,11 @@ export async function postParsedImportToBackend(
     const result = await api.postShare({
       share: payload.share as unknown as Record<string, unknown>,
       keyManifest: payload.keyManifest,
+      parentMessage: JSON.parse(payload.parentMessageJson) as Record<
+        string,
+        unknown
+      >,
+      messageId: payload.parentMessageId,
     });
     return { kind: 'share', id: result.id };
   }

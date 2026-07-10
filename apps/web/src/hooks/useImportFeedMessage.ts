@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { importParsedFeedMessage } from '@/crypto/importFeedMessage.ts';
+import type { FeedMessageImportResult } from '@/crypto/importFeedMessage.ts';
 import {
-  encryptedMessageFingerprintFromPayloadJson,
-  encryptedMessageFingerprintsMatch,
-  type EncryptedMessageFingerprint,
-} from '@/types/oneToOne.ts';
+  planOriginalImport,
+  planShareImport,
+} from '@/crypto/importFeedMessageAnalysis.ts';
 import {
   parseImportPayloadText,
   recipientKeyInImportPayload,
@@ -12,29 +12,7 @@ import {
 } from '@/utils/parseImportPayloadText.ts';
 import { validateImportJsonText } from '@/utils/readImportJsonFile.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
-import type {
-  StoredFeedDelivery,
-  StoredMessage,
-} from '@/services/db/storedMessages.ts';
-import { getStoredMessageById } from '@/services/db/storedMessages.ts';
-
-function findDuplicateMessageId(
-  messages: StoredMessage[],
-  fingerprint: EncryptedMessageFingerprint,
-): string | null {
-  for (const message of messages) {
-    const existing = encryptedMessageFingerprintFromPayloadJson(
-      message.payload,
-    );
-    if (
-      existing !== null &&
-      encryptedMessageFingerprintsMatch(existing, fingerprint)
-    ) {
-      return message.id;
-    }
-  }
-  return null;
-}
+import type { StoredMessage } from '@/services/db/storedMessages.ts';
 
 export function validateImportPayloadText(text: string): string | null {
   const validated = validateImportJsonText(text);
@@ -72,37 +50,16 @@ export async function validateImportForRecipient(
   }
 
   if (parsed.payload.kind === 'original') {
-    const originalPayload = parsed.payload;
-    if (originalPayload.exportedMessageId) {
-      const existing = await getStoredMessageById(
-        originalPayload.exportedMessageId,
-      );
-      if (existing) {
-        return 'This message is already in your feed.';
-      }
-    } else {
-      const fingerprint = encryptedMessageFingerprintFromPayloadJson(
-        originalPayload.fullPayloadJson,
-      );
-      if (fingerprint !== null) {
-        const duplicateId = findDuplicateMessageId(
-          existingMessages,
-          fingerprint,
-        );
-        if (duplicateId !== null) {
-          return 'This message is already in your feed.';
-        }
-      }
+    const plan = await planOriginalImport(parsed.payload, existingMessages);
+    if (plan.mode === 'blocked') {
+      return plan.error;
     }
   }
 
-  if (parsed.payload.kind === 'share') {
-    const sharePayload = parsed.payload;
-    const parentMessage = await getStoredMessageById(
-      sharePayload.parentMessageId,
-    );
-    if (!parentMessage) {
-      return 'Parent message not found. Import the original message first.';
+  if (parsed.payload.kind === 'share' && recipientKeyId) {
+    const plan = await planShareImport(parsed.payload, recipientKeyId);
+    if (plan.mode === 'blocked') {
+      return plan.error;
     }
   }
 
@@ -147,7 +104,7 @@ export function useImportFeedValidation(
 type UseImportFeedMessageOptions = {
   recipientKeyId: string | null;
   existingMessages: StoredMessage[];
-  onImported?: (message: StoredFeedDelivery) => void;
+  onImported?: (result: FeedMessageImportResult) => void;
 };
 
 export function useImportFeedMessage({
@@ -198,11 +155,12 @@ export function useImportFeedMessage({
 
       setBusy(true);
       try {
-        const savedMessage = await importParsedFeedMessage(
+        const importResult = await importParsedFeedMessage(
           parsed.payload,
           recipientKeyId,
+          existingMessages,
         );
-        onImported?.(savedMessage);
+        onImported?.(importResult);
         return true;
       } catch (e) {
         setError(errorMessage(e, 'Failed to import message.'));
