@@ -16,6 +16,7 @@ apps/web/release
 
 # misc
 .DS_Store
+apps/api/keys/
 .env
 .env.local
 .env.development.local
