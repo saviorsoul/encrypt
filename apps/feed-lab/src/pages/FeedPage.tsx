@@ -1,13 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Paper,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import type { StoredComment } from '@encrypt/core/feed/types';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
@@ -16,7 +10,8 @@ import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
 import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
 import { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
 import { MessageThreadCard } from '@lab/components/MessageThreadCard.tsx';
-import { SendMessagePanel } from '@lab/components/SendMessagePanel.tsx';
+import { MessageSentSnackbar } from '@lab/components/MessageSentSnackbar.tsx';
+import { SendMessageDialog } from '@lab/components/SendMessageDialog.tsx';
 import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
@@ -30,9 +25,13 @@ export function FeedPage() {
     null,
   );
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [createMessageDialogOpen, setCreateMessageDialogOpen] = useState(false);
   const [shareTargetMessageId, setShareTargetMessageId] = useState<
     string | null
   >(null);
+  const [sentMessageNotice, setSentMessageNotice] = useState<{
+    messageId: string;
+  } | null>(null);
 
   const friendships = useFeedLabFriendships(
     keys.keyId,
@@ -96,20 +95,25 @@ export function FeedPage() {
 
   const handleReloadFeed = useCallback(async () => {
     if (!keys.keyId) {
-      const keyId = await keys.changeKeyId();
-      if (!keyId) {
-        return;
-      }
+      return;
     }
     clearDecrypt();
     await feed.reload();
-  }, [clearDecrypt, feed, keys]);
+  }, [clearDecrypt, feed, keys.keyId]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
       await feed.reload();
     }
   }, [feed, keys.keyId]);
+
+  const handleMessageSent = useCallback((detail: { messageId: string }) => {
+    setSentMessageNotice(detail);
+  }, []);
+
+  const handleCloseSentMessageNotice = useCallback(() => {
+    setSentMessageNotice(null);
+  }, []);
 
   const handleOpenShare = useCallback(
     (messageId: string) => {
@@ -157,67 +161,34 @@ export function FeedPage() {
 
   return (
     <>
-      <SendMessagePanel
-        withPrivateKey={keys.withPrivateKey}
-        keyId={keys.keyId}
-        recipients={recipients}
-        onSendSuccess={handleSendSuccess}
-      />
-
-      <Paper sx={{ p: 2.125, mb: 2 }}>
-        <Stack
-          direction="row"
-          sx={{
-            mb: 1.5,
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          flexWrap: 'wrap',
+          gap: 1,
+        }}
+      >
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<RefreshOutlinedIcon />}
+          disabled={!keys.keyId || feed.loading}
+          onClick={() => void handleReloadFeed()}
         >
-          <Box>
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 800, fontSize: '1.1875rem' }}
-            >
-              Feed
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.25 }}
-            >
-              Warm neutral — encrypted inbox for your key
-            </Typography>
-          </Box>
-          <Button
-            onClick={() => void handleReloadFeed()}
-            disabled={feed.loading}
-            size="small"
-            variant="outlined"
-          >
-            {feed.loading ? 'Loading…' : 'Reload'}
-          </Button>
-        </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Loads inbox from the backend for your keyId. Comments load when you
-          expand a message.
-        </Typography>
-        {feed.error ? <Alert severity="warning">{feed.error}</Alert> : null}
-        {feed.loading ? (
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center', mt: 2 }}
-          >
-            <CircularProgress size={18} />
-            <Typography variant="body2">Loading inbox…</Typography>
-          </Stack>
-        ) : null}
-        {keys.keyId && !feed.loading ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            {feed.messages.length} message(s).
-          </Typography>
-        ) : null}
-      </Paper>
+          Refresh feed
+        </Button>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<SendOutlinedIcon />}
+          disabled={!keys.keyId}
+          onClick={() => setCreateMessageDialogOpen(true)}
+        >
+          Create message
+        </Button>
+      </Stack>
 
       <Stack spacing={1.5}>
         {feed.messages.map((message) => {
@@ -261,6 +232,21 @@ export function FeedPage() {
           </Typography>
         ) : null}
       </Stack>
+
+      <SendMessageDialog
+        open={createMessageDialogOpen}
+        withPrivateKey={keys.withPrivateKey}
+        keyId={keys.keyId}
+        recipients={recipients}
+        onClose={() => setCreateMessageDialogOpen(false)}
+        onSendSuccess={handleSendSuccess}
+        onMessageSent={handleMessageSent}
+      />
+
+      <MessageSentSnackbar
+        messageId={sentMessageNotice?.messageId ?? null}
+        onClose={handleCloseSentMessageNotice}
+      />
 
       <ShareMessageDialog
         open={shareDialogOpen}

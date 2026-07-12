@@ -25,7 +25,7 @@ export function useBackendSendMessage(
     async (
       plaintext: string,
       recipients: ManifestRecipientKeys[],
-    ): Promise<string | null> => {
+    ): Promise<{ id: string; copyPayload: string } | null> => {
       setError(null);
       setLastMessageId(null);
       setLastMessageCopyPayload(null);
@@ -73,7 +73,7 @@ export function useBackendSendMessage(
 
         setLastMessageId(sent.id);
         setLastMessageCopyPayload(sent.copyPayload);
-        return sent.id;
+        return sent;
       } catch (e) {
         if (isPrivateKeyFileSelectionCancelled(e)) {
           return null;

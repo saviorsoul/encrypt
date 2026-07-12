@@ -5,7 +5,6 @@ import {
   Button,
   CircularProgress,
   Paper,
-  Snackbar,
   Stack,
   TextField,
   ToggleButton,
@@ -13,10 +12,8 @@ import {
   Typography,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
 import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
-import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { validateJsonSyntaxText } from '@lab/lib/validateJsonSyntax.ts';
 import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendSendMessage } from '@lab/hooks/useBackendSendMessage.ts';
@@ -26,26 +23,30 @@ import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 type SendMode = 'message' | 'json';
 
 type SendMessagePanelProps = {
+  variant?: 'paper' | 'plain';
   withPrivateKey: ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
   keyId: string | null;
   recipients: ReturnType<typeof useFeedLabRecipients>;
   onSendSuccess: () => Promise<void>;
+  onMessageSent?: (detail: {
+    messageId: string;
+    copyPayload: string | null;
+  }) => void;
+  onClose?: () => void;
 };
 
 export function SendMessagePanel({
+  variant = 'paper',
   withPrivateKey,
   keyId,
   recipients,
   onSendSuccess,
+  onMessageSent,
+  onClose,
 }: SendMessagePanelProps) {
   const importSend = useSendImportToBackend();
   const sendMessage = useBackendSendMessage(withPrivateKey, keyId);
   const [importPayload, setImportPayload] = useState('');
-  const [copyNotice, setCopyNotice] = useState<{
-    open: boolean;
-    severity: 'success' | 'error';
-    key: number;
-  }>({ open: false, severity: 'success', key: 0 });
   const [sendMode, setSendMode] = useState<SendMode>('message');
   const [messageText, setMessageText] = useState('');
 
@@ -58,15 +59,25 @@ export function SendMessagePanel({
   }, [importSend, importPayload, onSendSuccess]);
 
   const handleSendMessage = useCallback(async () => {
-    const messageId = await sendMessage.sendMessage(
+    const sent = await sendMessage.sendMessage(
       messageText,
       recipients.recipients,
     );
-    if (messageId) {
+    if (sent) {
       setMessageText('');
+      onMessageSent?.({
+        messageId: sent.id,
+        copyPayload: sent.copyPayload,
+      });
       await onSendSuccess();
     }
-  }, [sendMessage, messageText, recipients.recipients, onSendSuccess]);
+  }, [
+    sendMessage,
+    messageText,
+    recipients.recipients,
+    onMessageSent,
+    onSendSuccess,
+  ]);
 
   const handleMessageTextChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -78,48 +89,21 @@ export function SendMessagePanel({
     [sendMessage],
   );
 
-  const handleCloseSentSnackbar = useCallback(() => {
-    sendMessage.clearLastMessageId();
-  }, [sendMessage]);
-
-  const handleCopySentMessage = useCallback(async () => {
-    if (!sendMessage.lastMessageCopyPayload) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(sendMessage.lastMessageCopyPayload);
-      setCopyNotice((prev) => ({
-        open: true,
-        severity: 'success',
-        key: prev.key + 1,
-      }));
-    } catch {
-      setCopyNotice((prev) => ({
-        open: true,
-        severity: 'error',
-        key: prev.key + 1,
-      }));
-    }
-  }, [sendMessage.lastMessageCopyPayload]);
-
-  const handleCloseCopyNotice = useCallback(() => {
-    setCopyNotice((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  return (
-    <Paper sx={{ p: 2 }}>
+  const content = (
+    <>
       <Stack
         direction="row"
         sx={{
-          mb: 2,
-          justifyContent: 'space-between',
+          mb: variant === 'plain' ? 1.5 : 2,
+          justifyContent: variant === 'plain' ? 'flex-start' : 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 1,
         }}
       >
-        <Typography variant="h6">Send Message</Typography>
+        {variant === 'paper' ? (
+          <Typography variant="h6">Send Message</Typography>
+        ) : null}
         <ToggleButtonGroup
           exclusive
           size="small"
@@ -148,60 +132,77 @@ export function SendMessagePanel({
             disabled={sendMessage.busy}
           />
 
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            {recipients.loadingFriends || recipients.loadingRecipientKeys ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  flex: 1,
-                }}
-              >
-                <CircularProgress size={20} />
-                <Typography variant="body2" color="text.secondary">
-                  Loading recipients…
-                </Typography>
-              </Box>
-            ) : recipients.recipientOptions.length === 0 ? (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ flex: 1 }}
-              >
-                No friends yet. Add or accept a friend on the Users page before
-                messaging.
+          {recipients.loadingFriends || recipients.loadingRecipientKeys ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">
+                Loading recipients…
               </Typography>
-            ) : (
+            </Box>
+          ) : recipients.recipientOptions.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No friends yet. Add or accept a friend in Users before messaging.
+            </Typography>
+          ) : variant === 'plain' ? (
+            <RecipientMultiSelect
+              options={recipients.recipientOptions}
+              value={recipients.selectedKeyIds}
+              onChange={recipients.setSelectedKeyIds}
+              getOptionLabel={recipients.getOptionLabel}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
               <RecipientMultiSelect
                 options={recipients.recipientOptions}
                 value={recipients.selectedKeyIds}
                 onChange={recipients.setSelectedKeyIds}
                 getOptionLabel={recipients.getOptionLabel}
               />
-            )}
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                disabled={
+                  sendMessage.busy ||
+                  !messageText.trim() ||
+                  recipients.recipients.length === 0
+                }
+                onClick={() => void handleSendMessage()}
+                sx={{ flexShrink: 0, height: 40 }}
+              >
+                {sendMessage.busy ? 'Sending…' : 'Send message'}
+              </Button>
+            </Box>
+          )}
 
-            <Button
-              variant="contained"
-              startIcon={<SendIcon />}
-              disabled={
-                sendMessage.busy ||
-                !messageText.trim() ||
-                recipients.recipients.length === 0
-              }
-              onClick={() => void handleSendMessage()}
-              sx={{ flexShrink: 0, height: 40 }}
-            >
-              {sendMessage.busy ? 'Sending…' : 'Send message'}
-            </Button>
-          </Box>
+          {variant === 'plain' ? (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              {onClose ? (
+                <Button variant="outlined" onClick={onClose}>
+                  Close
+                </Button>
+              ) : null}
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                disabled={
+                  sendMessage.busy ||
+                  !messageText.trim() ||
+                  recipients.recipients.length === 0
+                }
+                onClick={() => void handleSendMessage()}
+                sx={{ flexShrink: 0, height: 40 }}
+              >
+                {sendMessage.busy ? 'Sending…' : 'Send message'}
+              </Button>
+            </Box>
+          ) : null}
 
           {recipients.error ? (
             <Typography color="error" variant="body2">
@@ -233,9 +234,15 @@ export function SendMessagePanel({
             sx={{
               display: 'flex',
               justifyContent: 'flex-end',
+              gap: 1,
               mt: 2,
             }}
           >
+            {onClose ? (
+              <Button onClick={onClose} sx={{ flexShrink: 0, height: 40 }}>
+                Close
+              </Button>
+            ) : null}
             <Button
               variant="contained"
               startIcon={<SendIcon />}
@@ -258,40 +265,12 @@ export function SendMessagePanel({
           ) : null}
         </>
       )}
-
-      <Snackbar
-        key={sendMessage.lastMessageId ?? 'message-sent'}
-        open={sendMessage.lastMessageId !== null}
-        autoHideDuration={5000}
-        onClose={handleCloseSentSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          onClose={handleCloseSentSnackbar}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              startIcon={<ContentCopyOutlinedIcon />}
-              onClick={() => void handleCopySentMessage()}
-            >
-              Copy
-            </Button>
-          }
-          sx={{ width: '100%' }}
-        >
-          Message sent: {sendMessage.lastMessageId}
-        </Alert>
-      </Snackbar>
-
-      <CopiedToClipboardSnackbar
-        open={copyNotice.open}
-        severity={copyNotice.severity}
-        snackbarKey={copyNotice.key}
-        onClose={handleCloseCopyNotice}
-      />
-    </Paper>
+    </>
   );
+
+  if (variant === 'plain') {
+    return content;
+  }
+
+  return <Paper sx={{ p: 2 }}>{content}</Paper>;
 }

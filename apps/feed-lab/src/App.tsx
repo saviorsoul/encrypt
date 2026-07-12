@@ -6,7 +6,6 @@ import { FeedLabThemeProvider } from '@lab/providers/FeedLabThemeProvider.tsx';
 import { SignNetworkRequestProvider } from '@lab/providers/SignNetworkRequestProvider.tsx';
 import { FeedLabLayout } from '@lab/layout/FeedLabLayout.tsx';
 import { FeedPage } from '@lab/pages/FeedPage.tsx';
-import { UsersPage } from '@lab/pages/UsersPage.tsx';
 import { InvitePage } from '@lab/pages/InvitePage.tsx';
 
 export default function App() {
@@ -21,7 +20,7 @@ export default function App() {
                   <Route element={<FeedLabLayout />}>
                     <Route index element={<Navigate to="/feed" replace />} />
                     <Route path="feed" element={<FeedPage />} />
-                    <Route path="users" element={<UsersPage />} />
+                    <Route path="users" element={<FeedPage />} />
                   </Route>
                   <Route path="invite/:token" element={<InvitePage />} />
                 </Routes>
