@@ -4,8 +4,12 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 
 export function FeedLabSettingsMenu() {
-  const { requestsApprovalDialog, setRequestsApprovalDialog } =
-    useFeedLabSettings();
+  const {
+    requestsApprovalDialog,
+    setRequestsApprovalDialog,
+    colorMode,
+    setColorMode,
+  } = useFeedLabSettings();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = anchorEl !== null;
 
@@ -20,6 +24,10 @@ export function FeedLabSettingsMenu() {
   const toggleRequestsApprovalDialog = useCallback(() => {
     setRequestsApprovalDialog(!requestsApprovalDialog);
   }, [requestsApprovalDialog, setRequestsApprovalDialog]);
+
+  const toggleDarkMode = useCallback(() => {
+    setColorMode(colorMode === 'dark' ? 'light' : 'dark');
+  }, [colorMode, setColorMode]);
 
   return (
     <>
@@ -44,6 +52,20 @@ export function FeedLabSettingsMenu() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
+        <MenuItem
+          onClick={toggleDarkMode}
+          sx={{ justifyContent: 'space-between', gap: 2, minWidth: 280 }}
+        >
+          Dark mode
+          <Switch
+            edge="end"
+            checked={colorMode === 'dark'}
+            tabIndex={-1}
+            disableRipple
+            onClick={(event) => event.stopPropagation()}
+            onChange={(_, checked) => setColorMode(checked ? 'dark' : 'light')}
+          />
+        </MenuItem>
         <MenuItem
           onClick={toggleRequestsApprovalDialog}
           sx={{ justifyContent: 'space-between', gap: 2, minWidth: 280 }}

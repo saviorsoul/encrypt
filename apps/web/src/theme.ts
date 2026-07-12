@@ -1,4 +1,4 @@
-import { alpha, createTheme } from '@mui/material/styles';
+import { alpha, createTheme, type Theme } from '@mui/material/styles';
 import type { AlertProps } from '@mui/material/Alert';
 
 const standardAlertSeverities = [
@@ -8,14 +8,17 @@ const standardAlertSeverities = [
   'error',
 ] as const satisfies readonly AlertProps['severity'][];
 
-export const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-  },
+const sharedThemeOptions = {
   components: {
     MuiAlert: {
       styleOverrides: {
-        root: ({ theme, ownerState }) => {
+        root: ({
+          theme,
+          ownerState,
+        }: {
+          theme: Theme;
+          ownerState: AlertProps;
+        }) => {
           const severity = ownerState.severity ?? 'success';
           if (
             ownerState.variant !== 'standard' ||
@@ -47,4 +50,18 @@ export const darkTheme = createTheme({
       '"Segoe UI Symbol"',
     ].join(','),
   },
+} as const;
+
+export const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+  },
+  ...sharedThemeOptions,
+});
+
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+  ...sharedThemeOptions,
 });

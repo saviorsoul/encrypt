@@ -26,7 +26,13 @@ type DecryptContext = {
     messageId: string,
     recipientKeyId: string,
   ) => KeyManifestRecipientPayload | null;
-  comments?: StoredComment[];
+};
+
+type DecryptCommentsContext = {
+  messageId: string;
+  comments: StoredComment[];
+  allDeliveries: StoredFeedDelivery[];
+  manifestLookup: DecryptContext['manifestLookup'];
 };
 
 async function decryptWithMaterial(
@@ -129,76 +135,124 @@ async function decryptCommentsWithMaterial(
   return decrypted;
 }
 
+function withoutKey<T extends Record<string, unknown>>(map: T, key: string): T {
+  if (!(key in map)) {
+    return map;
+  }
+  const next = { ...map };
+  delete next[key];
+  return next;
+}
+
 export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [plaintext, setPlaintext] = useState<string | null>(null);
-  const [decryptedComments, setDecryptedComments] = useState<Record<
-    string,
-    string
-  > | null>(null);
+  const [busyMessageId, setBusyMessageId] = useState<string | null>(null);
+  const [busyCommentsMessageId, setBusyCommentsMessageId] = useState<
+    string | null
+  >(null);
+  const [decryptedMessages, setDecryptedMessages] = useState<
+    Record<string, string>
+  >({});
+  const [messageErrors, setMessageErrors] = useState<Record<string, string>>(
+    {},
+  );
+  const [decryptedCommentsByMessage, setDecryptedCommentsByMessage] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [commentsErrors, setCommentsErrors] = useState<Record<string, string>>(
+    {},
+  );
 
   const decryptDelivery = useCallback(
     async (context: DecryptContext) => {
-      setBusy(true);
-      setError(null);
-      setPlaintext(null);
-      setDecryptedComments(null);
+      const messageId = context.delivery.id;
+      setBusyMessageId(messageId);
+      setMessageErrors((prev) => withoutKey(prev, messageId));
       try {
-        const result = await withPrivateKey(async (material) => {
-          const messageText = await decryptWithMaterial(material, context);
-          const commentTexts = context.comments?.length
-            ? await decryptCommentsWithMaterial(
-                material,
-                context.comments,
-                context.allDeliveries,
-                context.manifestLookup,
-              )
-            : {};
-          return { messageText, commentTexts };
-        });
-        if (result === null) {
+        const messageText = await withPrivateKey(async (material) =>
+          decryptWithMaterial(material, context),
+        );
+        if (messageText === null) {
           return null;
         }
-        setPlaintext(result.messageText);
-        setDecryptedComments(result.commentTexts);
-        return result.messageText;
+        setDecryptedMessages((prev) => ({
+          ...prev,
+          [messageId]: messageText,
+        }));
+        return messageText;
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Decrypt failed.';
-        setError(message);
+        setMessageErrors((prev) => ({ ...prev, [messageId]: message }));
         throw e;
       } finally {
-        setBusy(false);
+        setBusyMessageId(null);
+      }
+    },
+    [withPrivateKey],
+  );
+
+  const decryptComments = useCallback(
+    async (context: DecryptCommentsContext) => {
+      const { messageId } = context;
+      setBusyCommentsMessageId(messageId);
+      setCommentsErrors((prev) => withoutKey(prev, messageId));
+      try {
+        const commentTexts = await withPrivateKey(async (material) =>
+          decryptCommentsWithMaterial(
+            material,
+            context.comments,
+            context.allDeliveries,
+            context.manifestLookup,
+          ),
+        );
+        if (commentTexts === null) {
+          return null;
+        }
+        setDecryptedCommentsByMessage((prev) => ({
+          ...prev,
+          [messageId]: commentTexts,
+        }));
+        return commentTexts;
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : 'Failed to decrypt comments.';
+        setCommentsErrors((prev) => ({ ...prev, [messageId]: message }));
+        throw e;
+      } finally {
+        setBusyCommentsMessageId(null);
       }
     },
     [withPrivateKey],
   );
 
   const clear = useCallback(() => {
-    setError(null);
-    setPlaintext(null);
-    setDecryptedComments(null);
-  }, []);
-
-  const clearDecryptedComments = useCallback(() => {
-    setDecryptedComments(null);
+    setBusyMessageId(null);
+    setBusyCommentsMessageId(null);
+    setDecryptedMessages({});
+    setMessageErrors({});
+    setDecryptedCommentsByMessage({});
+    setCommentsErrors({});
   }, []);
 
   const mergeDecryptedComments = useCallback(
-    (updates: Record<string, string>) => {
-      setDecryptedComments((prev) => ({ ...(prev ?? {}), ...updates }));
+    (messageId: string, updates: Record<string, string>) => {
+      setDecryptedCommentsByMessage((prev) => ({
+        ...prev,
+        [messageId]: { ...(prev[messageId] ?? {}), ...updates },
+      }));
     },
     [],
   );
 
   return {
     decryptDelivery,
-    busy,
-    error,
-    plaintext,
-    decryptedComments,
+    decryptComments,
+    busyMessageId,
+    busyCommentsMessageId,
+    decryptedMessages,
+    messageErrors,
+    decryptedCommentsByMessage,
+    commentsErrors,
     clear,
-    clearDecryptedComments,
     mergeDecryptedComments,
   };
 }

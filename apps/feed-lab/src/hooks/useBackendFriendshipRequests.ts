@@ -99,16 +99,12 @@ export function useBackendFriendshipRequests(
             };
           }
 
-          await saveFeedLabUser(
-            authenticatedKeyId,
-            trimmedName,
-            {
-              kty: 'EC',
-              crv: 'P-256',
-              x: ensured.publicKey.x,
-              y: ensured.publicKey.y,
-            },
-          );
+          await saveFeedLabUser(authenticatedKeyId, trimmedName, {
+            kty: 'EC',
+            crv: 'P-256',
+            x: ensured.publicKey.x,
+            y: ensured.publicKey.y,
+          });
           onLocalUserSaved?.({ keyId: ensured.keyId, username: trimmedName });
 
           const invitation = await api.postFriendInvitation();

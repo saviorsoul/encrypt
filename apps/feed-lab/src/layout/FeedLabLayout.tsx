@@ -111,14 +111,23 @@ export function FeedLabLayout() {
             onChange={(_, value: FeedLabTab) => {
               navigate(value === 'feed' ? '/feed' : '/users');
             }}
-            textColor="inherit"
-            indicatorColor="secondary"
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 40,
+              '& .MuiTab-root': { minHeight: 40, fontWeight: 600 },
+            }}
           >
             <Tab label="Feed" value="feed" />
             <Tab label="Users" value="users" />
           </Tabs>
           <Box sx={{ flexGrow: 1 }} />
-          <Chip size="small" label={`API ${apiUrl}`} />
+          <Chip
+            size="small"
+            variant="outlined"
+            label={`API ${apiUrl}`}
+            sx={{ borderColor: 'divider' }}
+          />
           <FeedLabSettingsMenu />
         </Toolbar>
       </AppBar>

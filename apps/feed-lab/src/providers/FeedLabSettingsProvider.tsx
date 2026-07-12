@@ -9,11 +9,13 @@ import React, {
 import {
   loadFeedLabSettings,
   saveFeedLabSettings,
+  type FeedLabColorMode,
   type FeedLabSettings,
 } from '@lab/services/feedLabSettingsStorage.ts';
 
 type FeedLabSettingsContextValue = FeedLabSettings & {
   setRequestsApprovalDialog: (enabled: boolean) => void;
+  setColorMode: (colorMode: FeedLabColorMode) => void;
 };
 
 const FeedLabSettingsContext =
@@ -32,12 +34,21 @@ export function FeedLabSettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setColorMode = useCallback((colorMode: FeedLabColorMode) => {
+    setSettings((current) => {
+      const next = { ...current, colorMode };
+      saveFeedLabSettings(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       ...settings,
       setRequestsApprovalDialog,
+      setColorMode,
     }),
-    [settings, setRequestsApprovalDialog],
+    [settings, setRequestsApprovalDialog, setColorMode],
   );
 
   return (

@@ -36,8 +36,11 @@ function InspectorPanel({
 }) {
   return (
     <Box
-      sx={{
-        bgcolor: '#0d1117',
+      sx={(theme) => ({
+        bgcolor:
+          theme.palette.mode === 'dark'
+            ? theme.palette.grey[900]
+            : theme.palette.grey[100],
         border: '1px solid',
         borderColor: 'divider',
         borderRadius: 1,
@@ -50,8 +53,8 @@ function InspectorPanel({
         p: 2,
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
-        color: empty ? 'text.secondary' : '#e6edf3',
-      }}
+        color: empty ? 'text.secondary' : 'text.primary',
+      })}
     >
       {children}
     </Box>
@@ -99,13 +102,16 @@ export function SignNetworkRequestDialog({
       aria-labelledby="sign-network-request-title"
     >
       <Box
-        sx={{
-          bgcolor: '#161b22',
+        sx={(theme) => ({
+          bgcolor:
+            theme.palette.mode === 'dark'
+              ? theme.palette.grey[800]
+              : theme.palette.grey[50],
           borderBottom: '1px solid',
           borderColor: 'divider',
           px: 2.5,
           py: 2,
-        }}
+        })}
       >
         <Stack
           direction="row"
@@ -168,7 +174,7 @@ export function SignNetworkRequestDialog({
                   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                 fontSize: '0.8rem',
                 wordBreak: 'break-all',
-                color: '#e6edf3',
+                color: 'text.primary',
               }}
             >
               {request.url}
@@ -217,7 +223,7 @@ export function SignNetworkRequestDialog({
         <Button
           type="button"
           variant="contained"
-          color="warning"
+          color="primary"
           onClick={onSign}
           startIcon={<LockOutlinedIcon />}
         >

@@ -122,10 +122,7 @@ export function ShareMessageDialog({
           type="button"
           variant="contained"
           disabled={
-            busy ||
-            !messageId ||
-            recipients.length === 0 ||
-            loadingRecipients
+            busy || !messageId || recipients.length === 0 || loadingRecipients
           }
           onClick={() => void handleShare()}
         >

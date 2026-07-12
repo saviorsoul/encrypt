@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   decryptComment,
   encryptCommentWithMessageKey,
@@ -6,6 +6,10 @@ import {
 } from '@encrypt/core/crypto/commentCrypto';
 import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment } from '@encrypt/core/feed/types';
+import {
+  COMMENTS_PANEL_COLLAPSE_MS,
+  waitForMinDuration,
+} from '@lab/lib/commentsPanelTiming.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
@@ -31,9 +35,14 @@ export function useBackendComments(
     async (options?: { silent?: boolean }) => {
       if (!messageId) {
         setComments([]);
+        setLoading(false);
         return [];
       }
-      if (!options?.silent) {
+
+      const trackLoading = !options?.silent;
+      const startedAt = Date.now();
+
+      if (trackLoading) {
         setLoading(true);
       }
       setError(null);
@@ -46,7 +55,8 @@ export function useBackendComments(
         setComments([]);
         return [];
       } finally {
-        if (!options?.silent) {
+        if (trackLoading) {
+          await waitForMinDuration(startedAt, COMMENTS_PANEL_COLLAPSE_MS);
           setLoading(false);
         }
       }
@@ -54,9 +64,21 @@ export function useBackendComments(
     [api, messageId],
   );
 
+  useLayoutEffect(() => {
+    if (messageId) {
+      setLoading(true);
+    } else {
+      setComments([]);
+      setLoading(false);
+    }
+  }, [messageId]);
+
   useEffect(() => {
+    if (!messageId) {
+      return;
+    }
     void reload();
-  }, [reload]);
+  }, [messageId, reload]);
 
   const postComment = useCallback(
     async ({

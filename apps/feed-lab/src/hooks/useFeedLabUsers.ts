@@ -9,23 +9,26 @@ export function useFeedLabUsers(ownerKeyId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async (overrideOwnerKeyId?: string | null) => {
-    const activeOwnerKeyId = overrideOwnerKeyId ?? ownerKeyId;
-    if (!activeOwnerKeyId) {
-      setUsernames([]);
-      setUsernameByKeyId({});
-      return;
-    }
+  const refresh = useCallback(
+    async (overrideOwnerKeyId?: string | null) => {
+      const activeOwnerKeyId = overrideOwnerKeyId ?? ownerKeyId;
+      if (!activeOwnerKeyId) {
+        setUsernames([]);
+        setUsernameByKeyId({});
+        return;
+      }
 
-    const storedUsers = await listFeedLabStoredUsers(activeOwnerKeyId);
+      const storedUsers = await listFeedLabStoredUsers(activeOwnerKeyId);
 
-    setUsernames(storedUsers.map((user) => user.username));
-    setUsernameByKeyId(
-      Object.fromEntries(
-        storedUsers.map((user) => [user.keyId, user.username]),
-      ),
-    );
-  }, [ownerKeyId]);
+      setUsernames(storedUsers.map((user) => user.username));
+      setUsernameByKeyId(
+        Object.fromEntries(
+          storedUsers.map((user) => [user.keyId, user.username]),
+        ),
+      );
+    },
+    [ownerKeyId],
+  );
 
   const addLocalUser = useCallback(
     (input: { keyId: string; username: string }) => {

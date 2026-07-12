@@ -4,15 +4,19 @@ import {
   Avatar,
   Box,
   Button,
+  CircularProgress,
   Collapse,
-  Divider,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
+import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import type { CopyState } from '@/types/copyState.ts';
 import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCrypto';
@@ -21,6 +25,11 @@ import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { formatCommentAuthorLabel } from '@lab/lib/formatCommentAuthorLabel.ts';
 import { assembleStoredMessageCopyPayload } from '@lab/lib/assembleMessageCopyPayload.ts';
+import {
+  COMMENTS_PANEL_COLLAPSE_MS,
+  COMMENTS_PANEL_CONTENT_GROW_MS,
+} from '@lab/lib/commentsPanelTiming.ts';
+import { RedactedText } from '@lab/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
 
 type FeedContext = {
@@ -40,8 +49,11 @@ type MessageThreadCardProps = {
   commentsPostBusy: boolean;
   onToggleMessage: (messageId: string) => void;
   onDecryptDelivery: ReturnType<typeof useBackendDecrypt>['decryptDelivery'];
+  onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
   decryptBusy: boolean;
+  decryptCommentsBusy: boolean;
   decryptError: string | null;
+  decryptCommentsError: string | null;
   decryptPlaintext: string | null;
   decryptedComments: Record<string, string> | null;
   shareBusy: boolean;
@@ -53,6 +65,70 @@ type MessageThreadCardProps = {
   viewerKeyId: string | null;
 };
 
+const REDACTED_PREVIEW_WORDS = 24;
+const REDACTED_COMMENT_WORDS = 12;
+
+const messageDecryptButtonSx = {
+  mb: 1.25,
+  py: 0.625,
+  fontSize: '0.75rem',
+  alignSelf: 'flex-start',
+  border: 'none',
+  boxShadow: 'none',
+  transition: (theme: Theme) =>
+    theme.transitions.create(['padding-left', 'padding-right'], {
+      duration: theme.transitions.duration.short,
+    }),
+};
+
+const messageEncBoxSx = (theme: {
+  feedLab: { encBg: string };
+  palette: { text: { secondary: string } };
+}) => ({
+  bgcolor: theme.feedLab.encBg,
+  borderRadius: 1.5,
+  px: 1.625,
+  py: 1.375,
+  borderLeft: `2px solid ${theme.palette.text.secondary}`,
+  display: 'flex',
+  flexDirection: 'column',
+});
+
+const cardActionButtonSx = {
+  color: 'text.primary',
+  fontWeight: 500,
+  minWidth: 0,
+  px: 1,
+  '&:hover': {
+    bgcolor: 'action.hover',
+    color: 'primary.main',
+  },
+  '&.Mui-disabled': {
+    color: 'action.disabled',
+  },
+};
+
+function threadAvatarSx(isOwn: boolean, size: number) {
+  return (theme: Theme) => ({
+    width: size,
+    height: size,
+    fontSize: size >= 32 ? '0.75rem' : '0.6875rem',
+    fontWeight: 700,
+    flexShrink: 0,
+    ...(isOwn
+      ? {
+          bgcolor: theme.feedLab.accentBg,
+          color: 'text.primary',
+          filter: 'none',
+        }
+      : {
+          bgcolor: theme.feedLab.accentBg,
+          color: 'text.primary',
+          filter: 'grayscale(20%)',
+        }),
+  });
+}
+
 export const MessageThreadCard = memo(function MessageThreadCard({
   message,
   expanded,
@@ -61,8 +137,11 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   commentsPostBusy,
   onToggleMessage,
   onDecryptDelivery,
+  onDecryptComments,
   decryptBusy,
+  decryptCommentsBusy,
   decryptError,
+  decryptCommentsError,
   decryptPlaintext,
   decryptedComments,
   shareBusy,
@@ -77,6 +156,10 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   const [senderLabel, setSenderLabel] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [copyBusy, setCopyBusy] = useState(false);
+
+  const handleToggle = useCallback(() => {
+    onToggleMessage(message.id);
+  }, [message.id, onToggleMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,178 +199,332 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
   return (
     <Paper
-      variant="outlined"
       sx={{
-        p: 1.5,
-        borderColor: expanded ? 'primary.main' : undefined,
+        overflow: 'hidden',
+        borderColor: expanded ? 'primary.main' : 'divider',
       }}
     >
-      <Box
-        onClick={() => onToggleMessage(message.id)}
-        sx={{ cursor: 'pointer' }}
-      >
+      <Box sx={{ px: 2.125, py: 1.875 }}>
         <Stack
           direction="row"
-          sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1 }}
+          spacing={1.125}
+          sx={{ mb: 1.5, alignItems: 'center' }}
         >
-          <Box
+          <Avatar sx={threadAvatarSx(isOwnMessage, 32)}>
+            {isOwnMessage ? 'You' : nameInitial(senderLabel ?? '?')}
+          </Avatar>
+          <Typography
+            variant="subtitle2"
+            sx={{ fontWeight: 800, fontSize: '0.8125rem' }}
+            noWrap
+          >
+            {isOwnMessage ? 'Your own message' : (senderLabel ?? '…')}
+          </Typography>
+          <Box sx={{ flex: 1 }} />
+          <Typography variant="caption" color="text.secondary">
+            {new Date(message.createdAt).toLocaleString()}
+          </Typography>
+        </Stack>
+
+        <Box sx={messageEncBoxSx}>
+          <Button
+            size="small"
+            variant={decryptPlaintext ? 'text' : 'contained'}
+            color="primary"
+            disabled={Boolean(decryptPlaintext) || decryptBusy}
+            disableElevation={Boolean(decryptPlaintext)}
+            startIcon={<LockOutlinedIcon sx={{ fontSize: 14 }} />}
+            onClick={
+              decryptPlaintext
+                ? undefined
+                : () => {
+                    void onDecryptDelivery({
+                      delivery: message,
+                      allDeliveries: feedContext.allDeliveries,
+                      manifestLookup: feedContext.manifestLookup,
+                    });
+                  }
+            }
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              minWidth: 0,
-              flex: 1,
+              ...messageDecryptButtonSx,
+              pl: decryptPlaintext ? 0 : 1.5,
+              pr: decryptPlaintext ? 0 : 1.5,
+              ...(decryptPlaintext
+                ? {
+                    '&.Mui-disabled': {
+                      border: 'none',
+                      boxShadow: 'none',
+                      color: 'primary.main',
+                    },
+                  }
+                : null),
             }}
           >
-            <Avatar
+            {decryptPlaintext ? 'Decrypted' : 'Decrypt'}
+          </Button>
+
+          {decryptPlaintext ? (
+            <Typography
+              variant="body2"
               sx={{
-                width: 28,
-                height: 28,
-                fontSize: isOwnMessage ? '0.625rem' : '0.75rem',
-                fontWeight: 600,
-                flexShrink: 0,
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.76,
+                fontSize: '0.9375rem',
               }}
             >
-              {isOwnMessage ? 'ME' : nameInitial(senderLabel ?? '?')}
-            </Avatar>
-            {!isOwnMessage ? (
-              <Typography variant="subtitle2" noWrap>
-                {senderLabel ?? '…'}
-              </Typography>
-            ) : null}
-          </Box>
-        </Stack>
-        <Typography variant="caption" color="text.secondary">
-          {new Date(message.createdAt).toLocaleString()}
-        </Typography>
+              {sanitizeDisplayText(decryptPlaintext)}
+            </Typography>
+          ) : (
+            <RedactedText
+              seed={message.payload}
+              maxPreviewWords={REDACTED_PREVIEW_WORDS}
+            />
+          )}
+        </Box>
       </Box>
 
-      <Collapse in={expanded} timeout={200} unmountOnExit>
-        <Box onClick={(event) => event.stopPropagation()} sx={{ pt: 1.5 }}>
-          <Divider sx={{ mb: 1.5 }} />
+      {decryptError ? (
+        <Alert severity="error" sx={{ mx: 2.125, mb: 1 }}>
+          {decryptError}
+        </Alert>
+      ) : null}
 
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={decryptBusy}
-              onClick={() =>
-                void onDecryptDelivery({
-                  delivery: message,
-                  allDeliveries: feedContext.allDeliveries,
-                  manifestLookup: feedContext.manifestLookup,
-                  comments,
-                })
-              }
-            >
-              Decrypt
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={copyBusy || commentsLoading}
-              color={copyState === 'ok' ? 'success' : 'primary'}
-              startIcon={
-                copyState === 'ok' ? <CheckIcon /> : <ContentCopyOutlinedIcon />
-              }
-              onClick={() => void handleCopy()}
-            >
-              Copy
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={shareBusy}
-              onClick={() => onOpenShare(message.id)}
-            >
-              Share
-            </Button>
-          </Stack>
+      {copyState === 'err' ? (
+        <Alert severity="error" sx={{ mx: 2.125, mb: 1 }}>
+          Failed to copy message. Reload the feed and try again.
+        </Alert>
+      ) : null}
 
-          {copyState === 'err' ? (
-            <Alert severity="error" sx={{ mt: 1 }}>
-              Failed to copy message. Reload the feed and try again.
-            </Alert>
-          ) : null}
-
-          {shareLastShareId ? (
-            <Alert severity="success" sx={{ mt: 1 }}>
-              Share created: {shareLastShareId}
-            </Alert>
-          ) : null}
-          {decryptError ? (
-            <Alert severity="error" sx={{ mt: 1 }}>
-              {decryptError}
-            </Alert>
-          ) : null}
-          {decryptPlaintext ? (
-            <Paper variant="outlined" sx={{ mt: 2, p: 1.5 }}>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {sanitizeDisplayText(decryptPlaintext)}
-              </Typography>
-            </Paper>
-          ) : null}
-
-          <Divider sx={{ my: 2 }}>
-            <Typography variant="subtitle2">
-              {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
-            </Typography>
-          </Divider>
-
-          <Box>
-            {commentsLoading ? (
-              <Typography variant="body2" color="text.secondary">
-                Loading comments…
-              </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          px: 1.875,
+          py: 1,
+          borderTop: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Button
+          size="small"
+          color="inherit"
+          onClick={handleToggle}
+          startIcon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 16 }} />}
+          sx={cardActionButtonSx}
+        >
+          Comments
+        </Button>
+        <Button
+          size="small"
+          color="inherit"
+          disabled={copyBusy}
+          onClick={() => void handleCopy()}
+          startIcon={
+            copyState === 'ok' ? (
+              <CheckIcon sx={{ fontSize: 16 }} />
             ) : (
-              <>
-                {decryptedComments !== null ? (
-                  <Stack spacing={1}>
-                    {comments.map((comment) => {
-                      const text = decryptedComments[comment.id];
-                      if (!text) {
-                        return null;
-                      }
-                      return (
-                        <CommentRow
-                          key={comment.id}
-                          comment={comment}
-                          text={text}
-                          usernameByKeyId={usernameByKeyId}
-                          viewerKeyId={viewerKeyId}
-                        />
-                      );
-                    })}
-                    {comments.length > 0 &&
-                    Object.keys(decryptedComments).length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">
-                        Could not decrypt comments.
-                      </Typography>
-                    ) : null}
-                  </Stack>
-                ) : null}
-                {comments.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No comments yet.
-                  </Typography>
-                ) : null}
-              </>
-            )}
-          </Box>
+              <ContentCopyOutlinedIcon sx={{ fontSize: 16 }} />
+            )
+          }
+          sx={{
+            ...cardActionButtonSx,
+            ...(copyState === 'ok'
+              ? {
+                  color: 'success.main',
+                  '&:hover': { color: 'success.dark' },
+                }
+              : null),
+          }}
+        >
+          Copy
+        </Button>
+        <Button
+          size="small"
+          color="inherit"
+          disabled={shareBusy}
+          onClick={() => onOpenShare(message.id)}
+          startIcon={<ShareOutlinedIcon sx={{ fontSize: 16 }} />}
+          sx={cardActionButtonSx}
+        >
+          Share
+        </Button>
+      </Box>
 
-          <CommentComposer
-            commentsPostBusy={commentsPostBusy}
-            messageDecrypted={decryptPlaintext !== null}
-            onPostCommentForMessage={onPostCommentForMessage}
-            messageId={message.id}
-          />
-        </Box>
+      <Collapse
+        in={expanded}
+        timeout={COMMENTS_PANEL_COLLAPSE_MS}
+        unmountOnExit
+      >
+        <MessageThreadExpandedPanel
+          message={message}
+          comments={comments}
+          commentsLoading={commentsLoading}
+          commentsPostBusy={commentsPostBusy}
+          decryptCommentsError={decryptCommentsError}
+          decryptPlaintext={decryptPlaintext}
+          decryptedComments={decryptedComments}
+          decryptCommentsBusy={decryptCommentsBusy}
+          onDecryptComments={onDecryptComments}
+          feedContext={feedContext}
+          shareLastShareId={shareLastShareId}
+          onPostCommentForMessage={onPostCommentForMessage}
+          usernameByKeyId={usernameByKeyId}
+          viewerKeyId={viewerKeyId}
+        />
       </Collapse>
     </Paper>
   );
 });
 
-function CommentComposer({
+type MessageThreadExpandedPanelProps = {
+  message: StoredMessage;
+  comments: StoredComment[];
+  commentsLoading: boolean;
+  commentsPostBusy: boolean;
+  decryptCommentsError: string | null;
+  decryptPlaintext: string | null;
+  decryptedComments: Record<string, string> | null;
+  decryptCommentsBusy: boolean;
+  onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
+  feedContext: FeedContext;
+  shareLastShareId: string | null;
+  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+  usernameByKeyId: Record<string, string>;
+  viewerKeyId: string | null;
+};
+
+const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
+  message,
+  comments,
+  commentsLoading,
+  commentsPostBusy,
+  decryptCommentsError,
+  decryptPlaintext,
+  decryptedComments,
+  decryptCommentsBusy,
+  onDecryptComments,
+  feedContext,
+  shareLastShareId,
+  onPostCommentForMessage,
+  usernameByKeyId,
+  viewerKeyId,
+}: MessageThreadExpandedPanelProps) {
+  const commentsDecrypted = decryptedComments !== null;
+  const showDecryptCommentsButton =
+    !commentsLoading && comments.length > 0 && !commentsDecrypted;
+
+  return (
+    <Box
+      onClick={(event) => event.stopPropagation()}
+      sx={{ px: 2.125, pb: 2, borderTop: 1, borderColor: 'divider' }}
+    >
+      {shareLastShareId ? (
+        <Alert severity="success" sx={{ mt: 1.5 }}>
+          Share created: {shareLastShareId}
+        </Alert>
+      ) : null}
+
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mt: 2, mb: 1.5, alignItems: 'center' }}
+      >
+        <Typography variant="subtitle2" sx={{ flex: 1 }}>
+          {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
+        </Typography>
+        {showDecryptCommentsButton ? (
+          <Button
+            size="small"
+            variant="contained"
+            color="primary"
+            disabled={decryptCommentsBusy}
+            startIcon={<LockOutlinedIcon sx={{ fontSize: 14 }} />}
+            onClick={() => {
+              void onDecryptComments({
+                messageId: message.id,
+                comments,
+                allDeliveries: feedContext.allDeliveries,
+                manifestLookup: feedContext.manifestLookup,
+              });
+            }}
+            sx={{ py: 0.625, px: 1.5, fontSize: '0.75rem' }}
+          >
+            {decryptCommentsBusy ? 'Decrypting…' : 'Decrypt comments'}
+          </Button>
+        ) : null}
+      </Stack>
+
+      {decryptCommentsError ? (
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          {decryptCommentsError}
+        </Alert>
+      ) : null}
+
+      <Box>
+        {commentsLoading ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', py: 0.5 }}
+          >
+            <CircularProgress size={16} />
+            <Typography variant="body2" color="text.secondary">
+              Loading comments…
+            </Typography>
+          </Stack>
+        ) : null}
+
+        <Collapse
+          in={!commentsLoading}
+          timeout={COMMENTS_PANEL_CONTENT_GROW_MS}
+        >
+          <Box>
+            {comments.length > 0 ? (
+              <Stack spacing={1}>
+                {comments.map((comment) => {
+                  const text =
+                    decryptedComments !== null
+                      ? decryptedComments[comment.id]
+                      : null;
+
+                  return (
+                    <CommentRow
+                      key={comment.id}
+                      comment={comment}
+                      text={text}
+                      usernameByKeyId={usernameByKeyId}
+                      viewerKeyId={viewerKeyId}
+                    />
+                  );
+                })}
+                {decryptedComments !== null &&
+                Object.keys(decryptedComments).length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Could not decrypt comments.
+                  </Typography>
+                ) : null}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No comments yet.
+              </Typography>
+            )}
+          </Box>
+        </Collapse>
+      </Box>
+
+      <CommentComposer
+        commentsPostBusy={commentsPostBusy}
+        messageDecrypted={decryptPlaintext !== null}
+        onPostCommentForMessage={onPostCommentForMessage}
+        messageId={message.id}
+      />
+    </Box>
+  );
+});
+
+const CommentComposer = memo(function CommentComposer({
   messageId,
   commentsPostBusy,
   messageDecrypted,
@@ -334,16 +571,16 @@ function CommentComposer({
       </Button>
     </>
   );
-}
+});
 
-function CommentRow({
+const CommentRow = memo(function CommentRow({
   comment,
   text,
   usernameByKeyId,
   viewerKeyId,
 }: {
   comment: StoredComment;
-  text: string;
+  text: string | null;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
 }) {
@@ -373,29 +610,35 @@ function CommentRow({
     viewerKeyId !== null && authorKeyId !== null && authorKeyId === viewerKeyId;
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5 }}>
+    <Box
+      sx={(theme) => ({
+        borderRadius: 1.5,
+        px: 1.625,
+        py: 1.375,
+        bgcolor: theme.feedLab.encBg,
+        borderLeft: `2px solid ${theme.palette.text.secondary}`,
+      })}
+    >
       <Stack spacing={0.75}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar
-            sx={{
-              width: 28,
-              height: 28,
-              fontSize: isOwnComment ? '0.625rem' : '0.75rem',
-              fontWeight: 600,
-            }}
-          >
-            {isOwnComment ? 'ME' : nameInitial(authorLabel ?? '?')}
+          <Avatar sx={threadAvatarSx(isOwnComment, 32)}>
+            {isOwnComment ? 'You' : nameInitial(authorLabel ?? '?')}
           </Avatar>
-          {!isOwnComment ? (
-            <Typography variant="caption" sx={{ fontWeight: 600 }}>
-              {authorLabel ?? '...'}
-            </Typography>
-          ) : null}
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+            {isOwnComment ? 'Your own comment' : (authorLabel ?? '...')}
+          </Typography>
         </Box>
-        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-          {text}
-        </Typography>
+        {text ? (
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+            {sanitizeDisplayText(text)}
+          </Typography>
+        ) : (
+          <RedactedText
+            seed={comment.payload}
+            maxPreviewWords={REDACTED_COMMENT_WORDS}
+          />
+        )}
       </Stack>
-    </Paper>
+    </Box>
   );
-}
+});

@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Paper,
@@ -45,14 +46,32 @@ export function FeedPage() {
     friendsError: friendships.error,
   });
   const decrypt = useBackendDecrypt(keys.withPrivateKey);
-  const { clear: clearDecrypt, mergeDecryptedComments } = decrypt;
+  const {
+    clear: clearDecrypt,
+    mergeDecryptedComments,
+    decryptDelivery,
+    decryptComments,
+    busyMessageId,
+    busyCommentsMessageId,
+    decryptedMessages,
+    messageErrors,
+    decryptedCommentsByMessage,
+    commentsErrors,
+  } = decrypt;
   const share = useBackendShare(keys.withPrivateKey, keys.keyId);
-  const { clearLastShare, clearError: clearShareError } = share;
-  const comments = useBackendComments(
-    selectedMessageId,
-    keys.keyId,
-    keys.withPrivateKey,
-  );
+  const {
+    clearLastShare,
+    clearError: clearShareError,
+    busy: shareBusy,
+    lastShare,
+  } = share;
+  const {
+    comments: loadedComments,
+    loading: commentsLoading,
+    postBusy: commentsPostBusy,
+    postComment,
+    decryptCommentText,
+  } = useBackendComments(selectedMessageId, keys.keyId, keys.withPrivateKey);
 
   const feedContext = useMemo(
     () => ({
@@ -67,13 +86,12 @@ export function FeedPage() {
       setSelectedMessageId((current) => {
         const next = current === messageId ? null : messageId;
         if (next !== current) {
-          clearDecrypt();
           clearLastShare();
         }
         return next;
       });
     },
-    [clearDecrypt, clearLastShare],
+    [clearLastShare],
   );
 
   const handleReloadFeed = useCallback(async () => {
@@ -83,8 +101,9 @@ export function FeedPage() {
         return;
       }
     }
+    clearDecrypt();
     await feed.reload();
-  }, [keys, feed]);
+  }, [clearDecrypt, feed, keys]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
@@ -109,7 +128,7 @@ export function FeedPage() {
 
   const handlePostComment = useCallback(
     async (messageId: string, text: string) => {
-      const newComment = await comments.postComment({
+      const newComment = await postComment({
         messageId,
         allDeliveries: feed.allDeliveries,
         manifestLookup: feed.manifestLookup,
@@ -119,15 +138,21 @@ export function FeedPage() {
         return;
       }
 
-      const decryptedText = await comments.decryptCommentText(newComment, {
+      const decryptedText = await decryptCommentText(newComment, {
         allDeliveries: feed.allDeliveries,
         manifestLookup: feed.manifestLookup,
       });
       if (decryptedText) {
-        mergeDecryptedComments({ [newComment.id]: decryptedText });
+        mergeDecryptedComments(messageId, { [newComment.id]: decryptedText });
       }
     },
-    [comments, feed.allDeliveries, feed.manifestLookup, mergeDecryptedComments],
+    [
+      postComment,
+      decryptCommentText,
+      feed.allDeliveries,
+      feed.manifestLookup,
+      mergeDecryptedComments,
+    ],
   );
 
   return (
@@ -139,88 +164,103 @@ export function FeedPage() {
         onSendSuccess={handleSendSuccess}
       />
 
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2.125, mb: 2 }}>
         <Stack
           direction="row"
           sx={{
-            mb: 2,
+            mb: 1.5,
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <Typography variant="h6">Feed data for your keyId</Typography>
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 800, fontSize: '1.1875rem' }}
+            >
+              Feed
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.25 }}
+            >
+              Warm neutral — encrypted inbox for your key
+            </Typography>
+          </Box>
           <Button
             onClick={() => void handleReloadFeed()}
             disabled={feed.loading}
+            size="small"
+            variant="outlined"
           >
-            {feed.loading ? 'Loading…' : 'Reload all'}
+            {feed.loading ? 'Loading…' : 'Reload'}
           </Button>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Loads inbox from the backend for your keyId. Set your keyId from a
-          private JWK file; the private key is not stored. Comments load when
-          you expand a message.
+          Loads inbox from the backend for your keyId. Comments load when you
+          expand a message.
         </Typography>
         {feed.error ? <Alert severity="warning">{feed.error}</Alert> : null}
         {feed.loading ? (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', mt: 2 }}
+          >
             <CircularProgress size={18} />
             <Typography variant="body2">Loading inbox…</Typography>
           </Stack>
         ) : null}
         {keys.keyId && !feed.loading ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             {feed.messages.length} message(s).
           </Typography>
         ) : null}
-        <Stack spacing={1}>
-          {feed.messages.map((message) => {
-            const isExpanded = selectedMessageId === message.id;
-            return (
-              <MessageThreadCard
-                key={message.id}
-                message={message}
-                expanded={isExpanded}
-                comments={
-                  isExpanded && selectedMessageId === message.id
-                    ? comments.comments
-                    : EMPTY_COMMENTS
-                }
-                commentsLoading={
-                  isExpanded &&
-                  selectedMessageId === message.id &&
-                  comments.loading
-                }
-                commentsPostBusy={isExpanded && comments.postBusy}
-                onToggleMessage={handleToggleMessage}
-                onDecryptDelivery={decrypt.decryptDelivery}
-                decryptBusy={isExpanded && decrypt.busy}
-                decryptError={isExpanded ? decrypt.error : null}
-                decryptPlaintext={isExpanded ? decrypt.plaintext : null}
-                decryptedComments={
-                  isExpanded ? decrypt.decryptedComments : null
-                }
-                shareBusy={share.busy}
-                shareLastShareId={
-                  isExpanded && share.lastShare?.messageId === message.id
-                    ? share.lastShare.shareId
-                    : null
-                }
-                onOpenShare={handleOpenShare}
-                onPostCommentForMessage={handlePostComment}
-                feedContext={feedContext}
-                usernameByKeyId={usernameByKeyId}
-                viewerKeyId={keys.keyId}
-              />
-            );
-          })}
-          {keys.keyId && !feed.loading && feed.messages.length === 0 ? (
-            <Typography color="text.secondary">
-              No data yet for this keyId.
-            </Typography>
-          ) : null}
-        </Stack>
       </Paper>
+
+      <Stack spacing={1.5}>
+        {feed.messages.map((message) => {
+          const isExpanded = selectedMessageId === message.id;
+          const decryptedComments =
+            decryptedCommentsByMessage[message.id] ?? null;
+          return (
+            <MessageThreadCard
+              key={message.id}
+              message={message}
+              expanded={isExpanded}
+              comments={isExpanded ? loadedComments : EMPTY_COMMENTS}
+              commentsLoading={isExpanded && commentsLoading}
+              commentsPostBusy={isExpanded && commentsPostBusy}
+              onToggleMessage={handleToggleMessage}
+              onDecryptDelivery={decryptDelivery}
+              onDecryptComments={decryptComments}
+              decryptBusy={busyMessageId === message.id}
+              decryptCommentsBusy={busyCommentsMessageId === message.id}
+              decryptError={messageErrors[message.id] ?? null}
+              decryptCommentsError={commentsErrors[message.id] ?? null}
+              decryptPlaintext={decryptedMessages[message.id] ?? null}
+              decryptedComments={isExpanded ? decryptedComments : null}
+              shareBusy={shareBusy}
+              shareLastShareId={
+                isExpanded && lastShare?.messageId === message.id
+                  ? lastShare.shareId
+                  : null
+              }
+              onOpenShare={handleOpenShare}
+              onPostCommentForMessage={handlePostComment}
+              feedContext={feedContext}
+              usernameByKeyId={usernameByKeyId}
+              viewerKeyId={keys.keyId}
+            />
+          );
+        })}
+        {keys.keyId && !feed.loading && feed.messages.length === 0 ? (
+          <Typography color="text.secondary">
+            No data yet for this keyId.
+          </Typography>
+        ) : null}
+      </Stack>
 
       <ShareMessageDialog
         open={shareDialogOpen}

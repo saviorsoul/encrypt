@@ -1,11 +1,15 @@
 const SETTINGS_STORAGE_KEY = 'encrypt:feed-lab:settings';
 
+export type FeedLabColorMode = 'light' | 'dark';
+
 export type FeedLabSettings = {
   requestsApprovalDialog: boolean;
+  colorMode: FeedLabColorMode;
 };
 
 const DEFAULT_SETTINGS: FeedLabSettings = {
   requestsApprovalDialog: true,
+  colorMode: 'light',
 };
 
 function getSettingsStorage(): Storage | null {
@@ -32,6 +36,10 @@ export function loadFeedLabSettings(): FeedLabSettings {
         typeof parsed.requestsApprovalDialog === 'boolean'
           ? parsed.requestsApprovalDialog
           : DEFAULT_SETTINGS.requestsApprovalDialog,
+      colorMode:
+        parsed.colorMode === 'light' || parsed.colorMode === 'dark'
+          ? parsed.colorMode
+          : DEFAULT_SETTINGS.colorMode,
     };
   } catch {
     return DEFAULT_SETTINGS;

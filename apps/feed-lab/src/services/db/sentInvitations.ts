@@ -92,9 +92,7 @@ export async function saveSentInvitation(
     label: trimmedLabel,
     inviterKeyId,
     createdAt:
-      existingIndex >= 0
-        ? invitations[existingIndex]!.createdAt
-        : createdAt,
+      existingIndex >= 0 ? invitations[existingIndex]!.createdAt : createdAt,
   };
 
   if (existingIndex >= 0) {
