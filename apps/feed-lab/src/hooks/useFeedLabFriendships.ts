@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Friendship, FriendshipRequest } from '@encrypt/core/api/feedApi';
+import type { Friendship } from '@encrypt/core/api/feedApi';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { buildSentInvitationLabelByToken } from '@lab/services/db/sentInvitations.ts';
 import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
@@ -49,12 +49,6 @@ export function useFeedLabFriendships(
 ) {
   const api = useFeedApi();
   const [rawFriendships, setRawFriendships] = useState<Friendship[]>([]);
-  const [incomingRequests, setIncomingRequests] = useState<FriendshipRequest[]>(
-    [],
-  );
-  const [outgoingRequests, setOutgoingRequests] = useState<FriendshipRequest[]>(
-    [],
-  );
   const [invitationLabelByToken, setInvitationLabelByToken] = useState<
     Record<string, string>
   >({});
@@ -64,8 +58,6 @@ export function useFeedLabFriendships(
   const refresh = useCallback(async () => {
     if (!ownerKeyId) {
       setRawFriendships([]);
-      setIncomingRequests([]);
-      setOutgoingRequests([]);
       setInvitationLabelByToken({});
       setError(null);
       return;
@@ -74,19 +66,14 @@ export function useFeedLabFriendships(
     setLoading(true);
     setError(null);
     try {
-      const [friendships, requests, labels] = await Promise.all([
+      const [friendships, labels] = await Promise.all([
         api.getFriendships(),
-        api.getFriendshipRequests(),
         buildSentInvitationLabelByToken(ownerKeyId),
       ]);
       setRawFriendships(friendships);
-      setIncomingRequests(requests.incoming);
-      setOutgoingRequests(requests.outgoing);
       setInvitationLabelByToken(labels);
     } catch (e) {
       setRawFriendships([]);
-      setIncomingRequests([]);
-      setOutgoingRequests([]);
       setInvitationLabelByToken({});
       setError(e instanceof Error ? e.message : 'Failed to load friendships.');
     } finally {
@@ -119,16 +106,12 @@ export function useFeedLabFriendships(
         }
 
         try {
-          await saveFeedLabUser(
-            ownerKeyId,
-            label,
-            {
-              kty: 'EC',
-              crv: 'P-256',
-              x: friendship.publicKey.x,
-              y: friendship.publicKey.y,
-            },
-          );
+          await saveFeedLabUser(ownerKeyId, label, {
+            kty: 'EC',
+            crv: 'P-256',
+            x: friendship.publicKey.x,
+            y: friendship.publicKey.y,
+          });
           addLocalUser({ keyId: friendship.friendKeyId, username: label });
         } catch {
           /* username may already be taken by another key */
@@ -167,8 +150,6 @@ export function useFeedLabFriendships(
     friends,
     friendKeyIds,
     friendLabels,
-    incomingRequests,
-    outgoingRequests,
     invitationLabelByToken,
     loading,
     error,

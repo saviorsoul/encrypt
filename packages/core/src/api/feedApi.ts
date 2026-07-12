@@ -7,7 +7,10 @@ import {
   resolveAuthHeaderRecord,
   captureFeedApiNextNonce,
 } from './feedApiAuth.ts';
-import { buildAuthRequestDescriptorFromParts } from '../crypto/authProof.ts';
+import {
+  buildAuthRequestDescriptorFromParts,
+  type AuthRequestDescriptor,
+} from '../crypto/authProof.ts';
 
 export type {
   FeedApiAuthProvider,
@@ -26,6 +29,10 @@ export type FeedApiConfig = {
   baseUrl: string;
   fetch?: typeof fetch;
   auth?: FeedApiAuthProvider;
+  beforeSign?: (
+    request: AuthRequestDescriptor,
+    options?: FeedApiAuthHeaderOptions,
+  ) => Promise<void>;
 };
 
 export type FeedApiRequestOptions = {
@@ -128,6 +135,9 @@ export function createFeedApi(config: FeedApiConfig) {
     options?: FeedApiRequestOptions & FeedApiAuthHeaderOptions,
   ): Promise<Record<string, string>> {
     const request = buildAuthRequestDescriptorFromParts(method, url, body);
+    if (config.beforeSign && options?.bypassClientNonceCache !== true) {
+      await config.beforeSign(request, options);
+    }
     return resolveAuthHeaderRecord(
       authConfig,
       request,

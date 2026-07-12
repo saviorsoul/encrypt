@@ -10,6 +10,7 @@ type RecipientMultiSelectProps = {
   onChange: (value: string[]) => void;
   getOptionLabel?: (option: string) => string;
   disabled?: boolean;
+  onOpen?: () => void;
 };
 
 export function RecipientMultiSelect({
@@ -18,6 +19,7 @@ export function RecipientMultiSelect({
   onChange,
   getOptionLabel,
   disabled = false,
+  onOpen,
 }: RecipientMultiSelectProps) {
   const resolveLabel = getOptionLabel ?? ((option: string) => option);
 
@@ -29,6 +31,7 @@ export function RecipientMultiSelect({
       options={options}
       value={value}
       onChange={(_, next) => onChange(next)}
+      onOpen={onOpen}
       disabled={disabled}
       getOptionLabel={resolveLabel}
       renderValue={(selected, getTagProps) => {

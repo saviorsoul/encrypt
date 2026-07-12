@@ -3,19 +3,23 @@ import { createFeedApi, type FeedApi } from '@encrypt/core/api/feedApi';
 import { getApiBaseUrl } from '@lab/lib/feedApiClient.ts';
 import { useFeedApiAuthStorageSync } from '@lab/hooks/useFeedApiAuthStorageSync.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { useSignNetworkRequest } from '@lab/providers/SignNetworkRequestProvider.tsx';
 
 const FeedApiContext = createContext<FeedApi | null>(null);
 
 export function FeedApiProvider({ children }: { children: ReactNode }) {
   useFeedApiAuthStorageSync();
   const { keys } = useFeedLabSession();
+  const { requestSignApproval } = useSignNetworkRequest();
+
   const api = useMemo(
     () =>
       createFeedApi({
         baseUrl: getApiBaseUrl(),
         auth: keys.authProvider,
+        beforeSign: requestSignApproval,
       }),
-    [keys.authProvider],
+    [keys.authProvider, requestSignApproval],
   );
   return <FeedApiContext value={api}>{children}</FeedApiContext>;
 }

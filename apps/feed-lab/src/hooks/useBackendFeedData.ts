@@ -46,10 +46,44 @@ export function useBackendFeedData(keyId: string | null) {
   }, [api]);
 
   useEffect(() => {
-    if (keyId) {
-      void reload();
+    if (!keyId) {
+      return;
     }
-  }, [keyId, reload]);
+
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const inbox = await api.getInbox();
+        if (cancelled) {
+          return;
+        }
+        cacheInboxItems(inbox);
+        setRawItems(inbox);
+        const deliveries = inboxApiItemsToStoredDeliveries(inbox);
+        setMessages(filterFeedInboxMessages(deliveries));
+      } catch (e) {
+        if (cancelled) {
+          return;
+        }
+        setError(e instanceof Error ? e.message : 'Failed to load feed data.');
+        setRawItems([]);
+        setMessages([]);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, keyId]);
 
   const manifestLookup = useCallback(
     (messageId: string, keyId: string) =>

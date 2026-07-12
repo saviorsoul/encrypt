@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
+import { useFeedLabFriendshipRequests } from '@lab/hooks/useFeedLabFriendshipRequests.ts';
 import { useBackendFriendshipRequests } from '@lab/hooks/useBackendFriendshipRequests.ts';
 import {
   AcceptFriendRequestDialog,
@@ -44,13 +45,16 @@ export function UsersPage() {
     usernameByKeyId,
     addLocalUser,
   );
+  const friendshipRequestList = useFeedLabFriendshipRequests(keys.keyId);
 
-  const friendInvitations = useBackendFriendInvitations(() =>
-    friendships.refresh(),
-  );
+  const refreshFriendData = useCallback(async () => {
+    await Promise.all([friendships.refresh(), friendshipRequestList.refresh()]);
+  }, [friendships, friendshipRequestList]);
+
+  const friendInvitations = useBackendFriendInvitations(refreshFriendData);
 
   const friendshipRequests = useBackendFriendshipRequests(
-    () => friendships.refresh(),
+    refreshFriendData,
     (user) => {
       addLocalUser(user);
     },
@@ -135,6 +139,14 @@ export function UsersPage() {
 
   return (
     <>
+      {friendshipRequestList.incomingRequests.length > 0 ? (
+        <Alert severity="info">
+          {friendshipRequestList.incomingRequests.length === 1
+            ? 'You have 1 incoming friend request.'
+            : `You have ${friendshipRequestList.incomingRequests.length} incoming friend requests.`}
+        </Alert>
+      ) : null}
+
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
           Friends
@@ -151,10 +163,10 @@ export function UsersPage() {
           </Stack>
         ) : (
           <Stack spacing={2}>
-            {friendships.incomingRequests.length > 0 ? (
+            {friendshipRequestList.incomingRequests.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Incoming requests</Typography>
-                {friendships.incomingRequests.map((request) => {
+                {friendshipRequestList.incomingRequests.map((request) => {
                   const entry = formatFriendListEntry(
                     request.requesterKeyId,
                     usernameByKeyId,
@@ -211,10 +223,10 @@ export function UsersPage() {
               </Stack>
             ) : null}
 
-            {friendships.outgoingRequests.length > 0 ? (
+            {friendshipRequestList.outgoingRequests.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Outgoing requests</Typography>
-                {friendships.outgoingRequests.map((request) => {
+                {friendshipRequestList.outgoingRequests.map((request) => {
                   const entry = formatFriendListEntry(
                     request.targetKeyId,
                     usernameByKeyId,
@@ -302,9 +314,9 @@ export function UsersPage() {
           </Stack>
         )}
 
-        {friendships.error ? (
+        {friendships.error || friendshipRequestList.error ? (
           <Alert severity="warning" sx={{ mt: 2 }}>
-            {friendships.error}
+            {friendships.error ?? friendshipRequestList.error}
           </Alert>
         ) : null}
       </Paper>
