@@ -6,6 +6,17 @@ export const FRIENDSHIP_REQUEST_REJECTED = 'rejected';
 
 type DbClient = PrismaTx | typeof prisma;
 
+export async function hasFriends(
+  ownerKeyId: string,
+  client: DbClient = prisma,
+): Promise<boolean> {
+  const row = await client.userFriendship.findFirst({
+    where: { ownerKeyId },
+    select: { ownerKeyId: true },
+  });
+  return row != null;
+}
+
 export async function areFriends(
   keyIdA: string,
   keyIdB: string,

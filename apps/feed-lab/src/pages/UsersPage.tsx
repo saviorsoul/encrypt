@@ -264,7 +264,11 @@ export function UsersPage() {
                 <Button
                   variant="outlined"
                   size="small"
-                  disabled={!keys.keyId || friendInvitations.busy}
+                  disabled={
+                    !keys.keyId ||
+                    friendInvitations.busy ||
+                    friendships.friends.length === 0
+                  }
                   onClick={openAddFriendDialog}
                 >
                   Add friend
@@ -272,7 +276,9 @@ export function UsersPage() {
               </Stack>
               {friendships.friends.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No friends yet.
+                  No friends yet. Accept an invitation link from someone else to
+                  get started — you need at least one friend before you can
+                  invite others.
                 </Typography>
               ) : (
                 friendships.friends.map((friend) => {
@@ -324,6 +330,7 @@ export function UsersPage() {
       <AddFriendDialog
         open={addFriendDialogOpen}
         authenticated={keys.keyId != null}
+        hasFriends={friendships.friends.length > 0}
         invitationBusy={friendInvitations.busy}
         invitationError={friendInvitations.error}
         invitationHref={friendInvitations.lastInvitationHref}

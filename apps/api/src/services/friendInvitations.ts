@@ -9,6 +9,7 @@ import {
 import {
   areFriends,
   deletePendingRequestsBetween,
+  hasFriends,
   insertFriendshipPair,
 } from '../db/friendships.js';
 import {
@@ -36,6 +37,10 @@ export async function createFriendInvitation(input: {
 }) {
   const { inviterKeyId, inviterPublicKey } = input;
   await registerInviterForNewInvitation(inviterKeyId, inviterPublicKey);
+
+  if (!(await hasFriends(inviterKeyId))) {
+    throw badRequest('Add or accept a friend before sending invitations.');
+  }
 
   const token = randomUUID();
 

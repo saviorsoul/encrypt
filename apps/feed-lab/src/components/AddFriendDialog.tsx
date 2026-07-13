@@ -18,6 +18,7 @@ type AddFriendTab = 'link' | 'publicKey';
 type AddFriendDialogProps = {
   open: boolean;
   authenticated: boolean;
+  hasFriends: boolean;
   invitationBusy: boolean;
   invitationError: string | null;
   invitationHref: string | null;
@@ -37,6 +38,7 @@ type AddFriendDialogProps = {
 export function AddFriendDialog({
   open,
   authenticated,
+  hasFriends,
   invitationBusy,
   invitationError,
   invitationHref,
@@ -72,6 +74,7 @@ export function AddFriendDialog({
   }
 
   const busy = invitationBusy || requestBusy;
+  const canInvite = authenticated && hasFriends;
 
   const handleCopyLink = useCallback(async () => {
     if (!invitationHref) {
@@ -120,13 +123,21 @@ export function AddFriendDialog({
       <DialogTitle>Add friend</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
+          {!hasFriends ? (
+            <Alert severity="info">
+              Add or accept a friend before sending invitations. You can still
+              accept an invitation link from someone else to get your first
+              friend.
+            </Alert>
+          ) : null}
+
           <Tabs
             value={tab}
             onChange={(_, next: AddFriendTab) => setTab(next)}
             variant="fullWidth"
           >
-            <Tab label="Invitation link" value="link" />
-            <Tab label="Public key" value="publicKey" />
+            <Tab label="Invitation link" value="link" disabled={!canInvite} />
+            <Tab label="Public key" value="publicKey" disabled={!canInvite} />
           </Tabs>
 
           {tab === 'link' ? (
@@ -166,7 +177,7 @@ export function AddFriendDialog({
                     onClearInvitationError();
                   }}
                   fullWidth
-                  disabled={busy || !authenticated}
+                  disabled={busy || !canInvite}
                   error={invitationNameError != null}
                 />
               )}
@@ -187,7 +198,7 @@ export function AddFriendDialog({
                 label="Name"
                 placeholder="Friend name"
                 value={friendName}
-                disabled={busy || !authenticated}
+                disabled={busy || !canInvite}
                 onChange={(event) => {
                   setFriendName(event.target.value);
                   onClearRequestError();
@@ -200,7 +211,7 @@ export function AddFriendDialog({
                 label="Public key"
                 placeholder='x;y or {"kty":"EC","crv":"P-256","x":"…","y":"…"}'
                 value={publicKey}
-                disabled={busy || !authenticated}
+                disabled={busy || !canInvite}
                 onChange={(event) => {
                   setPublicKey(event.target.value);
                   onClearRequestError();
@@ -235,7 +246,7 @@ export function AddFriendDialog({
               <Button
                 variant="contained"
                 onClick={handleCreateLink}
-                disabled={busy || !authenticated}
+                disabled={busy || !canInvite}
               >
                 {invitationBusy ? 'Creating…' : 'Create link'}
               </Button>
@@ -244,10 +255,7 @@ export function AddFriendDialog({
             <Button
               variant="contained"
               disabled={
-                busy ||
-                !authenticated ||
-                !publicKey.trim() ||
-                !friendName.trim()
+                busy || !canInvite || !publicKey.trim() || !friendName.trim()
               }
               onClick={handleSendRequest}
             >

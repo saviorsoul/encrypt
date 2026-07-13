@@ -10,6 +10,7 @@ import {
   findFriendshipRequest,
   FRIENDSHIP_REQUEST_PENDING,
   FRIENDSHIP_REQUEST_REJECTED,
+  hasFriends,
   insertFriendshipPair,
   listFriendshipsWithPublicKeys,
   listIncomingPendingRequests,
@@ -76,6 +77,9 @@ export async function createFriendshipRequest(input: FriendshipPairInput) {
   const { requesterKeyId, requesterPublicKey, targetKeyId, invitationToken } =
     input;
   assertDistinctKeyIds(requesterKeyId, targetKeyId);
+  if (!(await hasFriends(requesterKeyId))) {
+    throw badRequest('Add or accept a friend before sending invitations.');
+  }
   await registerRequesterForFriendshipRequest(
     requesterKeyId,
     requesterPublicKey,
@@ -140,7 +144,10 @@ export async function createFriendshipRequest(input: FriendshipPairInput) {
 
   return {
     status: 'pending' as const,
-    request: serializeFriendshipRequest(request),
+    request: serializeFriendshipRequest({
+      ...request,
+      invitationToken: request.invitationToken ?? invitationToken,
+    }),
   };
 }
 
@@ -195,11 +202,7 @@ export async function acceptFriendshipRequest(input: {
     return { status: 'accepted' as const };
   }
 
-  await establishMutualFriendship(
-    requesterKeyId,
-    targetKeyId,
-    invitationToken,
-  );
+  await establishMutualFriendship(requesterKeyId, targetKeyId, invitationToken);
   return { status: 'accepted' as const };
 }
 
