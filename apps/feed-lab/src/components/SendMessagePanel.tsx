@@ -142,7 +142,7 @@ export function SendMessagePanel({
             value={messageText}
             onChange={handleMessageTextChange}
             multiline
-            minRows={3}
+            minRows={5}
             fullWidth
             placeholder="Enter text to encrypt..."
             disabled={sendMessage.busy}
