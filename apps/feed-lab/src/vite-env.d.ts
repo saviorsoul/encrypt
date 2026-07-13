@@ -10,6 +10,7 @@ interface ImportMeta {
 
 interface Window {
   electron?: {
+    writeTextToClipboard?: (text: string) => Promise<void>;
     pickPrivateKeyJwkText?: () => Promise<{
       cancelled?: boolean;
       error?: string;

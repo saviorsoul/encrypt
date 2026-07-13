@@ -45,7 +45,7 @@ export function ImportJsonPayloadInput({
   readOnlyFileName = null,
   description,
   readOnlyDescription,
-  placeholder = null,
+  placeholder,
   pasteHelperText = null,
   getPayloadError,
   validateFileContent = validateImportJsonText,
