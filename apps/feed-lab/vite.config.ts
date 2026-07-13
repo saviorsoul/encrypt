@@ -7,7 +7,7 @@ const apiProxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
 
 export default defineConfig(({ mode }) => ({
   // GCS: index.html lives at storage.googleapis.com/BUCKET/index.html — use relative asset paths.
-  base: mode === 'production' ? './' : '/',
+  base: process.env.VITE_BASE ?? (mode === 'production' ? './' : '/'),
   envDir: repoRoot,
   plugins: [react()],
   resolve: {
