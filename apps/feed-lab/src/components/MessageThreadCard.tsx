@@ -25,6 +25,7 @@ import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCr
 import { getSenderKeyIdFromCorePayload } from '@encrypt/core/crypto/manifestDecrypt';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
+import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
 import { formatCommentAuthorLabel } from '@lab/lib/formatCommentAuthorLabel.ts';
 import { assembleStoredMessageCopyPayload } from '@lab/lib/assembleMessageCopyPayload.ts';
 import {
@@ -33,6 +34,7 @@ import {
 } from '@lab/lib/commentsPanelTiming.ts';
 import { RedactedText } from '@lab/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
+import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
 type FeedContext = {
   allDeliveries: Parameters<
@@ -46,9 +48,8 @@ type FeedContext = {
 type MessageThreadCardProps = {
   message: StoredMessage;
   expanded: boolean;
-  comments: StoredComment[];
-  commentsLoading: boolean;
-  commentsPostBusy: boolean;
+  highlighted: boolean;
+  onMessageInteract: (messageId: string) => void;
   onToggleMessage: (messageId: string) => void;
   onDecryptDelivery: ReturnType<typeof useBackendDecrypt>['decryptDelivery'];
   onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
@@ -61,7 +62,9 @@ type MessageThreadCardProps = {
   shareBusy: boolean;
   shareLastShareId: string | null;
   onOpenShare: (messageId: string) => void;
-  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+  onMergeDecryptedComments: ReturnType<
+    typeof useBackendDecrypt
+  >['mergeDecryptedComments'];
   feedContext: FeedContext;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
@@ -134,9 +137,8 @@ function threadAvatarSx(isOwn: boolean, size: number) {
 export const MessageThreadCard = memo(function MessageThreadCard({
   message,
   expanded,
-  comments,
-  commentsLoading,
-  commentsPostBusy,
+  highlighted,
+  onMessageInteract,
   onToggleMessage,
   onDecryptDelivery,
   onDecryptComments,
@@ -149,7 +151,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   shareBusy,
   shareLastShareId,
   onOpenShare,
-  onPostCommentForMessage,
+  onMergeDecryptedComments,
   feedContext,
   usernameByKeyId,
   viewerKeyId,
@@ -158,10 +160,21 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   const [senderLabel, setSenderLabel] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [copyBusy, setCopyBusy] = useState(false);
+  const [commentsForCopy, setCommentsForCopy] = useState<StoredComment[]>([]);
+
+  const markInteracted = useCallback(() => {
+    onMessageInteract(message.id);
+  }, [message.id, onMessageInteract]);
 
   const handleToggle = useCallback(() => {
     onToggleMessage(message.id);
   }, [message.id, onToggleMessage]);
+
+  useEffect(() => {
+    if (!expanded) {
+      setCommentsForCopy([]);
+    }
+  }, [expanded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,11 +200,12 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   );
 
   const handleCopy = useCallback(async () => {
+    markInteracted();
     setCopyBusy(true);
     try {
       const payloadJson = assembleStoredMessageCopyPayload(
         message,
-        comments,
+        commentsForCopy,
         feedContext.allDeliveries,
       );
       await navigator.clipboard.writeText(payloadJson);
@@ -202,13 +216,13 @@ export const MessageThreadCard = memo(function MessageThreadCard({
       setCopyBusy(false);
       window.setTimeout(() => setCopyState('idle'), 2000);
     }
-  }, [comments, feedContext.allDeliveries, message]);
+  }, [commentsForCopy, feedContext.allDeliveries, markInteracted, message]);
 
   return (
     <Paper
       sx={{
         overflow: 'hidden',
-        borderColor: expanded ? 'primary.main' : 'divider',
+        borderColor: highlighted ? 'primary.main' : 'divider',
       }}
     >
       <Box sx={{ px: 2.125, py: 1.875 }}>
@@ -252,6 +266,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               decryptPlaintext
                 ? undefined
                 : () => {
+                    markInteracted();
                     void onDecryptDelivery({
                       delivery: message,
                       allDeliveries: feedContext.allDeliveries,
@@ -372,17 +387,16 @@ export const MessageThreadCard = memo(function MessageThreadCard({
       >
         <MessageThreadExpandedPanel
           message={message}
-          comments={comments}
-          commentsLoading={commentsLoading}
-          commentsPostBusy={commentsPostBusy}
           decryptCommentsError={decryptCommentsError}
           decryptPlaintext={decryptPlaintext}
           decryptedComments={decryptedComments}
           decryptCommentsBusy={decryptCommentsBusy}
           onDecryptComments={onDecryptComments}
+          onMergeDecryptedComments={onMergeDecryptedComments}
+          onMessageInteract={onMessageInteract}
           feedContext={feedContext}
           shareLastShareId={shareLastShareId}
-          onPostCommentForMessage={onPostCommentForMessage}
+          onCommentsForCopyChange={setCommentsForCopy}
           usernameByKeyId={usernameByKeyId}
           viewerKeyId={viewerKeyId}
         />
@@ -393,37 +407,85 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
 type MessageThreadExpandedPanelProps = {
   message: StoredMessage;
-  comments: StoredComment[];
-  commentsLoading: boolean;
-  commentsPostBusy: boolean;
   decryptCommentsError: string | null;
   decryptPlaintext: string | null;
   decryptedComments: Record<string, string> | null;
   decryptCommentsBusy: boolean;
   onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
+  onMergeDecryptedComments: ReturnType<
+    typeof useBackendDecrypt
+  >['mergeDecryptedComments'];
+  onMessageInteract: (messageId: string) => void;
   feedContext: FeedContext;
   shareLastShareId: string | null;
-  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+  onCommentsForCopyChange: (comments: StoredComment[]) => void;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
 };
 
 const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   message,
-  comments,
-  commentsLoading,
-  commentsPostBusy,
   decryptCommentsError,
   decryptPlaintext,
   decryptedComments,
   decryptCommentsBusy,
   onDecryptComments,
+  onMergeDecryptedComments,
+  onMessageInteract,
   feedContext,
   shareLastShareId,
-  onPostCommentForMessage,
+  onCommentsForCopyChange,
   usernameByKeyId,
   viewerKeyId,
 }: MessageThreadExpandedPanelProps) {
+  const { keys } = useFeedLabSession();
+  const {
+    comments,
+    loading: commentsLoading,
+    postBusy: commentsPostBusy,
+    postComment,
+    decryptCommentText,
+  } = useBackendComments(message.id, keys.keyId, keys.withPrivateKey);
+
+  useEffect(() => {
+    if (!commentsLoading) {
+      onCommentsForCopyChange(comments);
+    }
+  }, [comments, commentsLoading, onCommentsForCopyChange]);
+
+  const handlePostComment = useCallback(
+    async (text: string) => {
+      onMessageInteract(message.id);
+      const newComment = await postComment({
+        messageId: message.id,
+        allDeliveries: feedContext.allDeliveries,
+        manifestLookup: feedContext.manifestLookup,
+        text,
+      });
+      if (!newComment) {
+        return;
+      }
+
+      const decryptedText = await decryptCommentText(newComment, {
+        allDeliveries: feedContext.allDeliveries,
+        manifestLookup: feedContext.manifestLookup,
+      });
+      if (decryptedText) {
+        onMergeDecryptedComments(message.id, {
+          [newComment.id]: decryptedText,
+        });
+      }
+    },
+    [
+      decryptCommentText,
+      feedContext.allDeliveries,
+      feedContext.manifestLookup,
+      message.id,
+      onMergeDecryptedComments,
+      onMessageInteract,
+      postComment,
+    ],
+  );
   const commentsDecrypted = decryptedComments !== null;
   const showDecryptCommentsButton =
     !commentsLoading && comments.length > 0 && !commentsDecrypted;
@@ -442,10 +504,20 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       <Stack
         direction="row"
         spacing={1}
-        sx={{ mt: 2, mb: 1.5, alignItems: 'center' }}
+        sx={{ mt: 2, mb: 1, alignItems: 'center' }}
       >
-        <Typography variant="subtitle2" sx={{ flex: 1 }}>
-          {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
+        <Typography
+          variant="subtitle2"
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '0.75rem',
+            lineHeight: '30px',
+          }}
+        >
+          Comments (
+          {commentsLoading ? <CircularProgress size={10} /> : comments.length})
         </Typography>
         {showDecryptCommentsButton ? (
           <Button
@@ -455,6 +527,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
             disabled={decryptCommentsBusy}
             startIcon={<LockOutlinedIcon sx={{ fontSize: 14 }} />}
             onClick={() => {
+              onMessageInteract(message.id);
               void onDecryptComments({
                 messageId: message.id,
                 comments,
@@ -476,19 +549,6 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       ) : null}
 
       <Box>
-        {commentsLoading ? (
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center', py: 0.5 }}
-          >
-            <CircularProgress size={16} />
-            <Typography variant="body2" color="text.secondary">
-              Loading comments…
-            </Typography>
-          </Stack>
-        ) : null}
-
         <Collapse
           in={!commentsLoading}
           timeout={COMMENTS_PANEL_CONTENT_GROW_MS}
@@ -519,11 +579,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
                   </Typography>
                 ) : null}
               </Stack>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No comments yet.
-              </Typography>
-            )}
+            ) : null}
           </Box>
         </Collapse>
       </Box>
@@ -531,23 +587,20 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       <CommentComposer
         commentsPostBusy={commentsPostBusy}
         messageDecrypted={decryptPlaintext !== null}
-        onPostCommentForMessage={onPostCommentForMessage}
-        messageId={message.id}
+        onPostComment={handlePostComment}
       />
     </Box>
   );
 });
 
 const CommentComposer = memo(function CommentComposer({
-  messageId,
   commentsPostBusy,
   messageDecrypted,
-  onPostCommentForMessage,
+  onPostComment,
 }: {
-  messageId: string;
   commentsPostBusy: boolean;
   messageDecrypted: boolean;
-  onPostCommentForMessage: (messageId: string, text: string) => Promise<void>;
+  onPostComment: (text: string) => Promise<void>;
 }) {
   const [commentText, setCommentText] = useState('');
 
@@ -556,9 +609,9 @@ const CommentComposer = memo(function CommentComposer({
     if (!text) {
       return;
     }
-    await onPostCommentForMessage(messageId, text);
+    await onPostComment(text);
     setCommentText('');
-  }, [commentText, messageId, onPostCommentForMessage]);
+  }, [commentText, onPostComment]);
 
   return (
     <>
@@ -573,7 +626,7 @@ const CommentComposer = memo(function CommentComposer({
         helperText={
           messageDecrypted ? undefined : 'Decrypt the message to add a comment.'
         }
-        sx={{ my: 2 }}
+        sx={{ my: 1 }}
       />
       <Button
         variant="contained"

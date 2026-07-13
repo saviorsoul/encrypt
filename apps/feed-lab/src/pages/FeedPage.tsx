@@ -2,10 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Button, Stack, Typography } from '@mui/material';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
-import type { StoredComment } from '@encrypt/core/feed/types';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
-import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
 import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
 import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
 import { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
@@ -15,15 +13,16 @@ import { SendMessageDialog } from '@lab/components/SendMessageDialog.tsx';
 import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
-const EMPTY_COMMENTS: StoredComment[] = [];
-
 export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
   const { usernameByKeyId, addLocalUser } = feedLabUsers;
   const feed = useBackendFeedData(keys.keyId);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
-    null,
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
+    () => new Set(),
   );
+  const [lastInteractedMessageId, setLastInteractedMessageId] = useState<
+    string | null
+  >(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [createMessageDialogOpen, setCreateMessageDialogOpen] = useState(false);
   const [shareTargetMessageId, setShareTargetMessageId] = useState<
@@ -64,14 +63,6 @@ export function FeedPage() {
     busy: shareBusy,
     lastShare,
   } = share;
-  const {
-    comments: loadedComments,
-    loading: commentsLoading,
-    postBusy: commentsPostBusy,
-    postComment,
-    decryptCommentText,
-  } = useBackendComments(selectedMessageId, keys.keyId, keys.withPrivateKey);
-
   const feedContext = useMemo(
     () => ({
       allDeliveries: feed.allDeliveries,
@@ -80,11 +71,19 @@ export function FeedPage() {
     [feed.allDeliveries, feed.manifestLookup],
   );
 
+  const handleMessageInteract = useCallback((messageId: string) => {
+    setLastInteractedMessageId(messageId);
+  }, []);
+
   const handleToggleMessage = useCallback(
     (messageId: string) => {
-      setSelectedMessageId((current) => {
-        const next = current === messageId ? null : messageId;
-        if (next !== current) {
+      setLastInteractedMessageId(messageId);
+      setExpandedMessageIds((current) => {
+        const next = new Set(current);
+        if (next.has(messageId)) {
+          next.delete(messageId);
+        } else {
+          next.add(messageId);
           clearLastShare();
         }
         return next;
@@ -117,6 +116,7 @@ export function FeedPage() {
 
   const handleOpenShare = useCallback(
     (messageId: string) => {
+      setLastInteractedMessageId(messageId);
       clearShareError();
       setShareTargetMessageId(messageId);
       setShareDialogOpen(true);
@@ -129,35 +129,6 @@ export function FeedPage() {
     setShareTargetMessageId(null);
     clearShareError();
   }, [clearShareError]);
-
-  const handlePostComment = useCallback(
-    async (messageId: string, text: string) => {
-      const newComment = await postComment({
-        messageId,
-        allDeliveries: feed.allDeliveries,
-        manifestLookup: feed.manifestLookup,
-        text,
-      });
-      if (!newComment) {
-        return;
-      }
-
-      const decryptedText = await decryptCommentText(newComment, {
-        allDeliveries: feed.allDeliveries,
-        manifestLookup: feed.manifestLookup,
-      });
-      if (decryptedText) {
-        mergeDecryptedComments(messageId, { [newComment.id]: decryptedText });
-      }
-    },
-    [
-      postComment,
-      decryptCommentText,
-      feed.allDeliveries,
-      feed.manifestLookup,
-      mergeDecryptedComments,
-    ],
-  );
 
   return (
     <>
@@ -192,7 +163,7 @@ export function FeedPage() {
 
       <Stack spacing={1.5}>
         {feed.messages.map((message) => {
-          const isExpanded = selectedMessageId === message.id;
+          const isExpanded = expandedMessageIds.has(message.id);
           const decryptedComments =
             decryptedCommentsByMessage[message.id] ?? null;
           return (
@@ -200,9 +171,8 @@ export function FeedPage() {
               key={message.id}
               message={message}
               expanded={isExpanded}
-              comments={isExpanded ? loadedComments : EMPTY_COMMENTS}
-              commentsLoading={isExpanded && commentsLoading}
-              commentsPostBusy={isExpanded && commentsPostBusy}
+              highlighted={lastInteractedMessageId === message.id}
+              onMessageInteract={handleMessageInteract}
               onToggleMessage={handleToggleMessage}
               onDecryptDelivery={decryptDelivery}
               onDecryptComments={decryptComments}
@@ -211,7 +181,7 @@ export function FeedPage() {
               decryptError={messageErrors[message.id] ?? null}
               decryptCommentsError={commentsErrors[message.id] ?? null}
               decryptPlaintext={decryptedMessages[message.id] ?? null}
-              decryptedComments={isExpanded ? decryptedComments : null}
+              decryptedComments={decryptedComments}
               shareBusy={shareBusy}
               shareLastShareId={
                 isExpanded && lastShare?.messageId === message.id
@@ -219,7 +189,7 @@ export function FeedPage() {
                   : null
               }
               onOpenShare={handleOpenShare}
-              onPostCommentForMessage={handlePostComment}
+              onMergeDecryptedComments={mergeDecryptedComments}
               feedContext={feedContext}
               usernameByKeyId={usernameByKeyId}
               viewerKeyId={keys.keyId}
