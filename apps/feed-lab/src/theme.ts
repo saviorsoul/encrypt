@@ -50,7 +50,7 @@ const stoneDark = {
   text: '#fafaf9',
   sub: '#a8a29e',
   border: '#44403c',
-  encBg: '#292524',
+  encBg: '#1c1917',
   cardShadow: '0 1px 2px rgba(0,0,0,0.2), 0 3px 12px rgba(0,0,0,0.15)',
 };
 

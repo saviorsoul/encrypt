@@ -86,15 +86,15 @@ const messageDecryptButtonSx = {
     }),
 };
 
-const messageEncBoxSx = (theme: {
-  feedLab: { encBg: string };
-  palette: { text: { secondary: string } };
-}) => ({
+const ENC_PAPER_ELEVATION = 3;
+
+const encPaperSx = (theme: Theme) => ({
   bgcolor: theme.feedLab.encBg,
   borderRadius: 1.5,
+  border: 'none',
+  boxShadow: theme.shadows[ENC_PAPER_ELEVATION],
   px: 1.625,
   py: 1.375,
-  borderLeft: `2px solid ${theme.palette.text.secondary}`,
   display: 'flex',
   flexDirection: 'column',
 });
@@ -254,7 +254,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           </Tooltip>
         </Stack>
 
-        <Box sx={messageEncBoxSx}>
+        <Paper elevation={ENC_PAPER_ELEVATION} sx={encPaperSx}>
           <Button
             size="small"
             variant={decryptPlaintext ? 'text' : 'contained'}
@@ -309,7 +309,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               maxPreviewWords={REDACTED_PREVIEW_WORDS}
             />
           )}
-        </Box>
+        </Paper>
       </Box>
 
       {decryptError ? (
@@ -677,15 +677,7 @@ const CommentRow = memo(function CommentRow({
     viewerKeyId !== null && authorKeyId !== null && authorKeyId === viewerKeyId;
 
   return (
-    <Box
-      sx={(theme) => ({
-        borderRadius: 1.5,
-        px: 1.625,
-        py: 1.375,
-        bgcolor: theme.feedLab.encBg,
-        borderLeft: `2px solid ${theme.palette.text.secondary}`,
-      })}
-    >
+    <Paper elevation={ENC_PAPER_ELEVATION} sx={encPaperSx}>
       <Stack spacing={0.75}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar sx={threadAvatarSx(isOwnComment, 32)}>
@@ -706,6 +698,6 @@ const CommentRow = memo(function CommentRow({
           />
         )}
       </Stack>
-    </Box>
+    </Paper>
   );
 });
