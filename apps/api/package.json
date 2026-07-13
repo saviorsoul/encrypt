@@ -16,6 +16,7 @@
     "db:citus:distribute": "tsx scripts/citus-distribute.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "npm run migrate && npm run db:citus:distribute",
+    "db:setup:postgres": "npm run migrate",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
