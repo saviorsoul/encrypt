@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react';
 const repoRoot = path.resolve(__dirname, '../..');
 const apiProxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
 
-export default defineConfig(({ mode }) => ({
-  // GCS: index.html lives at storage.googleapis.com/BUCKET/index.html — use relative asset paths.
-  base: process.env.VITE_BASE ?? (mode === 'production' ? './' : '/'),
+export default defineConfig(({ command }) => ({
+  // GCS: use relative asset paths on `vite build`; dev server keeps `/` for the proxy.
+  base: command === 'serve' ? '/' : './',
   envDir: repoRoot,
   plugins: [react()],
   resolve: {
