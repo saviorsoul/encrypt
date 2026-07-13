@@ -15,6 +15,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
+import { useNavigate } from 'react-router-dom';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
@@ -39,6 +40,7 @@ const listItemTextProps = {
 };
 
 export function FeedLabSettingsMenu() {
+  const navigate = useNavigate();
   const { keys } = useFeedLabSession();
   const {
     requestsApprovalDialog,
@@ -81,7 +83,8 @@ export function FeedLabSettingsMenu() {
   const handleLogout = useCallback(() => {
     handleClose();
     keys.clearSession();
-  }, [handleClose, keys]);
+    navigate('/login', { replace: true });
+  }, [handleClose, keys, navigate]);
 
   const toggleRequestsApprovalDialog = useCallback(() => {
     setRequestsApprovalDialog(!requestsApprovalDialog);

@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ProtectedRoute } from '@lab/components/routes/ProtectedRoute.tsx';
 import { FeedApiProvider } from '@lab/providers/FeedApiProvider.tsx';
 import { FeedLabSessionProvider } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { FeedLabSettingsProvider } from '@lab/providers/FeedLabSettingsProvider.tsx';
@@ -7,6 +8,7 @@ import { SignNetworkRequestProvider } from '@lab/providers/SignNetworkRequestPro
 import { FeedLabLayout } from '@lab/layout/FeedLabLayout.tsx';
 import { FeedPage } from '@lab/pages/FeedPage.tsx';
 import { InvitePage } from '@lab/pages/InvitePage.tsx';
+import { LoginPage } from '@lab/pages/LoginPage.tsx';
 
 export default function App() {
   return (
@@ -17,12 +19,15 @@ export default function App() {
             <FeedApiProvider>
               <BrowserRouter>
                 <Routes>
-                  <Route element={<FeedLabLayout />}>
-                    <Route index element={<Navigate to="/feed" replace />} />
-                    <Route path="feed" element={<FeedPage />} />
-                    <Route path="users" element={<FeedPage />} />
-                  </Route>
+                  <Route path="login" element={<LoginPage />} />
                   <Route path="invite/:token" element={<InvitePage />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<FeedLabLayout />}>
+                      <Route index element={<Navigate to="/feed" replace />} />
+                      <Route path="feed" element={<FeedPage />} />
+                      <Route path="users" element={<FeedPage />} />
+                    </Route>
+                  </Route>
                 </Routes>
               </BrowserRouter>
             </FeedApiProvider>
