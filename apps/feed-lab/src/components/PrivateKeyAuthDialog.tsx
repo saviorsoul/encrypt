@@ -36,9 +36,8 @@ export function PrivateKeyAuthDialog({
   return (
     <Dialog
       open={open}
-      disableEscapeKeyDown
       onClose={(_, reason) => {
-        if (reason === 'backdropClick') {
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
           return;
         }
       }}
@@ -49,8 +48,8 @@ export function PrivateKeyAuthDialog({
       <DialogContent>
         <Stack spacing={2.5}>
           <Typography variant="body2" color="text.secondary">
-            To use Feed Lab, select the private key file for the account you want
-            to sign in with.
+            To use Feed Lab, select the private key file for the account you
+            want to sign in with.
           </Typography>
           <Typography variant="body2">
             Click the button below to open your file picker and choose a{' '}

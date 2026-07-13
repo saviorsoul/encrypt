@@ -114,8 +114,24 @@ export function SendMessagePanel({
             }
           }}
         >
-          <ToggleButton value="message">Send message</ToggleButton>
-          <ToggleButton value="json">Send JSON</ToggleButton>
+          <ToggleButton
+            value="message"
+            sx={{
+              paddingTop: '0.2em',
+              paddingBottom: '0.2em',
+            }}
+          >
+            Send message
+          </ToggleButton>
+          <ToggleButton
+            value="json"
+            sx={{
+              paddingTop: '0.2em',
+              paddingBottom: '0.2em',
+            }}
+          >
+            Send JSON
+          </ToggleButton>
         </ToggleButtonGroup>
       </Stack>
 
@@ -235,7 +251,11 @@ export function SendMessagePanel({
               mt: 2,
             }}
           >
-            {onClose ? <Button onClick={onClose}>Close</Button> : null}
+            {onClose ? (
+              <Button variant="outlined" onClick={onClose}>
+                Close
+              </Button>
+            ) : null}
             <Button
               variant="contained"
               startIcon={<SendIcon />}

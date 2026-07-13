@@ -154,10 +154,10 @@ export function FeedLabSettingsMenu() {
               </MenuItem>
             ) : null}
             <MenuItem onClick={handleLogout} sx={menuItemSx}>
-              <ListItemIcon sx={{ minWidth: 28 }}>
+              <ListItemText primary="Log out" {...listItemTextProps} />
+              <ListItemIcon sx={{ minWidth: 0, pl: 1 }}>
                 <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
               </ListItemIcon>
-              <ListItemText primary="Log out" {...listItemTextProps} />
             </MenuItem>
             <Divider />
           </>
