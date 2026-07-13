@@ -174,9 +174,8 @@ export function SendMessagePanel({
                   recipients.recipients.length === 0
                 }
                 onClick={() => void handleSendMessage()}
-                sx={{ flexShrink: 0, height: 40 }}
               >
-                {sendMessage.busy ? 'Sending…' : 'Send message'}
+                Send message
               </Button>
             </Box>
           )}
@@ -197,9 +196,8 @@ export function SendMessagePanel({
                   recipients.recipients.length === 0
                 }
                 onClick={() => void handleSendMessage()}
-                sx={{ flexShrink: 0, height: 40 }}
               >
-                {sendMessage.busy ? 'Sending…' : 'Send message'}
+                Send message
               </Button>
             </Box>
           ) : null}
@@ -225,7 +223,6 @@ export function SendMessagePanel({
                 informational only; the API validates the request body.
               </Typography>
             }
-            placeholder="Paste signed manifest or share export JSON…"
             getPayloadError={(text) => importSend.validatePayloadText(text)}
             validateFileContent={validateJsonSyntaxText}
             onClearErrors={importSend.clearError}
@@ -238,17 +235,12 @@ export function SendMessagePanel({
               mt: 2,
             }}
           >
-            {onClose ? (
-              <Button onClick={onClose} sx={{ flexShrink: 0, height: 40 }}>
-                Close
-              </Button>
-            ) : null}
+            {onClose ? <Button onClick={onClose}>Close</Button> : null}
             <Button
               variant="contained"
               startIcon={<SendIcon />}
               disabled={importSend.busy || !importPayload.trim()}
               onClick={() => void handleSendImport()}
-              sx={{ flexShrink: 0, height: 40 }}
             >
               {importSend.busy ? 'Sending…' : 'Send imported data'}
             </Button>

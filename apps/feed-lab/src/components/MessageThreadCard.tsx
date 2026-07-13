@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Avatar,
@@ -9,6 +9,7 @@ import {
   Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
@@ -17,6 +18,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import type { CopyState } from '@/types/copyState.ts';
 import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCrypto';
@@ -178,6 +180,11 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
   const isOwnMessage =
     viewerKeyId !== null && senderKeyId !== null && senderKeyId === viewerKeyId;
+  const sentAgo = useRelativeTime(message.createdAt);
+  const sentAtLabel = useMemo(
+    () => new Date(message.createdAt).toLocaleString(),
+    [message.createdAt],
+  );
 
   const handleCopy = useCallback(async () => {
     setCopyBusy(true);
@@ -218,12 +225,19 @@ export const MessageThreadCard = memo(function MessageThreadCard({
             sx={{ fontWeight: 800, fontSize: '0.8125rem' }}
             noWrap
           >
-            {isOwnMessage ? 'Your own message' : (senderLabel ?? '…')}
+            {isOwnMessage ? 'Your own message' : (senderLabel ?? '...')}
           </Typography>
           <Box sx={{ flex: 1 }} />
-          <Typography variant="caption" color="text.secondary">
-            {new Date(message.createdAt).toLocaleString()}
-          </Typography>
+          <Tooltip arrow placement="bottom-end" title={sentAtLabel}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              component="span"
+              sx={{ cursor: 'default' }}
+            >
+              {sentAgo}
+            </Typography>
+          </Tooltip>
         </Stack>
 
         <Box sx={messageEncBoxSx}>

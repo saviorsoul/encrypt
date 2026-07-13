@@ -45,8 +45,8 @@ export function ImportJsonPayloadInput({
   readOnlyFileName = null,
   description,
   readOnlyDescription,
-  placeholder = 'Paste signed manifest JSON…',
-  pasteHelperText = 'Paste the full signed manifest JSON exported from encryption.',
+  placeholder = null,
+  pasteHelperText = null,
   getPayloadError,
   validateFileContent = validateImportJsonText,
   onFileContentLoaded,
@@ -191,7 +191,6 @@ export function ImportJsonPayloadInput({
       ) : (
         <TextField
           autoFocus={!readOnly}
-          label="Encrypted JSON"
           value={payload}
           onChange={(event) => {
             if (readOnly) {
@@ -204,7 +203,7 @@ export function ImportJsonPayloadInput({
           multiline
           rows={rows}
           disabled={disabled || readOnly}
-          placeholder={placeholder}
+          placeholder={placeholder ? placeholder : 'Signed payload'}
           error={Boolean(payloadError)}
           helperText={payloadError ?? pasteHelperText}
           slotProps={{
