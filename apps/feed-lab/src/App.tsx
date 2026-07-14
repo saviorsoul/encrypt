@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { FeedLabRouter } from '@lab/lib/feedLabRouter.ts';
 import { ProtectedRoute } from '@lab/components/routes/ProtectedRoute.tsx';
 import { FeedApiProvider } from '@lab/providers/FeedApiProvider.tsx';
 import { FeedLabSessionProvider } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -17,7 +18,7 @@ export default function App() {
         <FeedLabThemeProvider>
           <SignNetworkRequestProvider>
             <FeedApiProvider>
-              <BrowserRouter>
+              <FeedLabRouter>
                 <Routes>
                   <Route path="login" element={<LoginPage />} />
                   <Route path="invite/:token" element={<InvitePage />} />
@@ -29,7 +30,7 @@ export default function App() {
                     </Route>
                   </Route>
                 </Routes>
-              </BrowserRouter>
+              </FeedLabRouter>
             </FeedApiProvider>
           </SignNetworkRequestProvider>
         </FeedLabThemeProvider>
