@@ -14,7 +14,8 @@
     "migrate": "tsx scripts/run-with-env.ts prisma migrate deploy",
     "migrate:dev": "tsx scripts/run-with-env.ts prisma migrate dev",
     "db:citus:distribute": "tsx scripts/citus-distribute.ts",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:friendship": "tsx scripts/seed-friendship.ts",
     "db:setup": "npm run migrate && npm run db:citus:distribute",
     "db:setup:postgres": "npm run migrate",
     "lint": "eslint .",
@@ -24,7 +25,7 @@
     "test": "vitest run"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@encrypt/core": "*",
