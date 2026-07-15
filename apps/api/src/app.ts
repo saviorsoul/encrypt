@@ -19,7 +19,7 @@ import { readConfig } from './config.js';
 
 export function createApp(): Koa {
   const app = new Koa();
-  const { corsAllowedOrigins } = readConfig();
+  const { corsAllowedOrigins, corsPreflightMaxAgeSeconds } = readConfig();
 
   app.use(async (ctx, next) => {
     const origin = ctx.get('Origin');
@@ -39,6 +39,9 @@ export function createApp(): Koa {
     }
 
     if (ctx.method === 'OPTIONS') {
+      if (isAllowedOrigin) {
+        ctx.set('Access-Control-Max-Age', String(corsPreflightMaxAgeSeconds));
+      }
       ctx.status = isAllowedOrigin ? 204 : 403;
       return;
     }
