@@ -22,6 +22,7 @@ import {
   saveFeedLabUser,
   loadFeedLabUserByKeyId,
 } from '@lab/services/db/storedUsers.ts';
+import { FriendNameField } from '@lab/components/FriendNameField.tsx';
 import {
   formatCommentAuthorLabel,
   formatFriendListEntry,
@@ -290,7 +291,16 @@ export function UsersPage() {
                       sx={{ alignItems: 'center' }}
                     >
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2">{friend.label}</Typography>
+                        <FriendNameField
+                          friendKeyId={friend.keyId}
+                          label={friend.label}
+                          storedUsername={usernameByKeyId[friend.keyId]}
+                          publicKey={friend.publicKey}
+                          ownerKeyId={keys.keyId!}
+                          existingUsernames={usernames}
+                          disabled={friendshipRequests.busy}
+                          onSaved={addLocalUser}
+                        />
                         <Typography
                           variant="caption"
                           color="text.secondary"

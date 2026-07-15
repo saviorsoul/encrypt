@@ -19,7 +19,7 @@ export function formatFriendListEntry(
   usernameByKeyId: Record<string, string>,
   invitationLabel?: string | null,
 ): { primary: string; secondary: string | null } {
-  const username = invitationLabel?.trim() || usernameByKeyId[keyId];
+  const username = usernameByKeyId[keyId] || invitationLabel?.trim();
   if (username) {
     return { primary: username, secondary: keyId };
   }

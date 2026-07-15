@@ -16,13 +16,19 @@ function labelForFriend(
   invitationToken: string | null | undefined,
   invitationLabelByToken: Record<string, string>,
 ): string {
+  const storedUsername = usernameByKeyId[friendKeyId];
+  if (storedUsername) {
+    return storedUsername;
+  }
+
   if (invitationToken) {
     const invitationLabel = invitationLabelByToken[invitationToken]?.trim();
     if (invitationLabel) {
       return invitationLabel;
     }
   }
-  return usernameByKeyId[friendKeyId] ?? friendKeyId;
+
+  return friendKeyId;
 }
 
 function mapFriendshipsToFriends(
@@ -101,7 +107,7 @@ export function useFeedLabFriendships(
         if (!label) {
           continue;
         }
-        if (usernameByKeyId[friendship.friendKeyId] === label) {
+        if (usernameByKeyId[friendship.friendKeyId]) {
           continue;
         }
 

@@ -33,19 +33,28 @@ export function useFeedLabUsers(ownerKeyId: string | null) {
   const addLocalUser = useCallback(
     (input: { keyId: string; username: string }) => {
       setUsernameByKeyId((prev) => {
-        if (prev[input.keyId] === input.username) {
+        const previousUsername = prev[input.keyId];
+        if (previousUsername === input.username) {
           return prev;
         }
+
+        setUsernames((names) => {
+          const withoutOld =
+            previousUsername != null
+              ? names.filter((name) => name !== previousUsername)
+              : names;
+          if (withoutOld.includes(input.username)) {
+            return withoutOld;
+          }
+          return [...withoutOld, input.username].sort((a, b) =>
+            a.localeCompare(b),
+          );
+        });
+
         return {
           ...prev,
           [input.keyId]: input.username,
         };
-      });
-      setUsernames((prev) => {
-        if (prev.includes(input.username)) {
-          return prev;
-        }
-        return [...prev, input.username].sort((a, b) => a.localeCompare(b));
       });
     },
     [],
