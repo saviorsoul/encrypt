@@ -15,25 +15,34 @@ import { createMessagesRouter } from './routes/messages.js';
 import { createSharesRouter } from './routes/shares.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createUsersRouter } from './routes/users.js';
+import { readConfig } from './config.js';
 
 export function createApp(): Koa {
   const app = new Koa();
+  const { corsAllowedOrigins } = readConfig();
 
   app.use(async (ctx, next) => {
-    ctx.set('Access-Control-Allow-Origin', '*');
-    ctx.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    ctx.set(
-      'Access-Control-Allow-Headers',
-      'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Nonce, X-Signature',
-    );
-    ctx.set(
-      'Access-Control-Expose-Headers',
-      'X-Next-Nonce, X-Next-Nonce-Expires-At',
-    );
+    const origin = ctx.get('Origin');
+    const isAllowedOrigin = origin.length > 0 && corsAllowedOrigins.has(origin);
+
+    if (isAllowedOrigin) {
+      ctx.set('Access-Control-Allow-Origin', origin);
+      ctx.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+      ctx.set(
+        'Access-Control-Allow-Headers',
+        'Content-Type, X-Key-Id, X-Public-Key, X-Time-Slot, X-Nonce, X-Signature',
+      );
+      ctx.set(
+        'Access-Control-Expose-Headers',
+        'X-Next-Nonce, X-Next-Nonce-Expires-At',
+      );
+    }
+
     if (ctx.method === 'OPTIONS') {
-      ctx.status = 204;
+      ctx.status = isAllowedOrigin ? 204 : 403;
       return;
     }
+
     await next();
   });
 
