@@ -68,6 +68,7 @@ export type FriendshipRequest = {
   status: 'pending' | 'rejected';
   createdAt: string;
   updatedAt: string;
+  publicKey?: { x: string; y: string };
 };
 
 export type Friendship = {
@@ -393,6 +394,17 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
       return (await response.json()) as FriendInvitation;
+    },
+
+    async getFriendInvitations(): Promise<FriendInvitation[]> {
+      const response = await authorizedFetchUrl(
+        joinUrl(baseUrl, '/api/friend-invitations'),
+        {},
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as FriendInvitation[];
     },
 
     async getFriendInvitation(token: string): Promise<FriendInvitationPublic> {

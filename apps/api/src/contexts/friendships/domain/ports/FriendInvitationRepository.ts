@@ -24,5 +24,8 @@ export interface FriendInvitationRepository {
     token: string,
     inviterKeyId: string,
   ): Promise<FriendInvitationRecord | null>;
+  listPendingForInviter(
+    inviterKeyId: string,
+  ): Promise<FriendInvitationRecord[]>;
   serialize(row: FriendInvitationRecord): SerializedFriendInvitation;
 }

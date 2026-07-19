@@ -123,18 +123,31 @@ export const friendshipRepository: FriendshipRepository = {
     return rows.map(toRecord);
   },
 
-  async listOutgoingPendingRequests(
-    requesterKeyId: string,
-  ): Promise<FriendshipRequestRecord[]> {
+  async listPendingRequestsForUser(keyId: string): Promise<{
+    incoming: FriendshipRequestRecord[];
+    outgoing: FriendshipRequestRecord[];
+  }> {
     const rows = await prisma.friendshipRequest.findMany({
       where: {
-        requesterKeyId,
         status: FRIENDSHIP_REQUEST_PENDING,
         invitationToken: { not: null },
+        OR: [{ targetKeyId: keyId }, { requesterKeyId: keyId }],
       },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map(toRecord);
+
+    const incoming: FriendshipRequestRecord[] = [];
+    const outgoing: FriendshipRequestRecord[] = [];
+    for (const row of rows) {
+      const record = toRecord(row);
+      if (row.targetKeyId === keyId) {
+        incoming.push(record);
+      }
+      if (row.requesterKeyId === keyId) {
+        outgoing.push(record);
+      }
+    }
+    return { incoming, outgoing };
   },
 
   async upsertPendingRequest(

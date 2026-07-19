@@ -166,7 +166,6 @@ export function useBackendFriendshipRequests(
         await keys.withPrivateKey(async () => {
           await api.acceptFriendshipRequest({ requesterKeyId });
         });
-        await onChanged?.();
         return null;
       } catch (e) {
         const message =
@@ -177,7 +176,7 @@ export function useBackendFriendshipRequests(
         setBusy(false);
       }
     },
-    [api, keys, onChanged],
+    [api, keys],
   );
 
   const rejectRequest = useCallback(

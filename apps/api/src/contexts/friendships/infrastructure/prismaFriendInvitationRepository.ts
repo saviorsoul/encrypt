@@ -88,6 +88,19 @@ export const friendInvitationRepository: FriendInvitationRepository = {
     return toRecord(row);
   },
 
+  async listPendingForInviter(
+    inviterKeyId: string,
+  ): Promise<FriendInvitationRecord[]> {
+    const rows = await prisma.friendInvitation.findMany({
+      where: {
+        inviterKeyId,
+        status: FRIEND_INVITATION_PENDING,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map(toRecord);
+  },
+
   serialize(row: FriendInvitationRecord): SerializedFriendInvitation {
     return serializeFriendInvitation(row);
   },

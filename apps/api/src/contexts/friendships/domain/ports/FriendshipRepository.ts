@@ -9,11 +9,11 @@ export type FriendshipRequestRecord = {
   updatedAt: Date;
 };
 
-export type SerializedFriendshipRequest = {
-  requesterKeyId: string;
-  targetKeyId: string;
+export type SerializedFriendshipRequest = Omit<
+  FriendshipRequestRecord,
+  'invitationToken' | 'createdAt' | 'updatedAt'
+> & {
   invitationToken: string;
-  status: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -38,9 +38,10 @@ export interface FriendshipRepository {
   listIncomingPendingRequests(
     targetKeyId: string,
   ): Promise<FriendshipRequestRecord[]>;
-  listOutgoingPendingRequests(
-    requesterKeyId: string,
-  ): Promise<FriendshipRequestRecord[]>;
+  listPendingRequestsForUser(keyId: string): Promise<{
+    incoming: FriendshipRequestRecord[];
+    outgoing: FriendshipRequestRecord[];
+  }>;
   upsertPendingRequest(
     requesterKeyId: string,
     targetKeyId: string,

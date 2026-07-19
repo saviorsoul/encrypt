@@ -5,6 +5,7 @@ import {
   handleAcceptFriendInvitation,
   handleCreateFriendInvitation,
   handleGetFriendInvitation,
+  handleListFriendInvitations,
 } from '@/contexts/friendships/index.js';
 
 function readAuthenticatedKeyId(ctx: {
@@ -44,6 +45,11 @@ export function createFriendInvitationsRouter(): Router {
       ctx.body = invitation;
     },
   );
+
+  router.get('/friend-invitations', async (ctx) => {
+    const inviterKeyId = readAuthenticatedKeyId(ctx);
+    ctx.body = await handleListFriendInvitations({ inviterKeyId });
+  });
 
   router.get('/friend-invitations/:token', async (ctx) => {
     const token = ctx.params.token;

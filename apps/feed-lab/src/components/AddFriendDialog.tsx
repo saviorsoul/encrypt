@@ -190,9 +190,13 @@ export function AddFriendDialog({
               <Typography variant="body2" color="text.secondary">
                 Enter a local name and your friend&apos;s public key. An
                 invitation is created on the backend and a friend request is
-                sent. They must already have joined via an invitation link
-                before a request can reach them.
+                sent.
               </Typography>
+              <Alert severity="info">
+                This public key must already be registered in the system. Ask
+                your friend to join via an invitation link first if they have
+                not signed up yet.
+              </Alert>
               <TextField
                 fullWidth
                 label="Name"

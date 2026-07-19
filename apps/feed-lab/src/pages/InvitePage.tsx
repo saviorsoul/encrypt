@@ -503,8 +503,6 @@ export function InvitePage() {
             Verify the public key below, then generate a key pair or use an
             existing private key to accept this one-time invitation.
           </Typography>
-
-          <Typography variant="subtitle2">Inviter public key</Typography>
           <ToggleButtonGroup
             value={inviterPublicKeyFormat}
             exclusive

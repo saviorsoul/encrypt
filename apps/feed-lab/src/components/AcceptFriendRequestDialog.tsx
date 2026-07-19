@@ -98,11 +98,6 @@ export function AcceptFriendRequestDialog({
             Choose a local name for {requesterLabel}. Names are stored in this
             browser only.
           </Typography>
-          {request ? (
-            <Typography variant="caption" color="text.secondary">
-              keyId: {request.requesterKeyId}
-            </Typography>
-          ) : null}
           <TextField
             autoFocus
             label="Name"

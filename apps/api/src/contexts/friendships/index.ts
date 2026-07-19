@@ -16,3 +16,5 @@ export { handleAcceptFriendInvitation } from './application/invitations/commands
 export type { AcceptFriendInvitationCommand } from './application/invitations/commands/acceptFriendInvitation/acceptFriendInvitation.handler.js';
 export { handleGetFriendInvitation } from './application/invitations/queries/getFriendInvitation/getFriendInvitation.handler.js';
 export type { GetFriendInvitationQuery } from './application/invitations/queries/getFriendInvitation/getFriendInvitation.handler.js';
+export { handleListFriendInvitations } from './application/invitations/queries/listFriendInvitations/listFriendInvitations.handler.js';
+export type { ListFriendInvitationsQuery } from './application/invitations/queries/listFriendInvitations/listFriendInvitations.handler.js';

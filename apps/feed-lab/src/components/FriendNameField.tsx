@@ -24,6 +24,16 @@ export function FriendNameField({
   onSaved,
 }: FriendNameFieldProps) {
   const [editing, setEditing] = useState(!storedUsername);
+  const [hadStoredUsername, setHadStoredUsername] = useState(
+    Boolean(storedUsername),
+  );
+
+  if (Boolean(storedUsername) !== hadStoredUsername) {
+    setHadStoredUsername(Boolean(storedUsername));
+    if (storedUsername) {
+      setEditing(false);
+    }
+  }
 
   if (!storedUsername || editing) {
     return (
