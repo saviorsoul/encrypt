@@ -17,8 +17,8 @@ import {
 } from '@encrypt/core/crypto/authProof';
 import { slimEcPublicJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
-import { consumeAuthNonce, mintAuthNonce } from '../services/authNonce.js';
-import { unauthorized } from '../lib/httpError.js';
+import { consumeAuthNonce, mintAuthNonce } from '@/contexts/auth/index.js';
+import { unauthorized } from '@/lib/httpError.js';
 
 function readHeader(
   ctx: { get: (name: string) => string | undefined },

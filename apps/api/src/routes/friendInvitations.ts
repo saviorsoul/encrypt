@@ -1,11 +1,11 @@
 import Router from '@koa/router';
-import { validateBody } from '../middleware/validateBody.js';
-import { unauthorized } from '../lib/httpError.js';
+import { validateBody } from '@/middleware/validateBody.js';
+import { unauthorized } from '@/lib/httpError.js';
 import {
-  acceptFriendInvitation,
-  createFriendInvitation,
-  getFriendInvitation,
-} from '../services/friendInvitations.js';
+  handleAcceptFriendInvitation,
+  handleCreateFriendInvitation,
+  handleGetFriendInvitation,
+} from '@/contexts/friendships/index.js';
 
 function readAuthenticatedKeyId(ctx: {
   state: { authenticatedKeyId?: string };
@@ -36,7 +36,7 @@ export function createFriendInvitationsRouter(): Router {
     async (ctx) => {
       const inviterKeyId = readAuthenticatedKeyId(ctx);
       const inviterPublicKey = readAuthenticatedPublicKey(ctx);
-      const invitation = await createFriendInvitation({
+      const invitation = await handleCreateFriendInvitation({
         inviterKeyId,
         inviterPublicKey,
       });
@@ -47,7 +47,7 @@ export function createFriendInvitationsRouter(): Router {
 
   router.get('/friend-invitations/:token', async (ctx) => {
     const token = ctx.params.token;
-    ctx.body = await getFriendInvitation(token);
+    ctx.body = await handleGetFriendInvitation({ token });
   });
 
   router.post(
@@ -57,7 +57,7 @@ export function createFriendInvitationsRouter(): Router {
       const inviteeKeyId = readAuthenticatedKeyId(ctx);
       const inviteePublicKey = readAuthenticatedPublicKey(ctx);
       const token = ctx.params.token;
-      ctx.body = await acceptFriendInvitation({
+      ctx.body = await handleAcceptFriendInvitation({
         token,
         inviteeKeyId,
         inviteePublicKey,

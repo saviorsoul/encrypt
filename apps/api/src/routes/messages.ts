@@ -1,9 +1,11 @@
 import Router from '@koa/router';
-import type { CreateMessageRequest } from '../schemas/common.js';
-import { validateBody } from '../middleware/validateBody.js';
-import { verifySignature } from '../middleware/verifySignature.js';
-import { requireAuthenticatedSigner } from '../middleware/requireAuthenticatedSigner.js';
-import { createMessage } from '../services/createMessage.js';
+import {
+  handleCreateMessage,
+  type CreateMessageCommand,
+} from '@/contexts/feed/index.js';
+import { validateBody } from '@/middleware/validateBody.js';
+import { verifySignature } from '@/middleware/verifySignature.js';
+import { requireAuthenticatedSigner } from '@/middleware/requireAuthenticatedSigner.js';
 
 export function createMessagesRouter(): Router {
   const router = new Router({ prefix: '/api' });
@@ -14,8 +16,8 @@ export function createMessagesRouter(): Router {
     validateBody('createMessageRequest'),
     verifySignature('sender'),
     async (ctx) => {
-      const body = ctx.request.body as CreateMessageRequest;
-      const result = await createMessage(body);
+      const command = ctx.request.body as CreateMessageCommand;
+      const result = await handleCreateMessage(command);
       ctx.status = 201;
       ctx.body = result;
     },

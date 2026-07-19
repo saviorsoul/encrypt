@@ -1,6 +1,6 @@
 import Router from '@koa/router';
-import { unauthorized } from '../lib/httpError.js';
-import { listInboxItemsForRecipientKeyId } from '../db/inbox.js';
+import { handleListInbox } from '@/contexts/feed/index.js';
+import { unauthorized } from '@/lib/httpError.js';
 
 export function createInboxRouter(): Router {
   const router = new Router({ prefix: '/api' });
@@ -11,7 +11,7 @@ export function createInboxRouter(): Router {
       throw unauthorized('Authentication is required.');
     }
 
-    ctx.body = await listInboxItemsForRecipientKeyId(recipientKeyId);
+    ctx.body = await handleListInbox({ recipientKeyId });
   });
 
   return router;

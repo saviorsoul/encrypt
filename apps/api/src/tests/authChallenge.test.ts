@@ -28,7 +28,7 @@ import { createAuthRouter } from '../routes/auth.js';
 import {
   createMemoryAuthNonceStore,
   setAuthNonceStoreForTests,
-} from '../services/authNonce.js';
+} from '@/contexts/auth/index.js';
 import { requestApp } from './requestApp.js';
 
 function parseChallengeBody(body: string): AuthChallengeResponse {

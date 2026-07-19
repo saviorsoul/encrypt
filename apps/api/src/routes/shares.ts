@@ -1,9 +1,11 @@
 import Router from '@koa/router';
-import type { CreateShareRequest } from '../schemas/common.js';
-import { validateBody } from '../middleware/validateBody.js';
-import { verifySignature } from '../middleware/verifySignature.js';
-import { requireAuthenticatedSigner } from '../middleware/requireAuthenticatedSigner.js';
-import { createShare } from '../services/createShare.js';
+import {
+  handleCreateShare,
+  type CreateShareCommand,
+} from '@/contexts/feed/index.js';
+import { validateBody } from '@/middleware/validateBody.js';
+import { verifySignature } from '@/middleware/verifySignature.js';
+import { requireAuthenticatedSigner } from '@/middleware/requireAuthenticatedSigner.js';
 
 export function createSharesRouter(): Router {
   const router = new Router({ prefix: '/api' });
@@ -17,8 +19,8 @@ export function createSharesRouter(): Router {
     validateBody('createShareRequest'),
     verifySignature('sharer', { bodyPath: 'share' }),
     async (ctx) => {
-      const body = ctx.request.body as CreateShareRequest;
-      const result = await createShare(body);
+      const command = ctx.request.body as CreateShareCommand;
+      const result = await handleCreateShare(command);
       ctx.status = 201;
       ctx.body = result;
     },

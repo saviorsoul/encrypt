@@ -11,7 +11,7 @@ import {
   getOrMintAuthNonce,
   mintAuthNonce,
   setAuthNonceStoreForTests,
-} from '../services/authNonce.js';
+} from '@/contexts/auth/index.js';
 
 describe('authNonce', () => {
   afterEach(() => {

@@ -3,17 +3,17 @@ import type {
   DeleteFriendshipBody,
   FriendshipRequesterBody,
   FriendshipTargetBody,
-} from '../schemas/common.js';
-import { validateBody } from '../middleware/validateBody.js';
-import { unauthorized } from '../lib/httpError.js';
+} from '@/schemas/common.js';
+import { validateBody } from '@/middleware/validateBody.js';
+import { unauthorized } from '@/lib/httpError.js';
 import {
-  acceptFriendshipRequest,
-  createFriendshipRequest,
-  deleteFriendship,
-  listFriendships,
-  listFriendshipRequests,
-  rejectFriendshipRequest,
-} from '../services/friendships.js';
+  handleAcceptFriendshipRequest,
+  handleCreateFriendshipRequest,
+  handleDeleteFriendship,
+  handleListFriendshipRequests,
+  handleListFriendships,
+  handleRejectFriendshipRequest,
+} from '@/contexts/friendships/index.js';
 
 function readAuthenticatedKeyId(ctx: {
   state: { authenticatedKeyId?: string };
@@ -46,7 +46,7 @@ export function createFriendshipsRouter(): Router {
       const requesterPublicKey = readAuthenticatedPublicKey(ctx);
       const { targetKeyId, invitationToken } = ctx.request
         .body as FriendshipTargetBody;
-      const result = await createFriendshipRequest({
+      const result = await handleCreateFriendshipRequest({
         requesterKeyId,
         requesterPublicKey,
         targetKeyId,
@@ -60,7 +60,7 @@ export function createFriendshipsRouter(): Router {
   router.get('/friendships/requests', async (ctx) => {
     const keyId = readAuthenticatedKeyId(ctx);
     const publicKey = readAuthenticatedPublicKey(ctx);
-    ctx.body = await listFriendshipRequests(keyId, publicKey);
+    ctx.body = await handleListFriendshipRequests({ keyId, publicKey });
   });
 
   router.post(
@@ -70,7 +70,7 @@ export function createFriendshipsRouter(): Router {
       const targetKeyId = readAuthenticatedKeyId(ctx);
       const targetPublicKey = readAuthenticatedPublicKey(ctx);
       const { requesterKeyId } = ctx.request.body as FriendshipRequesterBody;
-      ctx.body = await acceptFriendshipRequest({
+      ctx.body = await handleAcceptFriendshipRequest({
         requesterKeyId,
         targetKeyId,
         targetPublicKey,
@@ -85,7 +85,7 @@ export function createFriendshipsRouter(): Router {
       const targetKeyId = readAuthenticatedKeyId(ctx);
       const targetPublicKey = readAuthenticatedPublicKey(ctx);
       const { requesterKeyId } = ctx.request.body as FriendshipRequesterBody;
-      ctx.body = await rejectFriendshipRequest({
+      ctx.body = await handleRejectFriendshipRequest({
         requesterKeyId,
         targetKeyId,
         targetPublicKey,
@@ -95,7 +95,7 @@ export function createFriendshipsRouter(): Router {
 
   router.get('/friendships', async (ctx) => {
     const ownerKeyId = readAuthenticatedKeyId(ctx);
-    ctx.body = await listFriendships(ownerKeyId);
+    ctx.body = await handleListFriendships({ ownerKeyId });
   });
 
   router.delete(
@@ -104,7 +104,7 @@ export function createFriendshipsRouter(): Router {
     async (ctx) => {
       const ownerKeyId = readAuthenticatedKeyId(ctx);
       const { friendKeyId } = ctx.request.body as DeleteFriendshipBody;
-      await deleteFriendship({ ownerKeyId, friendKeyId });
+      await handleDeleteFriendship({ ownerKeyId, friendKeyId });
       ctx.status = 204;
     },
   );
