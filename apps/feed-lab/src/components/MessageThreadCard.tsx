@@ -21,17 +21,23 @@ import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import { useRelativeTime } from '@/hooks/useRelativeTime.ts';
 import { nameInitial } from '@/utils/nameInitial.ts';
 import type { CopyState } from '@/types/copyState.ts';
-import { getCommentAuthorKeyIdFromPayload } from '@encrypt/core/crypto/commentCrypto';
-import { getSenderKeyIdFromCorePayload } from '@encrypt/core/crypto/manifestDecrypt';
+import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
+import type { IdentityDialogTarget } from '@lab/components/IdentityDialog.tsx';
 import { formatCommentAuthorLabel } from '@lab/lib/formatCommentAuthorLabel.ts';
 import { assembleStoredMessageCopyPayload } from '@lab/lib/assembleMessageCopyPayload.ts';
 import {
   COMMENTS_PANEL_COLLAPSE_MS,
   COMMENTS_PANEL_CONTENT_GROW_MS,
 } from '@lab/lib/commentsPanelTiming.ts';
+import {
+  getCommentAuthorIdentityFromPayload,
+  getSenderIdentityFromCorePayload,
+  getSharerIdentityFromSharePayload,
+  type FeedIdentity,
+} from '@lab/lib/identityFromPayload.ts';
 import { RedactedText } from '@lab/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -68,6 +74,7 @@ type MessageThreadCardProps = {
   feedContext: FeedContext;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
+  onOpenIdentity: (identity: IdentityDialogTarget) => void;
 };
 
 const REDACTED_PREVIEW_WORDS = 24;
@@ -134,6 +141,28 @@ function threadAvatarSx(isOwn: boolean, size: number) {
   });
 }
 
+const identityButtonSx = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 1.125,
+  minWidth: 0,
+  p: 0,
+  m: 0,
+  border: 'none',
+  background: 'none',
+  cursor: 'pointer',
+  color: 'inherit',
+  textAlign: 'left' as const,
+  borderRadius: 1,
+  '&:hover': {
+    opacity: 0.85,
+  },
+  '&:disabled': {
+    cursor: 'default',
+    opacity: 1,
+  },
+};
+
 export const MessageThreadCard = memo(function MessageThreadCard({
   message,
   expanded,
@@ -155,9 +184,16 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   feedContext,
   usernameByKeyId,
   viewerKeyId,
+  onOpenIdentity,
 }: MessageThreadCardProps) {
-  const [senderKeyId, setSenderKeyId] = useState<string | null>(null);
+  const [senderIdentity, setSenderIdentity] = useState<FeedIdentity | null>(
+    null,
+  );
   const [senderLabel, setSenderLabel] = useState<string | null>(null);
+  const [sharerIdentity, setSharerIdentity] = useState<FeedIdentity | null>(
+    null,
+  );
+  const [sharerLabel, setSharerLabel] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [copyBusy, setCopyBusy] = useState(false);
   const [commentsForCopy, setCommentsForCopy] = useState<StoredComment[]>([]);
@@ -179,10 +215,14 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   useEffect(() => {
     let cancelled = false;
 
-    void getSenderKeyIdFromCorePayload(message.payload).then((keyId) => {
+    void getSenderIdentityFromCorePayload(message.payload).then((identity) => {
       if (!cancelled) {
-        setSenderKeyId(keyId);
-        setSenderLabel(formatCommentAuthorLabel(keyId, usernameByKeyId));
+        setSenderIdentity(identity);
+        setSenderLabel(
+          identity
+            ? formatCommentAuthorLabel(identity.keyId, usernameByKeyId)
+            : null,
+        );
       }
     });
 
@@ -191,8 +231,84 @@ export const MessageThreadCard = memo(function MessageThreadCard({
     };
   }, [message.payload, usernameByKeyId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!viewerKeyId) {
+      setSharerIdentity(null);
+      setSharerLabel(null);
+      return;
+    }
+
+    void (async () => {
+      const access = await resolveParentMessageAccessFromFeed(
+        message.id,
+        viewerKeyId,
+        feedContext.allDeliveries,
+        feedContext.manifestLookup,
+      );
+      if (cancelled) {
+        return;
+      }
+      if (!access || access.deliveryMessageId === message.id) {
+        setSharerIdentity(null);
+        setSharerLabel(null);
+        return;
+      }
+
+      const identity = await getSharerIdentityFromSharePayload(
+        access.deliveryCorePayloadJson,
+      );
+      if (cancelled) {
+        return;
+      }
+      setSharerIdentity(identity);
+      setSharerLabel(
+        identity
+          ? formatCommentAuthorLabel(identity.keyId, usernameByKeyId)
+          : null,
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    feedContext.allDeliveries,
+    feedContext.manifestLookup,
+    message.id,
+    usernameByKeyId,
+    viewerKeyId,
+  ]);
+
+  const senderKeyId = senderIdentity?.keyId ?? null;
   const isOwnMessage =
     viewerKeyId !== null && senderKeyId !== null && senderKeyId === viewerKeyId;
+
+  const handleOpenSenderIdentity = useCallback(() => {
+    if (!senderIdentity) {
+      return;
+    }
+    markInteracted();
+    onOpenIdentity({
+      keyId: senderIdentity.keyId,
+      publicKey: senderIdentity.publicKey,
+      label: senderLabel ?? senderIdentity.keyId,
+    });
+  }, [markInteracted, onOpenIdentity, senderIdentity, senderLabel]);
+
+  const handleOpenSharerIdentity = useCallback(() => {
+    if (!sharerIdentity) {
+      return;
+    }
+    markInteracted();
+    onOpenIdentity({
+      keyId: sharerIdentity.keyId,
+      publicKey: sharerIdentity.publicKey,
+      label: sharerLabel ?? sharerIdentity.keyId,
+    });
+  }, [markInteracted, onOpenIdentity, sharerIdentity, sharerLabel]);
+
   const sentAgo = useRelativeTime(message.createdAt);
   const sentAtLabel = useMemo(
     () => new Date(message.createdAt).toLocaleString(),
@@ -231,23 +347,87 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           spacing={1.125}
           sx={{ mb: 1.5, alignItems: 'center' }}
         >
-          <Avatar sx={threadAvatarSx(isOwnMessage, 32)}>
-            {isOwnMessage ? 'You' : nameInitial(senderLabel ?? '?')}
-          </Avatar>
-          <Typography
-            variant="subtitle2"
-            sx={{ fontWeight: 800, fontSize: '0.8125rem' }}
-            noWrap
+          <Stack
+            direction="row"
+            spacing={1.125}
+            sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}
           >
-            {isOwnMessage ? 'Your own message' : (senderLabel ?? '...')}
-          </Typography>
-          <Box sx={{ flex: 1 }} />
+            <Box
+              component="button"
+              type="button"
+              disabled={!senderIdentity}
+              onClick={handleOpenSenderIdentity}
+              sx={{
+                ...identityButtonSx,
+                gap: 0,
+                flexShrink: 0,
+              }}
+              aria-label={
+                isOwnMessage
+                  ? 'View your identity'
+                  : `View identity for ${senderLabel ?? 'sender'}`
+              }
+            >
+              <Avatar sx={threadAvatarSx(isOwnMessage, 32)}>
+                {isOwnMessage ? 'You' : nameInitial(senderLabel ?? '?')}
+              </Avatar>
+            </Box>
+            <Stack spacing={0.15} sx={{ minWidth: 0 }}>
+              <Typography
+                component="button"
+                type="button"
+                disabled={!senderIdentity}
+                onClick={handleOpenSenderIdentity}
+                variant="subtitle2"
+                sx={{
+                  p: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: senderIdentity ? 'pointer' : 'default',
+                  color: 'inherit',
+                  fontWeight: 800,
+                  fontSize: '0.8125rem',
+                  textAlign: 'left',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  '&:hover': senderIdentity ? { opacity: 0.85 } : undefined,
+                }}
+              >
+                {isOwnMessage ? 'Your own message' : (senderLabel ?? '...')}
+              </Typography>
+              {sharerIdentity && sharerLabel ? (
+                <Typography
+                  component="button"
+                  type="button"
+                  variant="caption"
+                  color="primary"
+                  onClick={handleOpenSharerIdentity}
+                  sx={{
+                    p: 0,
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    '&:hover': { color: 'text.primary' },
+                  }}
+                >
+                  shared by: {sharerLabel}
+                </Typography>
+              ) : null}
+            </Stack>
+          </Stack>
           <Tooltip arrow placement="bottom-end" title={sentAtLabel}>
             <Typography
               variant="caption"
               color="text.secondary"
               component="span"
-              sx={{ cursor: 'default' }}
+              sx={{ cursor: 'default', flexShrink: 0 }}
             >
               {sentAgo}
             </Typography>
@@ -399,6 +579,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           onCommentsForCopyChange={setCommentsForCopy}
           usernameByKeyId={usernameByKeyId}
           viewerKeyId={viewerKeyId}
+          onOpenIdentity={onOpenIdentity}
         />
       </Collapse>
     </Paper>
@@ -421,6 +602,7 @@ type MessageThreadExpandedPanelProps = {
   onCommentsForCopyChange: (comments: StoredComment[]) => void;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
+  onOpenIdentity: (identity: IdentityDialogTarget) => void;
 };
 
 const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
@@ -437,6 +619,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   onCommentsForCopyChange,
   usernameByKeyId,
   viewerKeyId,
+  onOpenIdentity,
 }: MessageThreadExpandedPanelProps) {
   const { keys } = useFeedLabSession();
   const {
@@ -569,6 +752,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
                       text={text}
                       usernameByKeyId={usernameByKeyId}
                       viewerKeyId={viewerKeyId}
+                      onOpenIdentity={onOpenIdentity}
                     />
                   );
                 })}
@@ -645,24 +829,30 @@ const CommentRow = memo(function CommentRow({
   text,
   usernameByKeyId,
   viewerKeyId,
+  onOpenIdentity,
 }: {
   comment: StoredComment;
   text: string | null;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
+  onOpenIdentity: (identity: IdentityDialogTarget) => void;
 }) {
-  const [authorKeyId, setAuthorKeyId] = useState<string | null>(null);
+  const [authorIdentity, setAuthorIdentity] = useState<FeedIdentity | null>(
+    null,
+  );
   const [authorLabel, setAuthorLabel] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    void getCommentAuthorKeyIdFromPayload(comment.payload).then(
-      (resolvedAuthorKeyId) => {
+    void getCommentAuthorIdentityFromPayload(comment.payload).then(
+      (identity) => {
         if (!cancelled) {
-          setAuthorKeyId(resolvedAuthorKeyId);
+          setAuthorIdentity(identity);
           setAuthorLabel(
-            formatCommentAuthorLabel(resolvedAuthorKeyId, usernameByKeyId),
+            identity
+              ? formatCommentAuthorLabel(identity.keyId, usernameByKeyId)
+              : null,
           );
         }
       },
@@ -673,13 +863,36 @@ const CommentRow = memo(function CommentRow({
     };
   }, [comment.payload, usernameByKeyId]);
 
+  const authorKeyId = authorIdentity?.keyId ?? null;
   const isOwnComment =
     viewerKeyId !== null && authorKeyId !== null && authorKeyId === viewerKeyId;
+
+  const handleOpenAuthorIdentity = useCallback(() => {
+    if (!authorIdentity) {
+      return;
+    }
+    onOpenIdentity({
+      keyId: authorIdentity.keyId,
+      publicKey: authorIdentity.publicKey,
+      label: authorLabel ?? authorIdentity.keyId,
+    });
+  }, [authorIdentity, authorLabel, onOpenIdentity]);
 
   return (
     <Paper elevation={ENC_PAPER_ELEVATION} sx={encPaperSx}>
       <Stack spacing={0.75}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box
+          component="button"
+          type="button"
+          disabled={!authorIdentity}
+          onClick={handleOpenAuthorIdentity}
+          sx={{ ...identityButtonSx, gap: 1 }}
+          aria-label={
+            isOwnComment
+              ? 'View your identity'
+              : `View identity for ${authorLabel ?? 'author'}`
+          }
+        >
           <Avatar sx={threadAvatarSx(isOwnComment, 32)}>
             {isOwnComment ? 'You' : nameInitial(authorLabel ?? '?')}
           </Avatar>

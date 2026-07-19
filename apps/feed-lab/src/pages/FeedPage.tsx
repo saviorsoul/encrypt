@@ -7,6 +7,8 @@ import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
 import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
 import { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
+import { useIdentityDialog } from '@lab/hooks/useIdentityDialog.ts';
+import { IdentityDialog } from '@lab/components/IdentityDialog.tsx';
 import { MessageThreadCard } from '@lab/components/MessageThreadCard.tsx';
 import { MessageSentSnackbar } from '@lab/components/MessageSentSnackbar.tsx';
 import { SendMessageDialog } from '@lab/components/SendMessageDialog.tsx';
@@ -15,7 +17,7 @@ import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
 export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
-  const { usernameByKeyId, addLocalUser } = feedLabUsers;
+  const { usernameByKeyId, usernames, addLocalUser } = feedLabUsers;
   const feed = useBackendFeedData(keys.keyId);
   const { reload: reloadFeed } = feed;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
@@ -38,6 +40,14 @@ export function FeedPage() {
     usernameByKeyId,
     addLocalUser,
   );
+  const identity = useIdentityDialog({
+    keyId: keys.keyId,
+    usernameByKeyId,
+    usernames,
+    addLocalUser,
+    friendKeyIds: friendships.friendKeyIds,
+    onFriendshipsChanged: friendships.refresh,
+  });
   const recipients = useFeedLabRecipients({
     viewerKeyId: keys.keyId,
     friends: friendships.friends,
@@ -200,6 +210,7 @@ export function FeedPage() {
               feedContext={feedContext}
               usernameByKeyId={usernameByKeyId}
               viewerKeyId={keys.keyId}
+              onOpenIdentity={identity.openIdentity}
             />
           );
         })}
@@ -257,6 +268,8 @@ export function FeedPage() {
             })
         }
       />
+
+      <IdentityDialog {...identity.dialogProps} />
     </>
   );
 }
