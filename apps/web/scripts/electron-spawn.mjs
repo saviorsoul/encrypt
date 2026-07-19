@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const electronPath = require('electron');
 
-const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const projectRoot = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+);
 
 /** @param {string[]} forwardedArgs */
 export function runElectron(forwardedArgs = []) {

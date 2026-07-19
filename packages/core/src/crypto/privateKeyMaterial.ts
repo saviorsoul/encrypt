@@ -34,7 +34,13 @@ export async function importUploadedPrivateKeyMaterial(
       importPublicKeyExtractable(publicJwk),
     ]);
 
-  return { keyId, publicKey: { x, y }, ecdhPrivateKey, ecdsaSignPrivateKey, senderPublicKey };
+  return {
+    keyId,
+    publicKey: { x, y },
+    ecdhPrivateKey,
+    ecdsaSignPrivateKey,
+    senderPublicKey,
+  };
 }
 
 export function assertUploadedPrivateKeyMatchesKeyId(
