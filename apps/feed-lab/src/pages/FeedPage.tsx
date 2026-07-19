@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Button, Stack, Typography } from '@mui/material';
+import { Button, CircularProgress, Stack, Typography } from '@mui/material';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
@@ -17,6 +17,7 @@ export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
   const { usernameByKeyId, addLocalUser } = feedLabUsers;
   const feed = useBackendFeedData(keys.keyId);
+  const { reload: reloadFeed } = feed;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -97,14 +98,14 @@ export function FeedPage() {
       return;
     }
     clearDecrypt();
-    await feed.reload();
-  }, [clearDecrypt, feed, keys.keyId]);
+    await reloadFeed();
+  }, [clearDecrypt, keys.keyId, reloadFeed]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
-      await feed.reload();
+      await reloadFeed();
     }
-  }, [feed, keys.keyId]);
+  }, [keys.keyId, reloadFeed]);
 
   const handleMessageSent = useCallback((detail: { messageId: string }) => {
     setSentMessageNotice(detail);
@@ -144,7 +145,13 @@ export function FeedPage() {
         <Button
           variant="outlined"
           size="small"
-          startIcon={<RefreshOutlinedIcon />}
+          startIcon={
+            feed.loading ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <RefreshOutlinedIcon />
+            )
+          }
           disabled={!keys.keyId || feed.loading}
           onClick={() => void handleReloadFeed()}
         >
@@ -244,7 +251,7 @@ export function FeedPage() {
             })
             .then(async (shareId) => {
               if (shareId && keys.keyId) {
-                await feed.reload();
+                await reloadFeed();
               }
               return shareId;
             })

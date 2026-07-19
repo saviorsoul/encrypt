@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
 import { filterFeedInboxMessages } from '@encrypt/core/utils/feedInboxVisibility';
 import type { StoredMessage } from '@encrypt/core/feed/types';
@@ -26,64 +26,51 @@ export function useBackendFeedData(keyId: string | null) {
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadIdRef = useRef(0);
 
   const reload = useCallback(async () => {
+    if (!keyId) {
+      return;
+    }
+
+    const loadId = ++loadIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const inbox = await api.getInbox();
+      if (loadId !== loadIdRef.current) {
+        return;
+      }
       cacheInboxItems(inbox);
       setRawItems(inbox);
       const deliveries = inboxApiItemsToStoredDeliveries(inbox);
       setMessages(filterFeedInboxMessages(deliveries));
     } catch (e) {
+      if (loadId !== loadIdRef.current) {
+        return;
+      }
       setError(e instanceof Error ? e.message : 'Failed to load feed data.');
       setRawItems([]);
       setMessages([]);
     } finally {
-      setLoading(false);
+      if (loadId === loadIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [api]);
+  }, [api, keyId]);
 
   useEffect(() => {
     if (!keyId) {
+      loadIdRef.current += 1;
+      setRawItems([]);
+      setMessages([]);
+      setError(null);
+      setLoading(false);
       return;
     }
 
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const inbox = await api.getInbox();
-        if (cancelled) {
-          return;
-        }
-        cacheInboxItems(inbox);
-        setRawItems(inbox);
-        const deliveries = inboxApiItemsToStoredDeliveries(inbox);
-        setMessages(filterFeedInboxMessages(deliveries));
-      } catch (e) {
-        if (cancelled) {
-          return;
-        }
-        setError(e instanceof Error ? e.message : 'Failed to load feed data.');
-        setRawItems([]);
-        setMessages([]);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [api, keyId]);
+    void reload();
+  }, [keyId, reload]);
 
   const manifestLookup = useCallback(
     (messageId: string, keyId: string) =>
