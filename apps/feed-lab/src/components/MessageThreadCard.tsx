@@ -473,14 +473,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           </Button>
 
           {decryptPlaintext ? (
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.76,
-                fontSize: '0.9375rem',
-              }}
-            >
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
               {sanitizeDisplayText(decryptPlaintext)}
             </Typography>
           ) : (

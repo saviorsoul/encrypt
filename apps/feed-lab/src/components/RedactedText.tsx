@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { Box } from '@mui/material';
 import { redactedBarsFromSeed } from '@lab/lib/redactedPlaceholder.ts';
 
 const BAR_HEIGHT_PX = 14;
@@ -19,11 +20,12 @@ export const RedactedText = memo(function RedactedText({
   );
 
   return (
-    <p
-      style={{
-        margin: 0,
-        lineHeight: 1.85,
-        fontSize: '0.875rem',
+    <Box
+      component="p"
+      sx={{
+        m: 0,
+        fontSize: (theme) => theme.typography.body2.fontSize,
+        lineHeight: (theme) => theme.typography.body2.lineHeight,
       }}
     >
       {bars.map((bar, index) => (
@@ -38,13 +40,12 @@ export const RedactedText = memo(function RedactedText({
               minWidth: bar.widthPx,
               height: BAR_HEIGHT_PX,
               verticalAlign: 'middle',
-              marginBottom: 1,
               userSelect: 'none',
             }}
           />
           {index < bars.length - 1 ? ' ' : ''}
         </span>
       ))}
-    </p>
+    </Box>
   );
 });
