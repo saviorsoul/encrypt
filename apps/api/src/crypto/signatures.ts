@@ -4,7 +4,7 @@ import { importPublicKeyForEcdsaVerify } from './ecdsaKeys.js';
 /** Deterministic UTF-8 bytes for signing — canonical JSON with explicit property order. */
 export function serializeForSigning(
   canonical: Record<string, unknown>,
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   return new TextEncoder().encode(JSON.stringify(canonical));
 }
 

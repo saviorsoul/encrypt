@@ -12,7 +12,7 @@ export class HttpError extends Error {
 
 export function isHttpError(
   error: unknown,
-): error is HttpError | (Error & { status: number }) {
+): error is HttpError | (Error & { status: number; details?: unknown }) {
   if (error instanceof HttpError) {
     return true;
   }
