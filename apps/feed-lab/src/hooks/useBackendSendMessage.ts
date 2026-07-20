@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { encryptWithManifest } from '@encrypt/core/crypto/manifestEncrypt';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
+import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
 import { isPrivateKeyFileSelectionCancelled } from '@/crypto/privateKeyFile.ts';
 import { assembleMessageCopyPayloadFromWire } from '@lab/lib/assembleMessageCopyPayload.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
@@ -30,8 +31,9 @@ export function useBackendSendMessage(
       setLastMessageId(null);
       setLastMessageCopyPayload(null);
 
-      if (!plaintext.trim()) {
-        setError('Enter a message.');
+      const plaintextError = validateContentPlaintext(plaintext, 'message');
+      if (plaintextError) {
+        setError(plaintextError);
         return null;
       }
 

@@ -6,6 +6,7 @@ import {
 } from '@encrypt/core/crypto/commentCrypto';
 import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment } from '@encrypt/core/feed/types';
+import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
 import {
   COMMENTS_PANEL_COLLAPSE_MS,
   waitForMinDuration,
@@ -90,6 +91,12 @@ export function useBackendComments(
       setPostBusy(true);
       setError(null);
       try {
+        const plaintextError = validateContentPlaintext(text, 'comment');
+        if (plaintextError) {
+          setError(plaintextError);
+          return null;
+        }
+
         const newComment = await withPrivateKey(async (material) => {
           const access = await resolveParentMessageAccessFromFeed(
             threadId,

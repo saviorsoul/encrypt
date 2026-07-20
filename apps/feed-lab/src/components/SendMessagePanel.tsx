@@ -19,6 +19,10 @@ import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendSendMessage } from '@lab/hooks/useBackendSendMessage.ts';
 import type { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
+import {
+  encryptedContentCiphertextBase64Length,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+} from '@encrypt/core/constants/contentLimits';
 
 type SendMode = 'message' | 'json';
 
@@ -49,6 +53,12 @@ export function SendMessagePanel({
   const [importPayload, setImportPayload] = useState('');
   const [sendMode, setSendMode] = useState<SendMode>('message');
   const [messageText, setMessageText] = useState('');
+
+  const messageCiphertextLength = messageText
+    ? encryptedContentCiphertextBase64Length(messageText)
+    : 0;
+  const messageOverLimit =
+    messageCiphertextLength > MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH;
 
   const handleSendImport = useCallback(async () => {
     const ok = await importSend.sendImport(importPayload.trim());
@@ -146,6 +156,8 @@ export function SendMessagePanel({
             fullWidth
             placeholder="Enter text to encrypt..."
             disabled={sendMessage.busy}
+            error={messageOverLimit}
+            helperText={`${messageCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
           />
 
           {recipients.loadingFriends || recipients.loadingRecipientKeys ? (
@@ -187,6 +199,7 @@ export function SendMessagePanel({
                 disabled={
                   sendMessage.busy ||
                   !messageText.trim() ||
+                  messageOverLimit ||
                   recipients.recipients.length === 0
                 }
                 onClick={() => void handleSendMessage()}
@@ -209,6 +222,7 @@ export function SendMessagePanel({
                 disabled={
                   sendMessage.busy ||
                   !messageText.trim() ||
+                  messageOverLimit ||
                   recipients.recipients.length === 0
                 }
                 onClick={() => void handleSendMessage()}

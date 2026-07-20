@@ -48,6 +48,11 @@ import {
 import { RedactedText } from '@lab/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import {
+  encryptedContentCiphertextBase64Length,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+  validateContentPlaintext,
+} from '@encrypt/core/constants/contentLimits';
 
 type FeedContext = {
   allDeliveries: Parameters<
@@ -790,12 +795,17 @@ const CommentComposer = memo(function CommentComposer({
 }) {
   const [commentText, setCommentText] = useState('');
 
+  const commentCiphertextLength = commentText
+    ? encryptedContentCiphertextBase64Length(commentText)
+    : 0;
+  const commentOverLimit =
+    commentCiphertextLength > MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH;
+
   const handlePostComment = useCallback(async () => {
-    const text = commentText.trim();
-    if (!text) {
+    if (validateContentPlaintext(commentText, 'comment')) {
       return;
     }
-    await onPostComment(text);
+    await onPostComment(commentText.trim());
     setCommentText('');
   }, [commentText, onPostComment]);
 
@@ -812,6 +822,7 @@ const CommentComposer = memo(function CommentComposer({
           messageDecrypted ? 'New comment' : 'Decrypt message to add a comment'
         }
         sx={{ mt: 1 }}
+        error={commentOverLimit}
         slotProps={{
           input: {
             sx: {
@@ -819,11 +830,17 @@ const CommentComposer = memo(function CommentComposer({
             },
           },
         }}
+        helperText={`${commentCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
       />
       <Button
         variant="contained"
         size="small"
-        disabled={!messageDecrypted || commentsPostBusy || !commentText.trim()}
+        disabled={
+          !messageDecrypted ||
+          commentsPostBusy ||
+          !commentText.trim() ||
+          commentOverLimit
+        }
         onClick={() => void handlePostComment()}
         sx={{ width: 'fit-content' }}
       >

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { MANIFEST_WRAP } from '../constants.js';
+import {
+  MANIFEST_WRAP,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+} from '../constants.js';
 import { getValidator } from '../lib/ajv.js';
 
 const SAMPLE_KEY_ID = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ';
@@ -60,5 +63,32 @@ describe('createMessageRequest schema', () => {
     const body = minimalCreateMessageRequest({ messageId: 'not-a-uuid' });
 
     expect(validate(body)).toBe(false);
+  });
+
+  it('accepts ciphertext at the content limit', () => {
+    const validate = getValidator('createMessageRequest');
+    const body = minimalCreateMessageRequest({
+      encryptedContent: {
+        iv: 'AAAAAAAAAAAA',
+        ciphertext: 'A'.repeat(MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH),
+      },
+    });
+
+    expect(validate(body)).toBe(true);
+  });
+
+  it('rejects ciphertext longer than the content limit', () => {
+    const validate = getValidator('createMessageRequest');
+    const body = minimalCreateMessageRequest({
+      encryptedContent: {
+        iv: 'AAAAAAAAAAAA',
+        ciphertext: 'A'.repeat(MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH + 1),
+      },
+    });
+
+    expect(validate(body)).toBe(false);
+    expect(
+      validate.errors?.some((e) => e.instancePath.includes('ciphertext')),
+    ).toBe(true);
   });
 });

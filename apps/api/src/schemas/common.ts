@@ -1,4 +1,5 @@
 import {
+  AES_GCM_IV_BASE64_LENGTH,
   COMMENT_VERSION,
   COMMENT_WRAP,
   MANIFEST_SHARE_VERSION,
@@ -6,6 +7,7 @@ import {
   MANIFEST_VERSION,
   MANIFEST_WRAP,
   MAX_BASE64_FIELD_LENGTH,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
 } from '../constants.js';
 import { AUTH_NONCE_BYTES } from '@encrypt/core/crypto/authProof';
 import { JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH } from '@encrypt/core/crypto/jwkThumbprint';
@@ -41,12 +43,12 @@ export const encryptedContentSchema = {
     iv: {
       type: 'string',
       minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
+      maxLength: AES_GCM_IV_BASE64_LENGTH,
     },
     ciphertext: {
       type: 'string',
       minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
+      maxLength: MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
     },
   },
 } as const;

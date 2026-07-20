@@ -12,3 +12,9 @@ export const COMMENT_WRAP = 'message-bound-aes' as const;
 
 /** Max decoded base64 payload field length (generous wire limit). */
 export const MAX_BASE64_FIELD_LENGTH = 1_048_576;
+
+export {
+  AES_GCM_IV_BASE64_LENGTH,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+  MAX_CONTENT_PLAINTEXT_LENGTH,
+} from '@encrypt/core/constants/contentLimits';
