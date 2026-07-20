@@ -13,12 +13,12 @@ import {
   cachePrivateKeyMaterial,
   clearSessionPrivateKeyStorage,
   getCachedPrivateKeyMaterial,
-} from '@/crypto/sessionPrivateKeyStorage.ts';
+} from '@web/crypto/sessionPrivateKeyStorage.ts';
 import {
   pickPrivateKeyJwkFile,
   pickPrivateKeyJwkFileWithName,
   isPrivateKeyFileSelectionCancelled,
-} from '@/crypto/privateKeyFile.ts';
+} from '@web/crypto/privateKeyFile.ts';
 
 let sessionMaterial: UploadedPrivateKeyMaterial | null = null;
 

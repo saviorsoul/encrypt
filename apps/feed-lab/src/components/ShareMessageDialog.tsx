@@ -10,8 +10,8 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { AppDialog } from '@/components/shared/AppDialog.tsx';
-import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
+import { AppDialog } from '@web/components/shared/AppDialog.tsx';
+import { RecipientMultiSelect } from '@web/components/encrypt/RecipientMultiSelect.tsx';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 
 type ShareMessageDialogProps = {

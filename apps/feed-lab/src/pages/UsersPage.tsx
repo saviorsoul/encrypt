@@ -22,9 +22,9 @@ import {
 } from '@lab/components/AcceptFriendRequestDialog.tsx';
 import { AddFriendDialog } from '@lab/components/AddFriendDialog.tsx';
 import { PublicKeyDialog } from '@lab/components/PublicKeyDialog.tsx';
-import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
+import { CopiedToClipboardSnackbar } from '@web/components/CopiedToClipboardSnackbar.tsx';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
-import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@web/hooks/useCopiedToClipboardSnackbar.tsx';
 import {
   saveFeedLabUser,
   loadFeedLabUserByKeyId,

@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { AppDialog } from '@/components/shared/AppDialog.tsx';
+import { AppDialog } from '@web/components/shared/AppDialog.tsx';
 import {
   formatSignRequestPayload,
   signRequestMethodPalette,

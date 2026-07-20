@@ -12,8 +12,8 @@ import {
   Typography,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { RecipientMultiSelect } from '@/components/encrypt/RecipientMultiSelect.tsx';
-import { ImportJsonPayloadInput } from '@/components/shared/ImportJsonPayloadInput.tsx';
+import { RecipientMultiSelect } from '@web/components/encrypt/RecipientMultiSelect.tsx';
+import { ImportJsonPayloadInput } from '@web/components/shared/ImportJsonPayloadInput.tsx';
 import { validateJsonSyntaxText } from '@lab/lib/validateJsonSyntax.ts';
 import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendSendMessage } from '@lab/hooks/useBackendSendMessage.ts';

@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "paths": {
+      "@web/*": ["../web/src/*"],
+      "@lab/*": ["./src/*"]
+    },
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
@@ -10,12 +14,7 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
-    "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["../web/src/*"],
-      "@lab/*": ["src/*"]
-    }
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src"]
 }

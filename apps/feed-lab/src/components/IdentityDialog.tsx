@@ -16,9 +16,9 @@ import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/ecPublicKey';
-import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
-import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
-import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
+import { prettifyJsonText } from '@web/utils/prettifyJsonText.ts';
+import { CopiedToClipboardSnackbar } from '@web/components/CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@web/hooks/useCopiedToClipboardSnackbar.tsx';
 
 export type IdentityDialogTarget = {
   keyId: string;

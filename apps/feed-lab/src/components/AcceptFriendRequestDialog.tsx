@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { AppDialog } from '@/components/shared/AppDialog.tsx';
+import { AppDialog } from '@web/components/shared/AppDialog.tsx';
 
 export type PendingFriendRequest = {
   requesterKeyId: string;

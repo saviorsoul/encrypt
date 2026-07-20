@@ -3,7 +3,7 @@ import {
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
 import type { FeedApi, FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
-import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
+import { parsePublicKeyText } from '@web/utils/parsePublicKeyText.ts';
 
 export type EnsureBackendUserResult =
   | {

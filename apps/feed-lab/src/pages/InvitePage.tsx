@@ -38,7 +38,7 @@ import {
   saveFeedLabUser,
 } from '@lab/services/db/storedUsers.ts';
 import { InviteSuccessView } from '@lab/components/InviteSuccessView.tsx';
-import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
+import { prettifyJsonText } from '@web/utils/prettifyJsonText.ts';
 import type { FriendInvitationPublic } from '@encrypt/core/api/feedApi';
 
 type InviteStep =

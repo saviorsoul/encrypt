@@ -5,7 +5,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
-import { AppDialog } from '@/components/shared/AppDialog.tsx';
+import { AppDialog } from '@web/components/shared/AppDialog.tsx';
 import { SendMessagePanel } from '@lab/components/SendMessagePanel.tsx';
 import type { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';

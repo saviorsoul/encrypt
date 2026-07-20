@@ -9,14 +9,14 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import { AppDialog } from '@/components/shared/AppDialog.tsx';
+import { AppDialog } from '@web/components/shared/AppDialog.tsx';
 import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/ecPublicKey';
-import { prettifyJsonText } from '@/utils/prettifyJsonText.ts';
-import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
-import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
+import { prettifyJsonText } from '@web/utils/prettifyJsonText.ts';
+import { CopiedToClipboardSnackbar } from '@web/components/CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@web/hooks/useCopiedToClipboardSnackbar.tsx';
 
 type PublicKeyDialogProps = {
   open: boolean;

@@ -22,8 +22,10 @@ export default defineConfig(({ command }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '../web/src'),
         '@lab': path.resolve(__dirname, 'src'),
+        '@web': path.resolve(__dirname, '../web/src'),
+        // Web source still uses `@/`; map it here so those imports resolve.
+        '@': path.resolve(__dirname, '../web/src'),
       },
     },
     server: {
