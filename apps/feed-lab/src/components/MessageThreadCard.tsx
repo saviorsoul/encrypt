@@ -110,6 +110,7 @@ const encPaperSx = (theme: Theme) => ({
   py: 1.375,
   display: 'flex',
   flexDirection: 'column',
+  overflow: 'hidden',
 });
 
 const cardActionButtonSx = {
@@ -478,7 +479,10 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           </Button>
 
           {decryptPlaintext ? (
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+            <Typography
+              variant="body2"
+              sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+            >
               {sanitizeDisplayText(decryptPlaintext)}
             </Typography>
           ) : (
@@ -906,7 +910,10 @@ const CommentRow = memo(function CommentRow({
           </Typography>
         </Box>
         {text ? (
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+          >
             {sanitizeDisplayText(text)}
           </Typography>
         ) : (
