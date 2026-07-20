@@ -61,7 +61,6 @@ export function FeedPage() {
     decryptDelivery,
     decryptComments,
     busyMessageId,
-    busyCommentsMessageId,
     decryptedMessages,
     messageErrors,
     decryptedCommentsByMessage,
@@ -194,7 +193,6 @@ export function FeedPage() {
               onDecryptDelivery={decryptDelivery}
               onDecryptComments={decryptComments}
               decryptBusy={busyMessageId === message.id}
-              decryptCommentsBusy={busyCommentsMessageId === message.id}
               decryptError={messageErrors[message.id] ?? null}
               decryptCommentsError={commentsErrors[message.id] ?? null}
               decryptPlaintext={decryptedMessages[message.id] ?? null}

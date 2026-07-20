@@ -1,4 +1,11 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   Avatar,
@@ -60,7 +67,6 @@ type MessageThreadCardProps = {
   onDecryptDelivery: ReturnType<typeof useBackendDecrypt>['decryptDelivery'];
   onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
   decryptBusy: boolean;
-  decryptCommentsBusy: boolean;
   decryptError: string | null;
   decryptCommentsError: string | null;
   decryptPlaintext: string | null;
@@ -172,7 +178,6 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   onDecryptDelivery,
   onDecryptComments,
   decryptBusy,
-  decryptCommentsBusy,
   decryptError,
   decryptCommentsError,
   decryptPlaintext,
@@ -341,15 +346,15 @@ export const MessageThreadCard = memo(function MessageThreadCard({
         borderColor: highlighted ? 'primary.main' : 'divider',
       }}
     >
-      <Box sx={{ px: 2.125, py: 1.875 }}>
+      <Box sx={{ px: 2, py: 2 }}>
         <Stack
           direction="row"
-          spacing={1.125}
+          spacing={1}
           sx={{ mb: 1.5, alignItems: 'center' }}
         >
           <Stack
             direction="row"
-            spacing={1.125}
+            spacing={1}
             sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}
           >
             <Box
@@ -372,7 +377,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
                 {isOwnMessage ? 'You' : nameInitial(senderLabel ?? '?')}
               </Avatar>
             </Box>
-            <Stack spacing={0.15} sx={{ minWidth: 0 }}>
+            <Stack spacing={0.2} sx={{ minWidth: 0 }}>
               <Typography
                 component="button"
                 type="button"
@@ -486,13 +491,13 @@ export const MessageThreadCard = memo(function MessageThreadCard({
       </Box>
 
       {decryptError ? (
-        <Alert severity="error" sx={{ mx: 2.125, mb: 1 }}>
+        <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
           {decryptError}
         </Alert>
       ) : null}
 
       {copyState === 'err' ? (
-        <Alert severity="error" sx={{ mx: 2.125, mb: 1 }}>
+        <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
           Failed to copy message. Reload the feed and try again.
         </Alert>
       ) : null}
@@ -502,7 +507,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          px: 1.875,
+          px: 2,
           py: 1,
           borderTop: 1,
           borderColor: 'divider',
@@ -563,7 +568,6 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           decryptCommentsError={decryptCommentsError}
           decryptPlaintext={decryptPlaintext}
           decryptedComments={decryptedComments}
-          decryptCommentsBusy={decryptCommentsBusy}
           onDecryptComments={onDecryptComments}
           onMergeDecryptedComments={onMergeDecryptedComments}
           onMessageInteract={onMessageInteract}
@@ -584,7 +588,6 @@ type MessageThreadExpandedPanelProps = {
   decryptCommentsError: string | null;
   decryptPlaintext: string | null;
   decryptedComments: Record<string, string> | null;
-  decryptCommentsBusy: boolean;
   onDecryptComments: ReturnType<typeof useBackendDecrypt>['decryptComments'];
   onMergeDecryptedComments: ReturnType<
     typeof useBackendDecrypt
@@ -603,7 +606,6 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   decryptCommentsError,
   decryptPlaintext,
   decryptedComments,
-  decryptCommentsBusy,
   onDecryptComments,
   onMergeDecryptedComments,
   onMessageInteract,
@@ -628,6 +630,39 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       onCommentsForCopyChange(comments);
     }
   }, [comments, commentsLoading, onCommentsForCopyChange]);
+
+  const autoDecryptCommentsAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!decryptPlaintext) {
+      autoDecryptCommentsAttemptedRef.current = false;
+      return;
+    }
+    if (
+      commentsLoading ||
+      decryptedComments !== null ||
+      comments.length === 0 ||
+      autoDecryptCommentsAttemptedRef.current
+    ) {
+      return;
+    }
+    // Retry if message decrypt's comment fetch failed and comments are available here.
+    autoDecryptCommentsAttemptedRef.current = true;
+    void onDecryptComments({
+      messageId: message.id,
+      comments,
+      allDeliveries: feedContext.allDeliveries,
+      manifestLookup: feedContext.manifestLookup,
+    });
+  }, [
+    comments,
+    commentsLoading,
+    decryptPlaintext,
+    decryptedComments,
+    feedContext.allDeliveries,
+    feedContext.manifestLookup,
+    message.id,
+    onDecryptComments,
+  ]);
 
   const handlePostComment = useCallback(
     async (text: string) => {
@@ -662,14 +697,20 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       postComment,
     ],
   );
-  const commentsDecrypted = decryptedComments !== null;
-  const showDecryptCommentsButton =
-    !commentsLoading && comments.length > 0 && !commentsDecrypted;
 
   return (
     <Box
       onClick={(event) => event.stopPropagation()}
-      sx={{ px: 2.125, pb: 2, borderTop: 1, borderColor: 'divider' }}
+      sx={{
+        px: 3,
+        pt: 1.5,
+        pb: 2,
+        borderTop: 1,
+        borderColor: 'divider',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.5,
+      }}
     >
       {shareLastShareId ? (
         <Alert severity="success" sx={{ mt: 1.5 }}>
@@ -677,46 +718,17 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
         </Alert>
       ) : null}
 
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mt: 2, mb: 1, alignItems: 'center' }}
+      <Typography
+        variant="subtitle2"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '0.75rem',
+        }}
       >
-        <Typography
-          variant="subtitle2"
-          sx={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.75rem',
-            lineHeight: '30px',
-          }}
-        >
-          Comments (
-          {commentsLoading ? <CircularProgress size={10} /> : comments.length})
-        </Typography>
-        {showDecryptCommentsButton ? (
-          <Button
-            size="small"
-            variant="contained"
-            color="primary"
-            disabled={decryptCommentsBusy}
-            startIcon={<LockOutlinedIcon sx={{ fontSize: 14 }} />}
-            onClick={() => {
-              onMessageInteract(message.id);
-              void onDecryptComments({
-                messageId: message.id,
-                comments,
-                allDeliveries: feedContext.allDeliveries,
-                manifestLookup: feedContext.manifestLookup,
-              });
-            }}
-            sx={{ py: 0.625, px: 1.5, fontSize: '0.75rem' }}
-          >
-            {decryptCommentsBusy ? 'Decrypting…' : 'Decrypt comments'}
-          </Button>
-        ) : null}
-      </Stack>
+        Comments (
+        {commentsLoading ? <CircularProgress size={10} /> : comments.length})
+      </Typography>
 
       {decryptCommentsError ? (
         <Alert severity="error" sx={{ mb: 1.5 }}>
@@ -724,42 +736,35 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
         </Alert>
       ) : null}
 
-      <Box>
-        <Collapse
-          in={!commentsLoading}
-          timeout={COMMENTS_PANEL_CONTENT_GROW_MS}
-        >
-          <Box>
-            {comments.length > 0 ? (
-              <Stack spacing={1}>
-                {comments.map((comment) => {
-                  const text =
-                    decryptedComments !== null
-                      ? decryptedComments[comment.id]
-                      : null;
+      {comments.length > 0 && !commentsLoading ? (
+        <Collapse in appear timeout={COMMENTS_PANEL_CONTENT_GROW_MS}>
+          <Stack spacing={1}>
+            {comments.map((comment) => {
+              const text =
+                decryptedComments !== null
+                  ? decryptedComments[comment.id]
+                  : null;
 
-                  return (
-                    <CommentRow
-                      key={comment.id}
-                      comment={comment}
-                      text={text}
-                      usernameByKeyId={usernameByKeyId}
-                      viewerKeyId={viewerKeyId}
-                      onOpenIdentity={onOpenIdentity}
-                    />
-                  );
-                })}
-                {decryptedComments !== null &&
-                Object.keys(decryptedComments).length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Could not decrypt comments.
-                  </Typography>
-                ) : null}
-              </Stack>
+              return (
+                <CommentRow
+                  key={comment.id}
+                  comment={comment}
+                  text={text}
+                  usernameByKeyId={usernameByKeyId}
+                  viewerKeyId={viewerKeyId}
+                  onOpenIdentity={onOpenIdentity}
+                />
+              );
+            })}
+            {decryptedComments !== null &&
+            Object.keys(decryptedComments).length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Could not decrypt comments.
+              </Typography>
             ) : null}
-          </Box>
+          </Stack>
         </Collapse>
-      </Box>
+      ) : null}
 
       <CommentComposer
         commentsPostBusy={commentsPostBusy}
@@ -795,21 +800,28 @@ const CommentComposer = memo(function CommentComposer({
       <TextField
         fullWidth
         multiline
-        minRows={3}
-        label="New comment"
+        minRows={2}
         value={commentText}
         onChange={(event) => setCommentText(event.target.value)}
         disabled={!messageDecrypted || commentsPostBusy}
-        helperText={
-          messageDecrypted ? undefined : 'Decrypt the message to add a comment.'
+        placeholder={
+          messageDecrypted ? 'New comment' : 'Decrypt message to add a comment'
         }
-        sx={{ my: 1 }}
+        sx={{ mt: 1 }}
+        slotProps={{
+          input: {
+            sx: {
+              fontSize: '0.875rem',
+            },
+          },
+        }}
       />
       <Button
         variant="contained"
         size="small"
         disabled={!messageDecrypted || commentsPostBusy || !commentText.trim()}
         onClick={() => void handlePostComment()}
+        sx={{ width: 'fit-content' }}
       >
         {commentsPostBusy ? 'Posting…' : 'Add comment'}
       </Button>
@@ -886,10 +898,10 @@ const CommentRow = memo(function CommentRow({
               : `View identity for ${authorLabel ?? 'author'}`
           }
         >
-          <Avatar sx={threadAvatarSx(isOwnComment, 32)}>
+          <Avatar sx={threadAvatarSx(isOwnComment, 28)}>
             {isOwnComment ? 'You' : nameInitial(authorLabel ?? '?')}
           </Avatar>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+          <Typography variant="caption">
             {isOwnComment ? 'Your own comment' : (authorLabel ?? '...')}
           </Typography>
         </Box>

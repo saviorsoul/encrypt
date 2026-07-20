@@ -16,6 +16,7 @@ import type {
 } from '@encrypt/core/feed/types';
 import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
+import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 
 type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
 
@@ -144,11 +145,13 @@ function withoutKey<T extends Record<string, unknown>>(map: T, key: string): T {
   return next;
 }
 
+function commentThreadId(delivery: StoredFeedDelivery): string {
+  return isShareDelivery(delivery) ? delivery.messageId : delivery.id;
+}
+
 export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
+  const api = useFeedApi();
   const [busyMessageId, setBusyMessageId] = useState<string | null>(null);
-  const [busyCommentsMessageId, setBusyCommentsMessageId] = useState<
-    string | null
-  >(null);
   const [decryptedMessages, setDecryptedMessages] = useState<
     Record<string, string>
   >({});
@@ -162,38 +165,9 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
     {},
   );
 
-  const decryptDelivery = useCallback(
-    async (context: DecryptContext) => {
-      const messageId = context.delivery.id;
-      setBusyMessageId(messageId);
-      setMessageErrors((prev) => withoutKey(prev, messageId));
-      try {
-        const messageText = await withPrivateKey(async (material) =>
-          decryptWithMaterial(material, context),
-        );
-        if (messageText === null) {
-          return null;
-        }
-        setDecryptedMessages((prev) => ({
-          ...prev,
-          [messageId]: messageText,
-        }));
-        return messageText;
-      } catch (e) {
-        const message = e instanceof Error ? e.message : 'Decrypt failed.';
-        setMessageErrors((prev) => ({ ...prev, [messageId]: message }));
-        throw e;
-      } finally {
-        setBusyMessageId(null);
-      }
-    },
-    [withPrivateKey],
-  );
-
   const decryptComments = useCallback(
     async (context: DecryptCommentsContext) => {
       const { messageId } = context;
-      setBusyCommentsMessageId(messageId);
       setCommentsErrors((prev) => withoutKey(prev, messageId));
       try {
         const commentTexts = await withPrivateKey(async (material) =>
@@ -217,16 +191,69 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
           e instanceof Error ? e.message : 'Failed to decrypt comments.';
         setCommentsErrors((prev) => ({ ...prev, [messageId]: message }));
         throw e;
-      } finally {
-        setBusyCommentsMessageId(null);
       }
     },
     [withPrivateKey],
   );
 
+  const decryptDelivery = useCallback(
+    async (context: DecryptContext) => {
+      const messageId = context.delivery.id;
+      const threadId = commentThreadId(context.delivery);
+      setBusyMessageId(messageId);
+      setMessageErrors((prev) => withoutKey(prev, messageId));
+      setCommentsErrors((prev) => withoutKey(prev, messageId));
+      try {
+        const result = await withPrivateKey(async (material) => {
+          const messageText = await decryptWithMaterial(material, context);
+          try {
+            const comments = await api.getComments(threadId);
+            const commentTexts = await decryptCommentsWithMaterial(
+              material,
+              comments,
+              context.allDeliveries,
+              context.manifestLookup,
+            );
+            return { messageText, commentTexts, commentsError: null };
+          } catch (e) {
+            const commentsError =
+              e instanceof Error ? e.message : 'Failed to load comments.';
+            return { messageText, commentTexts: null, commentsError };
+          }
+        });
+        if (result === null) {
+          return null;
+        }
+        setDecryptedMessages((prev) => ({
+          ...prev,
+          [messageId]: result.messageText,
+        }));
+        if (result.commentTexts !== null) {
+          setDecryptedCommentsByMessage((prev) => ({
+            ...prev,
+            [messageId]: result.commentTexts,
+          }));
+        }
+        if (result.commentsError) {
+          setCommentsErrors((prev) => ({
+            ...prev,
+            [messageId]: result.commentsError,
+          }));
+        }
+        return result.messageText;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Decrypt failed.';
+        setMessageErrors((prev) => ({ ...prev, [messageId]: message }));
+        throw e;
+      } finally {
+        setBusyMessageId(null);
+      }
+    },
+    [api, withPrivateKey],
+  );
+
   const clear = useCallback(() => {
     setBusyMessageId(null);
-    setBusyCommentsMessageId(null);
     setDecryptedMessages({});
     setMessageErrors({});
     setDecryptedCommentsByMessage({});
@@ -247,7 +274,6 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
     decryptDelivery,
     decryptComments,
     busyMessageId,
-    busyCommentsMessageId,
     decryptedMessages,
     messageErrors,
     decryptedCommentsByMessage,
