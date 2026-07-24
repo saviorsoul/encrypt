@@ -45,7 +45,7 @@ export function SessionPrivateKeyProvider({
   useEffect(() => {
     const previousUser = previousUserRef.current;
     previousUserRef.current = user;
-    if (previousUser && !user) {
+    if (previousUser?.username !== user?.username) {
       clearSessionPrivateKeyStorage();
     }
   }, [user]);

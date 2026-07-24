@@ -1,10 +1,12 @@
 import { slimEcPrivateJwk } from '@/crypto/jwkThumbprint.ts';
 import {
   cachePrivateKeyMaterial,
+  clearSessionPrivateKeyStorage,
   getCachedPrivateKeyMaterial,
 } from '@/crypto/sessionPrivateKeyStorage.ts';
 import {
   importUploadedPrivateKeyMaterial,
+  isPrivateKeyMismatchError,
   type UploadedPrivateKeyMaterial,
 } from '@/crypto/privateKeyMaterial.ts';
 import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
@@ -146,8 +148,8 @@ export async function pickPrivateKeyJwkInElectronNativeDialog(): Promise<JsonWeb
 
 /**
  * Prompt for a private-key JWK file, import non-extractable CryptoKeys, run `fn`.
- * When caching is enabled, imported keys are kept in memory only for reuse in this tab.
- * Raw JWK material is not persisted.
+ * When caching is enabled, imported keys are kept in memory only after `fn`
+ * completes successfully (encrypt/decrypt/sign). Raw JWK material is not persisted.
  */
 export async function withUploadedPrivateKey<T>(
   fn: (material: UploadedPrivateKeyMaterial) => Promise<T>,
@@ -155,13 +157,28 @@ export async function withUploadedPrivateKey<T>(
 ): Promise<T> {
   const cached = getCachedPrivateKeyMaterial();
   if (cached) {
-    return fn(cached);
+    try {
+      return await fn(cached);
+    } catch (error) {
+      if (isPrivateKeyMismatchError(error)) {
+        clearSessionPrivateKeyStorage();
+      }
+      throw error;
+    }
   }
 
   const jwk = options?.pickJwk
     ? await options.pickJwk()
     : await pickPrivateKeyJwkFile();
   const material = await importUploadedPrivateKeyMaterial(jwk);
-  cachePrivateKeyMaterial(material);
-  return fn(material);
+  try {
+    const result = await fn(material);
+    cachePrivateKeyMaterial(material);
+    return result;
+  } catch (error) {
+    if (isPrivateKeyMismatchError(error)) {
+      clearSessionPrivateKeyStorage();
+    }
+    throw error;
+  }
 }

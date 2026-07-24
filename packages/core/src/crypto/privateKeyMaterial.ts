@@ -17,6 +17,19 @@ export type UploadedPrivateKeyMaterial = {
   senderPublicKey: CryptoKey;
 };
 
+export class PrivateKeyMismatchError extends Error {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
+  }
+}
+
+export function isPrivateKeyMismatchError(
+  error: unknown,
+): error is PrivateKeyMismatchError {
+  return error instanceof PrivateKeyMismatchError;
+}
+
 export async function importUploadedPrivateKeyMaterial(
   jwk: JsonWebKey,
 ): Promise<UploadedPrivateKeyMaterial> {
@@ -49,6 +62,6 @@ export function assertUploadedPrivateKeyMatchesKeyId(
   message = 'Uploaded private key does not match the publicKeyJwk for this side.',
 ): void {
   if (material.keyId !== expectedKeyId) {
-    throw new Error(message);
+    throw new PrivateKeyMismatchError(message);
   }
 }

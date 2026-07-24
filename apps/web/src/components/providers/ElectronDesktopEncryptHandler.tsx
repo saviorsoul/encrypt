@@ -4,11 +4,8 @@ import { useElectronEncryptPlaintextMessage } from '@/hooks/useElectronEncryptPl
 
 /** Tray IPC encrypt ingress (OS menu recipient is chosen before IPC). */
 export function ElectronDesktopEncryptHandler() {
-  const {
-    closeSnackbar,
-    handleTrayEncryptPayload,
-    snackbar,
-  } = useElectronEncryptPlaintextMessage();
+  const { closeSnackbar, handleTrayEncryptPayload, snackbar } =
+    useElectronEncryptPlaintextMessage();
 
   const handleTrayEncryptRef = useRef(handleTrayEncryptPayload);
 

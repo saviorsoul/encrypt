@@ -5,6 +5,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
+import { clearSessionPrivateKeyStorage } from '@/crypto/sessionPrivateKeyStorage.ts';
 
 export const SESSION_USER_STORAGE_KEY = 'social-fe-session-user';
 export const LAST_USERNAME_STORAGE_KEY = 'social-fe-last-username';
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    clearSessionPrivateKeyStorage();
     setUser(null);
     setLoginNotice(null);
     clearSessionAuthStorage();
