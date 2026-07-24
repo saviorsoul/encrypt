@@ -30,7 +30,9 @@ import { ProofOfConceptsNav } from '@/components/layout/ProofOfConceptsNav.tsx';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer.tsx';
 import { SessionPrivateKeyNavSwitch } from '@/components/layout/SessionPrivateKeyNavSwitch.tsx';
 import { StoragePersistenceWarningNavIcon } from '@/components/layout/StoragePersistenceWarningNavIcon.tsx';
+import { ProtocolHandlerWarningNavIcon } from '@/components/layout/ProtocolHandlerWarningNavIcon.tsx';
 import { useStoragePersistence } from '@/components/providers/StoragePersistenceProvider.tsx';
+import { useProtocolHandler } from '@/components/providers/ProtocolHandlerProvider.tsx';
 
 const NAV_ITEMS = [
   { label: '1:1', to: '/' },
@@ -43,6 +45,7 @@ const EXISTING_USER_LOGIN_SNACKBAR_MS = 5000;
 export function AppLayout() {
   const { user, logout, loginNotice, clearLoginNotice } = useAuth();
   const { storagePersistenceAtRisk } = useStoragePersistence();
+  const { protocolHandlerAtRisk } = useProtocolHandler();
   const { publicKeyJwk } = useKeysContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -132,6 +135,9 @@ export function AppLayout() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {storagePersistenceAtRisk ? (
                   <StoragePersistenceWarningNavIcon />
+                ) : null}
+                {protocolHandlerAtRisk ? (
+                  <ProtocolHandlerWarningNavIcon />
                 ) : null}
                 <SessionPrivateKeyNavSwitch />
                 <Tooltip title="Clean local data">

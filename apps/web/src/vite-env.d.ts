@@ -44,6 +44,26 @@ export type TrayEncryptCopiedMessagePayload =
       plaintext?: undefined;
     };
 
+export type DeepLinkAction =
+  | { type: 'copy-public-key' }
+  | { type: 'encrypt'; text: string }
+  | { type: 'decrypt'; text: string };
+
+export type DeepLinkErrorPayload = {
+  message: string;
+};
+
+export type ProtocolHandlerStatus = {
+  applicable: boolean;
+  isDefault: boolean;
+  scheme: string;
+  currentHandler?: string | null;
+};
+
+export type ProtocolHandlerRestoreResult = ProtocolHandlerStatus & {
+  ok: boolean;
+};
+
 export type PickPrivateKeyJwkTextResult =
   | { cancelled: true; text?: undefined; error?: undefined }
   | { cancelled: false; text: string; error?: undefined }
@@ -60,6 +80,15 @@ interface ElectronBridge {
   onTrayEncryptCopiedMessage: (
     callback: (payload: TrayEncryptCopiedMessagePayload) => void,
   ) => () => void;
+  onDeepLinkActionRequest: (
+    callback: (action: DeepLinkAction) => void,
+  ) => () => void;
+  onDeepLinkError: (
+    callback: (payload: DeepLinkErrorPayload) => void,
+  ) => () => void;
+  consumePendingDeepLinkAction: () => Promise<DeepLinkAction | null>;
+  getProtocolHandlerStatus: () => Promise<ProtocolHandlerStatus>;
+  restoreDefaultProtocolHandler: () => Promise<ProtocolHandlerRestoreResult>;
   writeTextToClipboard: (text: string) => Promise<void>;
   dismissExternalFile: (filePath: string) => Promise<void>;
   pickPrivateKeyJwkText: () => Promise<PickPrivateKeyJwkTextResult>;

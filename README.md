@@ -28,6 +28,7 @@ npm workspaces monorepo:
 | Package | Path | Description |
 | ------- | ---- | ----------- |
 | `@encrypt/web` | `apps/web` | Main React + Electron app (local-first) |
+| `@encrypt/extension` | `apps/extension` | Chromium MV3 extension (`encrypt://` deep links) |
 | `@encrypt/api` | `apps/api` | Koa HTTP API, Prisma, PostgreSQL/Citus |
 | `@encrypt/feed-lab` | `apps/feed-lab` | Dev UI for testing the backend |
 | `@encrypt/core` | `packages/core` | Shared crypto, feed types, API client |
@@ -175,6 +176,32 @@ Output is written to `release/`. Linux builds produce a **deb** package; Windows
 
 On Linux, the dev and preview scripts pass `--no-sandbox` to Electron to avoid sandbox issues in some environments.
 
+Packaged builds register the `encrypt://` URL scheme (deep links from the browser extension). See [apps/extension/README.md](apps/extension/README.md).
+
+Check protocol wiring (unit tests + OS probe):
+
+```bash
+npm run test:protocol
+```
+
+After installing the desktop app, require the OS handler:
+
+```bash
+REQUIRE_OS_HANDLER=1 npm run test:protocol
+```
+
+Manual browser check: open [`apps/web/electron/protocol-test.html`](apps/web/electron/protocol-test.html) and click a link (do not rely on typing `encrypt://` in the address bar).
+
+### Browser extension (Chromium)
+
+Build and load the unpacked MV3 extension that sends selections to the desktop app via `encrypt://` deep links:
+
+```bash
+npm run build:extension
+```
+
+Then load `apps/extension/dist` in Chrome/Chromium (**Extensions → Load unpacked**). The Encrypt desktop app must be installed so the OS handles `encrypt://`.
+
 ### Open files from the file manager (Ubuntu)
 
 The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message**, **add a recipient with the provided public key**, or **sign in with a private key**.
@@ -216,6 +243,8 @@ Root scripts delegate to workspaces. Run them from the repository root.
 | `npm run electron:preview` | Build and run the Electron app locally |
 | `npm run electron:run` | Run Electron from existing `dist/` build |
 | `npm run electron:build` | Package desktop installers to `release/` |
+| `npm run build:extension` | Build Chromium extension to `apps/extension/dist/` |
+| `npm run dev:extension` | Same as `build:extension` |
 
 ### API + feed-lab
 

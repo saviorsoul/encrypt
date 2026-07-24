@@ -47,6 +47,7 @@ type ExternalFileContextValue = {
   pendingImport: PendingExternalImport | null;
   importRequestId: number;
   consumePendingImport: () => PendingExternalImport | null;
+  importExternalText: (payload: ExternalTextImportPayload) => void;
   registerImportHandler: (
     destination: ImportDestination,
     handler: ImportHandler,
@@ -185,13 +186,16 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
       const metadata: ExternalFileMetadata = {
         path: '',
         name: payload.sourceName,
-        size: payload.text?.length,
+        size: payload.text?.length ?? 0,
       };
 
       if ('error' in payload) {
         setOpenExternalFile({
           file: metadata,
-          classified: { kind: 'invalid', error: payload.error },
+          classified: {
+            kind: 'invalid',
+            error: payload.error ?? 'Failed to import text.',
+          },
         });
         return;
       }
@@ -257,12 +261,14 @@ export function ExternalFileProvider({ children }: { children: ReactNode }) {
       pendingImport,
       importRequestId,
       consumePendingImport,
+      importExternalText: handleExternalTextImport,
       registerImportHandler,
     }),
     [
       pendingImport,
       importRequestId,
       consumePendingImport,
+      handleExternalTextImport,
       registerImportHandler,
     ],
   );

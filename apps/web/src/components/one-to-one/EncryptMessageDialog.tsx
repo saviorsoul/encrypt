@@ -12,6 +12,7 @@ type EncryptMessageDialogProps = {
   roleLabel: string;
   encrypting: boolean;
   error: string | null;
+  initialMessage?: string;
   onClose: () => void;
   onEncrypt: (message: string) => void;
   onMessageChange?: () => void;
@@ -22,6 +23,7 @@ export function EncryptMessageDialog({
   roleLabel,
   encrypting,
   error,
+  initialMessage = '',
   onClose,
   onEncrypt,
   onMessageChange,
@@ -32,7 +34,7 @@ export function EncryptMessageDialog({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setMessage('');
+      setMessage(initialMessage);
     }
   }
 
@@ -56,6 +58,11 @@ export function EncryptMessageDialog({
           multiline
           minRows={4}
           disabled={encrypting}
+          slotProps={{
+            input: {
+              sx: { whiteSpace: 'pre-wrap' },
+            },
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.metaKey && canEncrypt) {
               onEncrypt(trimmedMessage);

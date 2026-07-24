@@ -15,6 +15,12 @@ import {
   MAX_IMPORT_JSON_FILE_BYTES,
   validateBaseJsonText,
 } from './validateBaseJsonText.js';
+import { findDeepLinkInArgv, parseDeepLink } from './deepLinks.js';
+import {
+  isLinuxEncryptProtocolHandlerDefault,
+  queryLinuxEncryptProtocolHandler,
+  restoreLinuxEncryptProtocolHandler,
+} from './protocolHandlerLinux.js';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -23,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distIndexPath = path.join(__dirname, '../dist/index.html');
 const LINUX_WM_CLASS = 'encrypt';
+const PROTOCOL_SCHEME = 'encrypt';
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('class', LINUX_WM_CLASS);
@@ -71,16 +78,210 @@ let pendingClipboardImport = null;
 /** @type {{ username: string; plaintext?: string; error?: string } | null} */
 let pendingTrayEncryptCopiedMessage = null;
 
+/** @type {import('./deepLinks.js').DeepLinkAction | null} */
+let pendingDeepLinkAction = null;
+
+/** @type {{ message: string } | null} */
+let pendingDeepLinkError = null;
+
+/** @type {string | null} */
+let earlyOpenUrlDeepLink = null;
+
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
+    const deepLink = findDeepLinkInArgv(argv);
+    if (deepLink) {
+      handleDeepLinkUrl(deepLink);
+      return;
+    }
+
+    // Linux desktop launches sometimes pass the URL only after Electron flags;
+    // also accept a single bare argv entry that failed the first scan after join.
+    const joined = argv.filter((a) => typeof a === 'string').join(' ');
+    const embedded = joined.match(/encrypt:\/\/[^\s'"]+/i);
+    if (embedded) {
+      handleDeepLinkUrl(embedded[0]);
+      return;
+    }
+
     showMainWindow();
     enqueueExternalFiles(parseFilePathsFromArgv(argv));
     flushExternalFileQueue();
   });
+
+  // macOS may deliver the URL before ready.
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    if (app.isReady()) {
+      handleDeepLinkUrl(url);
+      return;
+    }
+    earlyOpenUrlDeepLink = url;
+  });
+}
+
+function registerDefaultProtocolClient() {
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
+    }
+    return;
+  }
+
+  app.setAsDefaultProtocolClient(PROTOCOL_SCHEME);
+}
+
+function isEncryptProtocolDefault() {
+  if (process.platform === 'linux') {
+    return isLinuxEncryptProtocolHandlerDefault();
+  }
+
+  return app.isDefaultProtocolClient(PROTOCOL_SCHEME);
+}
+
+function getProtocolHandlerStatus() {
+  if (!app.isPackaged) {
+    return { applicable: false, isDefault: true, scheme: PROTOCOL_SCHEME };
+  }
+
+  const status = {
+    applicable: true,
+    isDefault: isEncryptProtocolDefault(),
+    scheme: PROTOCOL_SCHEME,
+  };
+
+  if (process.platform === 'linux') {
+    return {
+      ...status,
+      currentHandler: queryLinuxEncryptProtocolHandler(),
+    };
+  }
+
+  return status;
+}
+
+function restoreDefaultProtocolHandler() {
+  if (!app.isPackaged) {
+    return {
+      applicable: false,
+      ok: false,
+      isDefault: isEncryptProtocolDefault(),
+      scheme: PROTOCOL_SCHEME,
+    };
+  }
+
+  if (process.platform === 'linux') {
+    const ok = restoreLinuxEncryptProtocolHandler();
+    registerDefaultProtocolClient();
+    const isDefault = isEncryptProtocolDefault();
+    return {
+      applicable: true,
+      ok: ok || isDefault,
+      isDefault,
+      scheme: PROTOCOL_SCHEME,
+    };
+  }
+
+  registerDefaultProtocolClient();
+  const isDefault = isEncryptProtocolDefault();
+  return {
+    applicable: true,
+    ok: isDefault,
+    isDefault,
+    scheme: PROTOCOL_SCHEME,
+  };
+}
+
+/**
+ * @param {string} href
+ */
+function handleDeepLinkUrl(href) {
+  const parsed = parseDeepLink(href);
+  if (!parsed.ok) {
+    sendDeepLinkError(parsed.error);
+    return;
+  }
+
+  dispatchDeepLinkAction(parsed.action);
+}
+
+/**
+ * @param {import('./deepLinks.js').DeepLinkAction} action
+ */
+function dispatchDeepLinkAction(action) {
+  sendDeepLinkActionRequest(action);
+}
+
+/**
+ * @param {import('./deepLinks.js').DeepLinkAction} action
+ */
+function sendDeepLinkActionRequest(action) {
+  showMainWindow();
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingDeepLinkAction = action;
+    return;
+  }
+
+  if (!mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.send('deep-link:action-request', action);
+    return;
+  }
+
+  pendingDeepLinkAction = action;
+}
+
+function flushPendingDeepLinkAction() {
+  if (!pendingDeepLinkAction || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send(
+    'deep-link:action-request',
+    pendingDeepLinkAction,
+  );
+}
+
+function consumePendingDeepLinkAction() {
+  const action = pendingDeepLinkAction;
+  pendingDeepLinkAction = null;
+  return action;
+}
+
+/**
+ * @param {string} message
+ */
+function sendDeepLinkError(message) {
+  showMainWindow();
+
+  const payload = { message };
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingDeepLinkError = payload;
+    return;
+  }
+
+  if (!mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.send('deep-link:error', payload);
+    return;
+  }
+
+  pendingDeepLinkError = payload;
+}
+
+function flushPendingDeepLinkError() {
+  if (!pendingDeepLinkError || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send('deep-link:error', pendingDeepLinkError);
+  pendingDeepLinkError = null;
 }
 
 function parseFilePathsFromArgv(argv) {
@@ -588,6 +789,8 @@ function createWindow({ showOnReady = true } = {}) {
     flushExternalFileQueue();
     flushPendingClipboardImport();
     flushPendingTrayEncryptCopiedMessage();
+    flushPendingDeepLinkAction();
+    flushPendingDeepLinkError();
   });
 }
 
@@ -680,6 +883,18 @@ ipcMain.handle('window:show', () => {
   showMainWindow();
 });
 
+ipcMain.handle('deep-link:consume-pending-action', () => {
+  return consumePendingDeepLinkAction();
+});
+
+ipcMain.handle('protocol:get-handler-status', () => {
+  return getProtocolHandlerStatus();
+});
+
+ipcMain.handle('protocol:restore-default-handler', () => {
+  return restoreDefaultProtocolHandler();
+});
+
 ipcMain.handle('tray:flash-success', () => {
   flashTraySuccessIcon();
 });
@@ -713,11 +928,26 @@ ipcMain.on('tray:set-recipients', (_event, state) => {
 });
 
 app.whenReady().then(() => {
+  if (!app.isPackaged) {
+    registerDefaultProtocolClient();
+  }
+
   configureContentSecurityPolicy();
   blockRemoteNetworkRequests();
-  enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
+
+  const startupDeepLink =
+    earlyOpenUrlDeepLink ?? findDeepLinkInArgv(process.argv);
+  earlyOpenUrlDeepLink = null;
+  if (startupDeepLink) {
+    handleDeepLinkUrl(startupDeepLink);
+  } else {
+    enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
+  }
+
   createTray();
-  createWindow();
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+  }
 
   app.on('activate', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {

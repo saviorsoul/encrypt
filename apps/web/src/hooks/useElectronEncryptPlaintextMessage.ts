@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AlertProps } from '@mui/material/Alert';
+import { useCallback, useState } from 'react';
 import {
   COPIED_TO_CLIPBOARD_MESSAGE,
   COPY_TO_CLIPBOARD_FAILED_MESSAGE,
-  CopiedToClipboardSnackbar,
 } from '@/components/CopiedToClipboardSnackbar.tsx';
 import {
   encryptCopiedMessageForRecipient,
@@ -16,36 +16,43 @@ import {
   withUploadedPrivateKey,
 } from '@/crypto/privateKeyFile.ts';
 import { getCachedPrivateKeyMaterial } from '@/crypto/sessionPrivateKeyStorage.ts';
+import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { dispatchTrayOneToOneMessageSaved } from '@/utils/trayOneToOneMessageSavedEvent.ts';
 import type { TrayEncryptCopiedMessagePayload } from '@/vite-env.d.ts';
 import { copyTextToClipboard } from '@/utils/copyToClipboard.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
 
-type TraySnackbarState = {
+type EncryptSnackbarState = {
   open: boolean;
   key: number;
-  severity: 'success' | 'error';
+  severity: NonNullable<AlertProps['severity']>;
   message: string;
 };
 
-const CLOSED_SNACKBAR: TraySnackbarState = {
+const CLOSED_SNACKBAR: EncryptSnackbarState = {
   open: false,
   key: 0,
   severity: 'success',
   message: '',
 };
 
-export function ElectronTrayEncryptHandler() {
+export const LOG_IN_FIRST_TO_ENCRYPT_MESSAGE =
+  'Log in first to encrypt a message.';
+
+export function useElectronEncryptPlaintextMessage() {
   const keys = useKeysContext();
-  const [snackbar, setSnackbar] = useState<TraySnackbarState>(CLOSED_SNACKBAR);
+  const { user } = useAuth();
+  const [snackbar, setSnackbar] =
+    useState<EncryptSnackbarState>(CLOSED_SNACKBAR);
+  const [encrypting, setEncrypting] = useState(false);
 
   const closeSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   }, []);
 
   const showSnackbar = useCallback(
-    (severity: 'success' | 'error', message: string) => {
+    (severity: NonNullable<AlertProps['severity']>, message: string) => {
       setSnackbar((prev) => ({
         open: true,
         key: prev.key + 1,
@@ -56,30 +63,42 @@ export function ElectronTrayEncryptHandler() {
     [],
   );
 
-  const handleTrayEncrypt = useCallback(
-    async (payload: TrayEncryptCopiedMessagePayload) => {
-      const revealWindow = async () => {
-        await window.electron?.showMainWindow();
-      };
+  const revealWindow = useCallback(async () => {
+    await window.electron?.showMainWindow();
+  }, []);
 
-      if (payload.error) {
+  const encryptPlaintextForRecipient = useCallback(
+    async (
+      username: string,
+      plaintext: string,
+      options?: {
+        failureMessage?: string;
+        onSuccess?: () => void;
+        onFailure?: (message: string) => void;
+      },
+    ) => {
+      if (!user) {
         await revealWindow();
-        showSnackbar('error', payload.error);
-        return;
+        const message = LOG_IN_FIRST_TO_ENCRYPT_MESSAGE;
+        showSnackbar('info', message);
+        options?.onFailure?.(message);
+        return false;
       }
 
       if (!keys?.publicKey || !keys?.publicKeyJwk) {
         await revealWindow();
-        showSnackbar('error', 'Keys are not ready yet.');
-        return;
+        const message = 'Keys are not ready yet.';
+        showSnackbar('error', message);
+        options?.onFailure?.(message);
+        return false;
       }
 
       const runInBackground = Boolean(getCachedPrivateKeyMaterial());
-
       if (!runInBackground) {
         await revealWindow();
       }
 
+      setEncrypting(true);
       try {
         await withUploadedPrivateKey(
           async (material) => {
@@ -90,8 +109,8 @@ export function ElectronTrayEncryptHandler() {
             );
 
             const result = await encryptCopiedMessageForRecipient(
-              payload.plaintext,
-              payload.username,
+              plaintext,
+              username,
               material,
               keys.publicKey!,
             );
@@ -100,12 +119,13 @@ export function ElectronTrayEncryptHandler() {
               item: savedItem,
               senderKeyId: result.senderKeyId,
               recipientKeyId: result.recipientKeyId,
-              recipientUsername: payload.username,
+              recipientUsername: username,
               plaintext: result.plaintext,
             });
             try {
               await copyTextToClipboard(result.payload);
               await window.electron?.flashTraySuccess();
+              options?.onSuccess?.();
               if (!runInBackground) {
                 showSnackbar('success', COPIED_TO_CLIPBOARD_MESSAGE);
               }
@@ -113,44 +133,58 @@ export function ElectronTrayEncryptHandler() {
               console.error(e);
               await revealWindow();
               showSnackbar('error', COPY_TO_CLIPBOARD_FAILED_MESSAGE);
+              options?.onFailure?.(COPY_TO_CLIPBOARD_FAILED_MESSAGE);
             }
           },
           { pickJwk: pickPrivateKeyJwkInElectronNativeDialog },
         );
+        return true;
       } catch (caught) {
         if (isPrivateKeyFileSelectionCancelled(caught)) {
-          return;
+          return false;
         }
         await revealWindow();
-        showSnackbar(
-          'error',
-          errorMessage(caught, 'Failed to encrypt copied message.'),
+        const message = errorMessage(
+          caught,
+          options?.failureMessage ?? 'Failed to encrypt message.',
         );
+        showSnackbar('error', message);
+        options?.onFailure?.(message);
+        return false;
+      } finally {
+        setEncrypting(false);
       }
     },
-    [keys, showSnackbar],
+    [keys, revealWindow, showSnackbar, user],
   );
 
-  const handleTrayEncryptRef = useRef(handleTrayEncrypt);
+  const handleTrayEncryptPayload = useCallback(
+    async (payload: TrayEncryptCopiedMessagePayload) => {
+      if (payload.error) {
+        await revealWindow();
+        showSnackbar('error', payload.error);
+        return;
+      }
 
-  useEffect(() => {
-    handleTrayEncryptRef.current = handleTrayEncrypt;
-  }, [handleTrayEncrypt]);
+      const { username, plaintext } = payload;
+      if (!plaintext) {
+        return;
+      }
 
-  useEffect(() => {
-    return window.electron?.onTrayEncryptCopiedMessage((payload) => {
-      void handleTrayEncryptRef.current(payload);
-    });
-  }, []);
-
-  return (
-    <CopiedToClipboardSnackbar
-      open={snackbar.open}
-      severity={snackbar.severity}
-      onClose={closeSnackbar}
-      snackbarKey={snackbar.key}
-      successMessage={snackbar.message}
-      errorMessage={snackbar.message}
-    />
+      await encryptPlaintextForRecipient(username, plaintext, {
+        failureMessage: 'Failed to encrypt copied message.',
+      });
+    },
+    [encryptPlaintextForRecipient, revealWindow, showSnackbar],
   );
+
+  return {
+    closeSnackbar,
+    encrypting,
+    encryptPlaintextForRecipient,
+    handleTrayEncryptPayload,
+    revealWindow,
+    showSnackbar,
+    snackbar,
+  };
 }

@@ -21,9 +21,11 @@ const SlideUpTransition = React.forwardRef(function SlideUpTransition(
 
 type DialogView = 'menu' | 'select';
 
-type ChangeRecipientDialogProps = {
+type ChooseRecipientDialogProps = {
   open: boolean;
   onClose: () => void;
+  /** Backdrop / Escape; defaults to {@link onClose}. */
+  onDismiss?: () => void;
   usernames: string[];
   loading: boolean;
   loadingSelection: boolean;
@@ -36,9 +38,10 @@ type ChangeRecipientDialogProps = {
   addDisabled?: boolean;
 };
 
-export function ChangeRecipientDialog({
+export function ChooseRecipientDialog({
   open,
   onClose,
+  onDismiss,
   usernames,
   loading,
   loadingSelection,
@@ -49,7 +52,7 @@ export function ChangeRecipientDialog({
   onAdd,
   generateDisabled = false,
   addDisabled = false,
-}: ChangeRecipientDialogProps) {
+}: ChooseRecipientDialogProps) {
   const [view, setView] = useState<DialogView>('menu');
   const [prevOpen, setPrevOpen] = useState(open);
 
@@ -60,26 +63,16 @@ export function ChangeRecipientDialog({
     }
   }
 
-  const handleClose = () => {
-    onClose();
+  const handleDismiss = () => {
+    (onDismiss ?? onClose)();
   };
 
-  const handlePickGenerate = () => {
-    handleClose();
-    onGenerate();
-  };
-
-  const handlePickAdd = () => {
-    handleClose();
-    onAdd();
-  };
-
-  const title = view === 'menu' ? 'Change recipient' : 'Select saved recipient';
+  const title = view === 'menu' ? 'Choose recipient' : 'Select saved recipient';
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={handleDismiss}
       slots={{ transition: SlideUpTransition }}
       fullWidth
       maxWidth="xs"
@@ -122,16 +115,13 @@ export function ChangeRecipientDialog({
                 }
               />
             </ListItemButton>
-            <ListItemButton
-              disabled={generateDisabled}
-              onClick={handlePickGenerate}
-            >
+            <ListItemButton disabled={generateDisabled} onClick={onGenerate}>
               <ListItemText
                 primary="Generate new recipient"
                 secondary="Create a new key pair and download the private key"
               />
             </ListItemButton>
-            <ListItemButton disabled={addDisabled} onClick={handlePickAdd}>
+            <ListItemButton disabled={addDisabled} onClick={onAdd}>
               <ListItemText
                 primary="Add recipient"
                 secondary="Save an existing public key"
@@ -164,7 +154,6 @@ export function ChangeRecipientDialog({
                 disabled={loadingSelection}
                 onClick={() => {
                   onSelect(username);
-                  handleClose();
                 }}
               >
                 <ListItemText primary={username} />

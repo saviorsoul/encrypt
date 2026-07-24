@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { contentSecurityPolicyPlugin } from './vite/contentSecurityPolicyPlugin.ts';
 import { subresourceIntegrityPlugin } from './vite/subresourceIntegrityPlugin.ts';
@@ -28,6 +28,7 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       setupFiles: './src/setupTests.js',
       globals: true,
+      exclude: configDefaults.exclude,
     },
     base: isGithubPages ? '/encrypt/' : isElectron ? './' : '/',
   };

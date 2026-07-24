@@ -7,9 +7,11 @@ import { KeysProvider } from '@/components/providers/KeysProvider.tsx';
 import { AuthProvider } from '@/components/providers/AuthProvider.tsx';
 import { ExternalFileProvider } from '@/components/providers/ExternalFileProvider.tsx';
 import { ElectronTraySync } from '@/components/providers/ElectronTraySync.tsx';
-import { ElectronTrayEncryptHandler } from '@/components/providers/ElectronTrayEncryptHandler.tsx';
+import { ElectronDesktopEncryptHandler } from '@/components/providers/ElectronDesktopEncryptHandler.tsx';
+import { ElectronDeepLinkHandler } from '@/components/providers/ElectronDeepLinkHandler.tsx';
 import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivateKeyProvider.tsx';
 import { StoragePersistenceProvider } from '@/components/providers/StoragePersistenceProvider.tsx';
+import { ProtocolHandlerProvider } from '@/components/providers/ProtocolHandlerProvider.tsx';
 
 const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
 
@@ -30,13 +32,18 @@ export function AppProviders({ children }: AppProvidersProps) {
           <StoragePersistenceProvider>
             <SessionPrivateKeyProvider>
               <KeysProvider>
-                {import.meta.env.VITE_ELECTRON ? (
-                  <>
-                    <ElectronTraySync />
-                    <ElectronTrayEncryptHandler />
-                  </>
-                ) : null}
-                <ExternalFileProvider>{children}</ExternalFileProvider>
+                <ProtocolHandlerProvider>
+                  <ExternalFileProvider>
+                    {import.meta.env.VITE_ELECTRON ? (
+                      <>
+                        <ElectronTraySync />
+                        <ElectronDesktopEncryptHandler />
+                        <ElectronDeepLinkHandler />
+                      </>
+                    ) : null}
+                    {children}
+                  </ExternalFileProvider>
+                </ProtocolHandlerProvider>
               </KeysProvider>
             </SessionPrivateKeyProvider>
           </StoragePersistenceProvider>

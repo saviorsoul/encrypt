@@ -39,7 +39,8 @@
     "electron:run": "node scripts/electron-run.mjs",
     "electron:build": "vite build --mode electron && electron-builder",
     "electron:package": "electron-builder --publish never",
-    "test": "vitest",
+    "test": "vitest --exclude 'src/tests/electron/**'",
+    "test:protocol": "vitest run src/tests/electron && node scripts/check-encrypt-protocol.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -53,6 +54,14 @@
       "name": "encrypt"
     },
     "icon": "electron/icons",
+    "protocols": [
+      {
+        "name": "Encrypt",
+        "schemes": [
+          "encrypt"
+        ]
+      }
+    ],
     "fileAssociations": [
       {
         "ext": [
@@ -80,7 +89,8 @@
       "syncDesktopName": true,
       "desktop": {
         "entry": {
-          "StartupWMClass": "encrypt"
+          "StartupWMClass": "encrypt",
+          "MimeType": "x-scheme-handler/encrypt;"
         }
       }
     },

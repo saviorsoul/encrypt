@@ -39,6 +39,13 @@ import {
   resolveInitialOneToOneRecipientLabel,
   saveLastOneToOneRecipientUsername,
 } from '@/utils/lastOneToOneRecipient.ts';
+import {
+  createOneToOneRecipientSelectRequest,
+  onOneToOneRecipientSelected,
+  readPendingOneToOneRecipientSelect,
+  writePendingOneToOneRecipientSelect,
+  type OneToOneRecipientSelectRequest,
+} from '@/utils/oneToOneRecipientSelect.ts';
 import { onTrayOneToOneMessageSaved } from '@/utils/trayOneToOneMessageSavedEvent.ts';
 import type {
   EncryptedMessageFingerprint,
@@ -149,6 +156,8 @@ export function OneToOnePage() {
   const [peerKeyIdToSelect, setPeerKeyIdToSelect] = useState<string | null>(
     null,
   );
+  const [recipientSelectRequest, setRecipientSelectRequest] =
+    useState<OneToOneRecipientSelectRequest | null>(null);
   const [unknownRecipientDialog, setUnknownRecipientDialog] =
     useState<UnknownRecipientDialogState | null>(null);
   const [unknownRecipientSaving, setUnknownRecipientSaving] = useState(false);
@@ -195,6 +204,42 @@ export function OneToOnePage() {
   }, []);
 
   useEffect(() => () => clearHighlightTimeout(), [clearHighlightTimeout]);
+
+  const applyRecipientSelection = useCallback(
+    (username: string) => {
+      const trimmed = username.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      if (user?.username) {
+        saveLastOneToOneRecipientUsername(user.username, trimmed);
+      }
+
+      setRecipientSelectRequest(createOneToOneRecipientSelectRequest(trimmed));
+    },
+    [user?.username],
+  );
+
+  useEffect(() => {
+    return onOneToOneRecipientSelected(({ username }) => {
+      applyRecipientSelection(username);
+    });
+  }, [applyRecipientSelection]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const pending = readPendingOneToOneRecipientSelect();
+    if (!pending) {
+      return;
+    }
+
+    writePendingOneToOneRecipientSelect(null);
+    applyRecipientSelection(pending);
+  }, [applyRecipientSelection, user]);
 
   useEffect(() => {
     return onTrayOneToOneMessageSaved(
@@ -742,6 +787,8 @@ export function OneToOnePage() {
             threadLoading={threadLoading}
             peerKeyIdToSelect={peerKeyIdToSelect}
             onPeerKeyIdSelected={() => setPeerKeyIdToSelect(null)}
+            recipientSelectRequest={recipientSelectRequest}
+            onRecipientSelectHandled={() => setRecipientSelectRequest(null)}
             onPeerNeedsName={handlePeerNeedsName}
             onEncryptedMessage={(item, side, decryptedText) =>
               appendThreadItem(item, side, { decryptedText })

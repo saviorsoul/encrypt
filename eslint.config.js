@@ -159,4 +159,22 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    files: ['apps/extension/**/*.{js,ts,mjs}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.browser,
+        chrome: 'readonly',
+      },
+      sourceType: 'module',
+    },
+  },
+  {
+    files: ['apps/extension/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
 );

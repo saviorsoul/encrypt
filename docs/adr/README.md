@@ -22,6 +22,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0012](./0012-auth-nonce-consumed-before-route-validation.md) | Auth nonce consumed before route validation | Accepted |
 | [0013](./0013-atomic-get-or-mint-auth-challenge.md) | Atomic `getOrMint` for auth challenge | Accepted |
 | [0014](./0014-request-persistent-storage-and-warn-on-denial.md) | Request persistent storage and warn on denial | Accepted |
+| [0015](./0015-browser-integration-via-encrypt-protocol.md) | Browser integration via `encrypt://` custom protocol | Accepted |
 
 ## When to write an ADR
 

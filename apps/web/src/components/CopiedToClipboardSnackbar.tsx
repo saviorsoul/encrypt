@@ -1,4 +1,5 @@
 import Alert from '@mui/material/Alert';
+import type { AlertProps } from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 
 export const COPIED_TO_CLIPBOARD_SNACKBAR_MS = 5000;
@@ -7,7 +8,7 @@ export const COPY_TO_CLIPBOARD_FAILED_MESSAGE = 'Failed to copy to clipboard';
 
 export type CopiedToClipboardSnackbarProps = {
   open: boolean;
-  severity: 'success' | 'error';
+  severity: NonNullable<AlertProps['severity']>;
   onClose: () => void;
   snackbarKey: number;
   successMessage?: string;

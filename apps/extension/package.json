@@ -1,0 +1,21 @@
+{
+  "name": "@encrypt/extension",
+  "version": "0.3.4",
+  "private": true,
+  "description": "Chromium extension that drives the Encrypt desktop app via encrypt:// deep links",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "dev": "npm run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.24",
+    "typescript": "^5.8.3"
+  }
+}

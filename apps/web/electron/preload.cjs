@@ -49,4 +49,32 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('tray:encrypt-copied-message', listener);
     };
   },
+  onDeepLinkActionRequest: (callback) => {
+    const listener = (_event, action) => {
+      callback(action);
+    };
+
+    ipcRenderer.on('deep-link:action-request', listener);
+
+    return () => {
+      ipcRenderer.removeListener('deep-link:action-request', listener);
+    };
+  },
+  onDeepLinkError: (callback) => {
+    const listener = (_event, payload) => {
+      callback(payload);
+    };
+
+    ipcRenderer.on('deep-link:error', listener);
+
+    return () => {
+      ipcRenderer.removeListener('deep-link:error', listener);
+    };
+  },
+  consumePendingDeepLinkAction: () =>
+    ipcRenderer.invoke('deep-link:consume-pending-action'),
+  getProtocolHandlerStatus: () =>
+    ipcRenderer.invoke('protocol:get-handler-status'),
+  restoreDefaultProtocolHandler: () =>
+    ipcRenderer.invoke('protocol:restore-default-handler'),
 });

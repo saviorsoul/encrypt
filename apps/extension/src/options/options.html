@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Encrypt extension options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Encrypt</h1>
+      <p class="lede">
+        This extension opens <code>encrypt://</code> deep links to the Encrypt
+        desktop app. Install and run Encrypt, then use context menus or
+        shortcuts on any page selection.
+      </p>
+
+      <section>
+        <h2>Actions</h2>
+        <label>
+          <input type="checkbox" id="enableEncryptSelection" />
+          Encrypt selection
+        </label>
+        <label>
+          <input type="checkbox" id="enableImportSelection" />
+          Decrypt selection
+        </label>
+        <label>
+          <input type="checkbox" id="enableCopyPublicKey" />
+          Public key into clipboard
+        </label>
+      </section>
+
+      <section>
+        <h2>Keyboard shortcuts</h2>
+        <p>
+          Remap shortcuts in
+          <a href="chrome://extensions/shortcuts" id="shortcuts-link"
+            >chrome://extensions/shortcuts</a
+          >.
+        </p>
+      </section>
+
+      <section>
+        <h2>Privacy note</h2>
+        <p>
+          Selected text is placed in the deep-link URL and passed to the OS /
+          Encrypt process argv for that launch. Very long selections may hit OS
+          or browser URL length limits.
+        </p>
+      </section>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

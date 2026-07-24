@@ -8,15 +8,9 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 import SendAndArchiveOutlinedIcon from '@mui/icons-material/SendAndArchiveOutlined';
-import { ChangeRecipientDialog } from '@/components/one-to-one/ChangeRecipientDialog.tsx';
 import { EncryptMessageDialog } from '@/components/one-to-one/EncryptMessageDialog.tsx';
-import { GenerateRecipientDialog } from '@/components/one-to-one/GenerateRecipientDialog.tsx';
-import { SaveRecipientDialog } from '@/components/one-to-one/SaveRecipientDialog.tsx';
+import { RecipientPickerDialogs } from '@/components/one-to-one/RecipientPickerDialogs.tsx';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
-import { jwkWithoutKeyOps } from '@/crypto/ecdhKeys.ts';
-import { createMockExternalRecipient } from '@/crypto/mockExternalRecipient.ts';
-import { downloadJsonFile } from '@/utils/downloadJson.ts';
-import { privateKeyDownloadFilename } from '@/utils/privateKeyFilename.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { usePublicKeyJwkInput } from '@/hooks/usePublicKeyJwkInput.ts';
 import {
@@ -25,20 +19,15 @@ import {
 } from '@/crypto/manifestEncrypt.ts';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import { formatEcPublicKeyText } from '@/crypto/ecPublicKey.ts';
-import {
-  ecPublicJwkThumbprintSha256,
-  slimEcPublicJwk,
-} from '@/crypto/jwkThumbprint.ts';
+import { slimEcPublicJwk } from '@/crypto/jwkThumbprint.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
   withUploadedPrivateKey,
 } from '@/crypto/privateKeyFile.ts';
 import {
-  listStoredUsernames,
   loadStoredPublicKeyMaterial,
   loadStoredPublicKeyMaterialByKeyId,
   saveStoredPublicKey,
-  saveStoredRecipientForUsername,
 } from '@/services/db/storedPublicKeys.ts';
 import { recoverPeerPublicJwkFromStoredThread } from '@/crypto/oneToOneMessageParties.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
@@ -47,8 +36,8 @@ import {
   resolveInitialOneToOneRecipientUsername,
   saveLastOneToOneRecipientUsername,
 } from '@/utils/lastOneToOneRecipient.ts';
-import { parsePublicKeyText } from '@/utils/parsePublicKeyText.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
+import type { OneToOneRecipientSelectRequest } from '@/utils/oneToOneRecipientSelect.ts';
 import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 import { useCopiedToClipboardSnackbar } from '@/hooks/useCopiedToClipboardSnackbar.tsx';
 import type {
@@ -65,6 +54,8 @@ type OneToOneEncryptionProps = {
   threadLoading?: boolean;
   peerKeyIdToSelect?: string | null;
   onPeerKeyIdSelected?: () => void;
+  recipientSelectRequest?: OneToOneRecipientSelectRequest | null;
+  onRecipientSelectHandled?: () => void;
   onPeerNeedsName?: (peer: { keyId: string; publicJwk: JsonWebKey }) => void;
   onEncryptedMessage: (
     item: OneToOneThreadItem,
@@ -83,6 +74,8 @@ export function OneToOneEncryption({
   threadLoading = false,
   peerKeyIdToSelect = null,
   onPeerKeyIdSelected,
+  recipientSelectRequest = null,
+  onRecipientSelectHandled,
   onPeerNeedsName,
   onEncryptedMessage,
   onImportMessage,
@@ -112,12 +105,9 @@ export function OneToOneEncryption({
   const senderKeys = usePublicKeyJwkInput(senderJwkText);
   const recipientKeys = usePublicKeyJwkInput(recipientJwkText);
   const {
-    storedUsers,
     usernames: storedUsernames,
-    allUsernames: allStoredUsernames,
     loading: storedUsersLoading,
     error: storedUsersError,
-    refresh: refreshStoredUsernames,
   } = useStoredUsernames();
 
   const [selectedStoredUsername, setSelectedStoredUsername] = useState<
@@ -126,17 +116,7 @@ export function OneToOneEncryption({
   const recipientTitle = selectedStoredUsername ?? 'Recipient';
   const [storedUserLoading, setStoredUserLoading] = useState(false);
   const [recipientDialogOpen, setRecipientDialogOpen] = useState(false);
-  const [saveRecipientDialogOpen, setSaveRecipientDialogOpen] = useState(false);
-  const [saveRecipientBusy, setSaveRecipientBusy] = useState(false);
-  const [saveRecipientError, setSaveRecipientError] = useState<string | null>(
-    null,
-  );
-  const [generateRecipientDialogOpen, setGenerateRecipientDialogOpen] =
-    useState(false);
-  const [generateRecipientBusy, setGenerateRecipientBusy] = useState(false);
-  const [generateRecipientError, setGenerateRecipientError] = useState<
-    string | null
-  >(null);
+  const [recipientPickerBusy, setRecipientPickerBusy] = useState(false);
   const lastRecipientRestoredForUserRef = useRef<string | null>(null);
 
   const bothKeysValid = senderKeys.isValid && recipientKeys.isValid;
@@ -263,6 +243,30 @@ export function OneToOneEncryption({
   );
 
   useEffect(() => {
+    if (!recipientSelectRequest) {
+      return;
+    }
+
+    const { username } = recipientSelectRequest;
+    let cancelled = false;
+
+    void (async () => {
+      await handleSelectStoredUser(username);
+      if (!cancelled) {
+        onRecipientSelectHandled?.();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    handleSelectStoredUser,
+    onRecipientSelectHandled,
+    recipientSelectRequest,
+  ]);
+
+  useEffect(() => {
     const loggedInUsername = user?.username;
     if (
       !loggedInUsername ||
@@ -320,108 +324,6 @@ export function OneToOneEncryption({
     };
   }, [user?.username, peerKeyIdToSelect, storedUsersLoading, storedUsernames]);
 
-  const handleOpenGenerateRecipientDialog = useCallback(() => {
-    setGenerateRecipientError(null);
-    setGenerateRecipientDialogOpen(true);
-  }, []);
-
-  const handleGenerateRecipient = useCallback(
-    async (username: string) => {
-      setGenerateRecipientBusy(true);
-      setGenerateRecipientError(null);
-      setRecipientPanelError(null);
-
-      try {
-        const existingNames = await listStoredUsernames();
-        if (existingNames.includes(username)) {
-          setGenerateRecipientError(
-            `"${username}" already exists. Choose a unique name.`,
-          );
-          return;
-        }
-
-        const mockRecipient = await createMockExternalRecipient();
-        const [privateJwk, publicJwk] = await Promise.all([
-          crypto.subtle.exportKey('jwk', mockRecipient.privateKey),
-          crypto.subtle.exportKey('jwk', mockRecipient.publicKey),
-        ]);
-        const slimPublicJwk = slimEcPublicJwk(jwkWithoutKeyOps(publicJwk));
-
-        await saveStoredRecipientForUsername(username, slimPublicJwk);
-        await refreshStoredUsernames();
-
-        downloadJsonFile(
-          jwkWithoutKeyOps(privateJwk),
-          privateKeyDownloadFilename(username),
-        );
-
-        setSelectedStoredUsername(username);
-        onPeerLabelChange?.(username);
-        setRecipientJwkText(formatEcPublicKeyText(slimPublicJwk));
-        setGenerateRecipientDialogOpen(false);
-      } catch (e) {
-        setGenerateRecipientError(
-          errorMessage(e, 'Failed to generate recipient keys.'),
-        );
-      } finally {
-        setGenerateRecipientBusy(false);
-      }
-    },
-    [refreshStoredUsernames, onPeerLabelChange],
-  );
-
-  const handleOpenSaveRecipientDialog = useCallback(() => {
-    setSaveRecipientError(null);
-    setSaveRecipientDialogOpen(true);
-  }, []);
-
-  const handleSaveRecipient = useCallback(
-    async (username: string, publicKeyJwkText: string) => {
-      const parsed = parsePublicKeyText(publicKeyJwkText);
-      if (parsed.ok === false) {
-        setSaveRecipientError(parsed.error);
-        return;
-      }
-
-      setSaveRecipientBusy(true);
-      setSaveRecipientError(null);
-      try {
-        const existingNames = await listStoredUsernames();
-        if (existingNames.includes(username)) {
-          setSaveRecipientError(
-            `"${username}" already exists. Choose a unique name.`,
-          );
-          return;
-        }
-
-        const keyId = await ecPublicJwkThumbprintSha256(
-          slimEcPublicJwk(parsed.jwk),
-        );
-        const existingKey = await loadStoredPublicKeyMaterialByKeyId(keyId);
-        if (existingKey) {
-          setSaveRecipientError(
-            existingKey.username
-              ? `This public key is already saved as "${existingKey.username}".`
-              : 'This public key is already stored.',
-          );
-          return;
-        }
-
-        await saveStoredRecipientForUsername(username, parsed.jwk);
-        await refreshStoredUsernames();
-        setSelectedStoredUsername(username);
-        onPeerLabelChange?.(username);
-        setRecipientJwkText(JSON.stringify(parsed.jwk, null, 2));
-        setSaveRecipientDialogOpen(false);
-      } catch (e) {
-        setSaveRecipientError(errorMessage(e, 'Failed to add recipient.'));
-      } finally {
-        setSaveRecipientBusy(false);
-      }
-    },
-    [refreshStoredUsernames, onPeerLabelChange],
-  );
-
   const handleOpenEncryptDialog = useCallback(() => {
     setSenderEncryptError(null);
     setEncryptDialogOpen(true);
@@ -460,6 +362,9 @@ export function OneToOneEncryption({
         return false;
       }
 
+      const encryptorKeyId = encryptorKeys.keyId;
+      const encryptorPublicKey = encryptorKeys.publicKey;
+
       const plaintext = messageText.trim();
       if (!plaintext) {
         setError('Enter a message to encrypt.');
@@ -478,14 +383,14 @@ export function OneToOneEncryption({
         await withUploadedPrivateKey(async (material) => {
           assertUploadedPrivateKeyMatchesKeyId(
             material,
-            encryptorKeys.keyId,
+            encryptorKeyId,
             `Uploaded private key does not match the ${roleLabel} publicKeyJwk.`,
           );
 
           const payload = await encryptWithManifest(
             plaintext,
             recipients,
-            encryptorKeys.publicKey!,
+            encryptorPublicKey,
             material.ecdsaSignPrivateKey,
           );
           if (peerKeys.jwk && peerKeys.keyId) {
@@ -565,13 +470,11 @@ export function OneToOneEncryption({
           titleOnRight
           titleAction={
             <Chip
-              label="Change Recipient"
+              label="Change recipient"
               size="small"
               variant="outlined"
               clickable
-              disabled={
-                storedUsersLoading || generateRecipientBusy || saveRecipientBusy
-              }
+              disabled={storedUsersLoading || recipientPickerBusy}
               onClick={() => setRecipientDialogOpen(true)}
             />
           }
@@ -656,42 +559,13 @@ export function OneToOneEncryption({
         </Box>
       </Divider>
 
-      <ChangeRecipientDialog
+      <RecipientPickerDialogs
         open={recipientDialogOpen}
         onClose={() => setRecipientDialogOpen(false)}
-        usernames={storedUsernames}
-        loading={storedUsersLoading}
-        loadingSelection={storedUserLoading}
-        error={storedUsersError}
         selectedUsername={selectedStoredUsername}
-        onSelect={(username) => void handleSelectStoredUser(username)}
-        onGenerate={handleOpenGenerateRecipientDialog}
-        onAdd={handleOpenSaveRecipientDialog}
-        generateDisabled={generateRecipientBusy}
-        addDisabled={saveRecipientBusy}
-      />
-
-      <SaveRecipientDialog
-        open={saveRecipientDialogOpen}
-        onClose={() => setSaveRecipientDialogOpen(false)}
-        existingUsernames={allStoredUsernames}
-        existingUsers={storedUsers}
-        saving={saveRecipientBusy}
-        error={saveRecipientError}
-        onFieldChange={() => setSaveRecipientError(null)}
-        onSave={(username, publicKeyJwkText) =>
-          void handleSaveRecipient(username, publicKeyJwkText)
-        }
-      />
-
-      <GenerateRecipientDialog
-        open={generateRecipientDialogOpen}
-        onClose={() => setGenerateRecipientDialogOpen(false)}
-        existingUsernames={allStoredUsernames}
-        generating={generateRecipientBusy}
-        error={generateRecipientError}
-        onNameChange={() => setGenerateRecipientError(null)}
-        onGenerate={(username) => void handleGenerateRecipient(username)}
+        loadingSelection={storedUserLoading}
+        onRecipientChosen={handleSelectStoredUser}
+        onBusyChange={setRecipientPickerBusy}
       />
 
       <EncryptMessageDialog
