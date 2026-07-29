@@ -21,6 +21,24 @@ import {
   queryLinuxEncryptProtocolHandler,
   restoreLinuxEncryptProtocolHandler,
 } from './protocolHandlerLinux.js';
+import {
+  clearAllStoredPrivateKeys,
+  getPrivateKeyEncryptionStatus,
+  hasStoredPrivateKey,
+  loadPrivateKeyJwk,
+  storePrivateKeyJwk,
+} from './safeStoragePrivateKey.js';
+import {
+  assertPrivateKeySafeStorageHas,
+  assertPrivateKeySafeStorageLoad,
+  assertPrivateKeySafeStoragePickFromDialog,
+  assertPrivateKeySafeStorageStore,
+  armPrivateKeySafeStorageSession,
+  beginPrivateKeySafeStorageSession,
+  getPrivateKeySafeStorageSessionState,
+  resetPrivateKeySafeStorageSession,
+  setPrivateKeySafeStorageAuthState,
+} from './privateKeySafeStorageSession.js';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -875,9 +893,98 @@ ipcMain.handle('clipboard:write-text', (_event, text) => {
   clipboard.writeText(text);
 });
 
-ipcMain.handle('private-key:pick-from-dialog', async () => {
+function assertPrivateKeyIpcSender(event) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    throw new Error('Main window is not available.');
+  }
+
+  if (event.sender !== mainWindow.webContents) {
+    throw new Error('Request is not allowed from this context.');
+  }
+}
+
+ipcMain.handle('private-key:pick-from-dialog', async (event) => {
+  assertPrivateKeyIpcSender(event);
+  assertPrivateKeySafeStoragePickFromDialog();
   return pickPrivateKeyJwkTextFromDialog();
 });
+
+ipcMain.handle('private-key:safe-storage:get-status', (event) => {
+  assertPrivateKeyIpcSender(event);
+  return getPrivateKeyEncryptionStatus();
+});
+
+ipcMain.handle('private-key:safe-storage:begin-session', (event, keyId) => {
+  assertPrivateKeyIpcSender(event);
+  if (typeof keyId !== 'string') {
+    throw new Error('Private key session requires a keyId string.');
+  }
+
+  beginPrivateKeySafeStorageSession(keyId);
+});
+
+ipcMain.handle(
+  'private-key:safe-storage:store',
+  async (event, keyId, jwkText) => {
+    assertPrivateKeyIpcSender(event);
+    if (typeof keyId !== 'string' || typeof jwkText !== 'string') {
+      throw new Error('Private key store requires keyId and jwkText strings.');
+    }
+
+    assertPrivateKeySafeStorageStore(keyId);
+    await storePrivateKeyJwk(app.getPath('userData'), keyId, jwkText);
+  },
+);
+
+ipcMain.handle('private-key:safe-storage:has', async (event, keyId) => {
+  assertPrivateKeyIpcSender(event);
+  if (typeof keyId !== 'string') {
+    throw new Error('Private key lookup requires a keyId string.');
+  }
+
+  assertPrivateKeySafeStorageHas(keyId);
+  return hasStoredPrivateKey(app.getPath('userData'), keyId);
+});
+
+ipcMain.handle('private-key:safe-storage:load', async (event, keyId) => {
+  assertPrivateKeyIpcSender(event);
+  if (typeof keyId !== 'string') {
+    throw new Error('Private key load requires a keyId string.');
+  }
+
+  assertPrivateKeySafeStorageLoad(keyId);
+  const jwkText = await loadPrivateKeyJwk(app.getPath('userData'), keyId);
+  if (!jwkText) {
+    return null;
+  }
+
+  return { keyId, jwkText };
+});
+
+ipcMain.handle('private-key:safe-storage:arm-session', (event, keyId) => {
+  assertPrivateKeyIpcSender(event);
+  if (typeof keyId !== 'string') {
+    throw new Error('Private key arm-session requires a keyId string.');
+  }
+
+  armPrivateKeySafeStorageSession(keyId);
+});
+
+if (!app.isPackaged) {
+  ipcMain.handle('private-key:safe-storage:get-session-state', (event) => {
+    assertPrivateKeyIpcSender(event);
+    return getPrivateKeySafeStorageSessionState();
+  });
+}
+
+ipcMain.handle(
+  'private-key:safe-storage:clear-all-for-clean-local-data',
+  async (event) => {
+    assertPrivateKeyIpcSender(event);
+    await clearAllStoredPrivateKeys(app.getPath('userData'));
+    resetPrivateKeySafeStorageSession();
+  },
+);
 
 ipcMain.handle('window:show', () => {
   showMainWindow();
@@ -915,6 +1022,10 @@ ipcMain.on('tray:set-auth-state', (_event, state) => {
   trayIsLoggedIn = Boolean(state?.isLoggedIn);
   trayPublicKeyText =
     typeof state?.publicKeyText === 'string' ? state.publicKeyText : null;
+  setPrivateKeySafeStorageAuthState({
+    isLoggedIn: trayIsLoggedIn,
+    keyId: typeof state?.keyId === 'string' ? state.keyId : null,
+  });
   updateTrayMenu();
 });
 

@@ -16,7 +16,7 @@ import Typography from '@mui/material/Typography';
 import { useNavigate } from 'react-router-dom';
 import {
   lookupPrivateKeyUser,
-  resolveUsernameFromPrivateKeyJwk,
+  completePrivateKeySignIn,
 } from '@/crypto/loginFromPrivateKey.ts';
 import { readPrivateKeyJwkFromFile } from '@/crypto/privateKeyFile.ts';
 import { LAST_USERNAME_STORAGE_KEY } from '@/components/providers/AuthProvider.tsx';
@@ -150,11 +150,7 @@ export function LoginPage() {
     privateJwk: JsonWebKey,
     usernameHint?: string,
   ) => {
-    const result = await resolveUsernameFromPrivateKeyJwk(
-      privateJwk,
-      usernameHint,
-    );
-    login(result.username, { existingUser: result.existingUser });
+    await completePrivateKeySignIn(privateJwk, login, usernameHint);
   };
 
   const handlePrivateKeyFileChange = (

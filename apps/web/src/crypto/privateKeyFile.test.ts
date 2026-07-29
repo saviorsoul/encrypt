@@ -1,15 +1,17 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
+import * as electronSafeStoragePrivateKey from '@/crypto/electronSafeStoragePrivateKey.ts';
 import {
   PrivateKeyMismatchError,
   type UploadedPrivateKeyMaterial,
 } from '@/crypto/privateKeyMaterial.ts';
 import * as privateKeyMaterial from '@/crypto/privateKeyMaterial.ts';
+import * as privateKeyJwkPickers from '@/crypto/privateKeyJwkPickers.ts';
+import { withUploadedPrivateKey } from '@/crypto/privateKeyFile.ts';
 import {
   clearSessionPrivateKeyStorage,
   getCachedPrivateKeyMaterial,
 } from '@/crypto/sessionPrivateKeyStorage.ts';
 import { setSessionPrivateKeyStorageEnabled } from '@/utils/sessionPrivateKeyPreference.ts';
-import { withUploadedPrivateKey } from '@/crypto/privateKeyFile.ts';
 
 const testMaterial = {
   keyId: 'test-key-id',
@@ -24,6 +26,13 @@ describe('withUploadedPrivateKey', () => {
     setSessionPrivateKeyStorageEnabled(true);
     clearSessionPrivateKeyStorage();
     vi.restoreAllMocks();
+    vi.spyOn(
+      electronSafeStoragePrivateKey,
+      'hasElectronSafeStorageBridge',
+    ).mockReturnValue(false);
+    vi.spyOn(privateKeyJwkPickers, 'pickPrivateKeyJwkFile').mockResolvedValue(
+      {},
+    );
   });
 
   it('does not cache a key when the operation fails with a mismatch error', async () => {
@@ -33,12 +42,9 @@ describe('withUploadedPrivateKey', () => {
     ).mockResolvedValue(testMaterial);
 
     await expect(
-      withUploadedPrivateKey(
-        async () => {
-          throw new PrivateKeyMismatchError('wrong key');
-        },
-        { pickJwk: async () => ({}) },
-      ),
+      withUploadedPrivateKey(async () => {
+        throw new PrivateKeyMismatchError('wrong key');
+      }),
     ).rejects.toThrow('wrong key');
 
     expect(getCachedPrivateKeyMaterial()).toBeNull();
@@ -50,9 +56,7 @@ describe('withUploadedPrivateKey', () => {
       'importUploadedPrivateKeyMaterial',
     ).mockResolvedValue(testMaterial);
 
-    await withUploadedPrivateKey(async () => 'ok', {
-      pickJwk: async () => ({}),
-    });
+    await withUploadedPrivateKey(async () => 'ok');
 
     expect(getCachedPrivateKeyMaterial()).toEqual(testMaterial);
   });
@@ -63,9 +67,7 @@ describe('withUploadedPrivateKey', () => {
       'importUploadedPrivateKeyMaterial',
     ).mockResolvedValue(testMaterial);
     clearSessionPrivateKeyStorage();
-    await withUploadedPrivateKey(async () => 'ok', {
-      pickJwk: async () => ({}),
-    });
+    await withUploadedPrivateKey(async () => 'ok');
     expect(getCachedPrivateKeyMaterial()).toEqual(testMaterial);
 
     await expect(
@@ -83,9 +85,7 @@ describe('withUploadedPrivateKey', () => {
       'importUploadedPrivateKeyMaterial',
     ).mockResolvedValue(testMaterial);
     clearSessionPrivateKeyStorage();
-    await withUploadedPrivateKey(async () => 'ok', {
-      pickJwk: async () => ({}),
-    });
+    await withUploadedPrivateKey(async () => 'ok');
 
     await expect(
       withUploadedPrivateKey(async () => {

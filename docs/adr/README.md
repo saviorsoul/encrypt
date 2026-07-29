@@ -23,6 +23,8 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0013](./0013-atomic-get-or-mint-auth-challenge.md) | Atomic `getOrMint` for auth challenge | Accepted |
 | [0014](./0014-request-persistent-storage-and-warn-on-denial.md) | Request persistent storage and warn on denial | Accepted |
 | [0015](./0015-browser-integration-via-encrypt-protocol.md) | Browser integration via `encrypt://` custom protocol | Accepted |
+| [0016](./0016-electron-safe-storage-private-key-persistence.md) | Electron safeStorage private key persistence | Accepted |
+| [0017](./0017-electron-main-process-private-key-crypto.md) | Electron main-process private key crypto | Postponed |
 
 ## When to write an ADR
 
@@ -50,6 +52,7 @@ docs/adr/NNNN-short-title-in-kebab-case.md
 |--------|---------|
 | **Proposed** | Under discussion; not yet implemented |
 | **Accepted** | Decision is in effect |
+| **Postponed** | Agreed direction or option worth revisiting; not implemented yet |
 | **Deprecated** | No longer recommended; replacement ADR should exist |
 | **Superseded by [NNNN](./NNNN-….md)** | Replaced by a newer ADR |
 
@@ -60,7 +63,7 @@ Copy this when adding a new ADR:
 ```markdown
 # NNNN. Title
 
-- **Status:** Proposed | Accepted | Deprecated | Superseded by [NNNN](./NNNN-….md)
+- **Status:** Proposed | Accepted | Postponed | Deprecated | Superseded by [NNNN](./NNNN-….md)
 - **Date:** YYYY-MM-DD
 - **Authors:** (optional)
 

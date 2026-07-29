@@ -8,7 +8,10 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { clearSessionPrivateKeyStorage } from '@/crypto/sessionPrivateKeyStorage.ts';
+import {
+  clearSessionPrivateKeyMemory,
+  clearSessionPrivateKeyStorage,
+} from '@/crypto/sessionPrivateKeyStorage.ts';
 import {
   initSessionPrivateKeyStoragePreference,
   setSessionPrivateKeyStorageEnabled,
@@ -45,8 +48,12 @@ export function SessionPrivateKeyProvider({
   useEffect(() => {
     const previousUser = previousUserRef.current;
     previousUserRef.current = user;
-    if (previousUser?.username !== user?.username) {
-      clearSessionPrivateKeyStorage();
+    if (
+      previousUser?.username &&
+      user?.username &&
+      previousUser.username !== user.username
+    ) {
+      clearSessionPrivateKeyMemory();
     }
   }, [user]);
 

@@ -12,7 +12,6 @@ import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@/crypto/privateKeyMaterial.ts';
 import {
   isPrivateKeyFileSelectionCancelled,
-  pickPrivateKeyJwkInElectronNativeDialog,
   withUploadedPrivateKey,
 } from '@/crypto/privateKeyFile.ts';
 import { getCachedPrivateKeyMaterial } from '@/crypto/sessionPrivateKeyStorage.ts';
@@ -100,44 +99,41 @@ export function useElectronEncryptPlaintextMessage() {
 
       setEncrypting(true);
       try {
-        await withUploadedPrivateKey(
-          async (material) => {
-            assertUploadedPrivateKeyMatchesKeyId(
-              material,
-              await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!),
-              'Uploaded private key does not match your stored public key.',
-            );
+        await withUploadedPrivateKey(async (material) => {
+          assertUploadedPrivateKeyMatchesKeyId(
+            material,
+            await ecPublicJwkThumbprintSha256(keys.publicKeyJwk!),
+            'Uploaded private key does not match your stored public key.',
+          );
 
-            const result = await encryptCopiedMessageForRecipient(
-              plaintext,
-              username,
-              material,
-              keys.publicKey!,
-            );
-            const savedItem = await saveTrayEncryptToOneToOneThread(result);
-            dispatchTrayOneToOneMessageSaved({
-              item: savedItem,
-              senderKeyId: result.senderKeyId,
-              recipientKeyId: result.recipientKeyId,
-              recipientUsername: username,
-              plaintext: result.plaintext,
-            });
-            try {
-              await copyTextToClipboard(result.payload);
-              await window.electron?.flashTraySuccess();
-              options?.onSuccess?.();
-              if (!runInBackground) {
-                showSnackbar('success', COPIED_TO_CLIPBOARD_MESSAGE);
-              }
-            } catch (e) {
-              console.error(e);
-              await revealWindow();
-              showSnackbar('error', COPY_TO_CLIPBOARD_FAILED_MESSAGE);
-              options?.onFailure?.(COPY_TO_CLIPBOARD_FAILED_MESSAGE);
+          const result = await encryptCopiedMessageForRecipient(
+            plaintext,
+            username,
+            material,
+            keys.publicKey!,
+          );
+          const savedItem = await saveTrayEncryptToOneToOneThread(result);
+          dispatchTrayOneToOneMessageSaved({
+            item: savedItem,
+            senderKeyId: result.senderKeyId,
+            recipientKeyId: result.recipientKeyId,
+            recipientUsername: username,
+            plaintext: result.plaintext,
+          });
+          try {
+            await copyTextToClipboard(result.payload);
+            await window.electron?.flashTraySuccess();
+            options?.onSuccess?.();
+            if (!runInBackground) {
+              showSnackbar('success', COPIED_TO_CLIPBOARD_MESSAGE);
             }
-          },
-          { pickJwk: pickPrivateKeyJwkInElectronNativeDialog },
-        );
+          } catch (e) {
+            console.error(e);
+            await revealWindow();
+            showSnackbar('error', COPY_TO_CLIPBOARD_FAILED_MESSAGE);
+            options?.onFailure?.(COPY_TO_CLIPBOARD_FAILED_MESSAGE);
+          }
+        });
         return true;
       } catch (caught) {
         if (isPrivateKeyFileSelectionCancelled(caught)) {

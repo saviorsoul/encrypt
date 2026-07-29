@@ -10,6 +10,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { resolveUsernameFromPrivateKeyJwk } from '@/crypto/loginFromPrivateKey.ts';
+import { registerElectronPrivateKeyOnLogin } from '@/crypto/electronSafeStoragePrivateKey.ts';
 import { readPrivateKeyJwkFromFile } from '@/crypto/privateKeyFile.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGuard.ts';
@@ -105,7 +106,10 @@ export function LocalDataRecoveryPage() {
       );
 
       if (result.username !== user.username) {
+        await registerElectronPrivateKeyOnLogin(privateJwk);
         login(result.username, { existingUser: result.existingUser });
+      } else {
+        await registerElectronPrivateKeyOnLogin(privateJwk);
       }
 
       window.location.assign('/');

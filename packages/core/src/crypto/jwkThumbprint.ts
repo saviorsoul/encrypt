@@ -7,13 +7,22 @@ import { bytesToBase64Url } from '../utils/bytes.ts';
 
 export { slimEcPublicJwk } from '../crypto/ecPublicKey.ts';
 
+/** Slim EC P-256 private JWK (`kty`, `crv`, `x`, `y`, `d`) before import to non-extractable CryptoKeys. */
+export type EcPrivateJwk = {
+  kty: typeof EC_PUBLIC_KTY;
+  crv: typeof EC_PUBLIC_CRV;
+  x: string;
+  y: string;
+  d: string;
+};
+
 /** Minimal EC private JWK (`kty`, `crv`, `x`, `y`, `d`); strips Web Crypto `ext` / `key_ops`. */
-export function slimEcPrivateJwk(jwk: JsonWebKey): JsonWebKey {
+export function slimEcPrivateJwk(jwk: JsonWebKey): EcPrivateJwk {
   const { kty, crv, x, y, d } = jwk;
   if (kty !== 'EC' || !crv || !x || !y || !d) {
     throw new Error('Expected EC private JWK with kty, crv, x, y, d');
   }
-  return { kty, crv, x, y, d };
+  return { kty: EC_PUBLIC_KTY, crv: EC_PUBLIC_CRV, x, y, d };
 }
 
 /**

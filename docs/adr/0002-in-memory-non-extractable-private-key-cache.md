@@ -91,6 +91,18 @@ withUploadedPrivateKey(fn)
                               └─► cachePrivateKeyMaterial (if enabled) ──► fn(material)
 ```
 
+## Changes
+
+### 2026-07-28 — [0016](./0016-electron-safe-storage-private-key-persistence.md)
+
+| Topic | As accepted | Current |
+| ----- | ----------- | ------- |
+| Persistence | In-memory only when caching enabled | **Electron only:** encrypted JWK also stored via `safeStorage` in main when a secure OS backend is selected (`getSelectedStorageBackend() !== 'basic_text'`) |
+| Survives restart | No (refresh/tab close clears cache) | **Electron:** yes across logout/restart when a secure safeStorage backend is available; wiped only via **Clean local data** |
+| User control | Opt-in via nav “Cache private key” switch (default off) | **Electron:** no toggle; safeStorage always used; file picker only on first import per account |
+| Onboarding | User downloads `.jwk` file; no auto-persist | **Electron:** save step writes to safeStorage and warms in-memory cache |
+| Web app | Opt-in in-memory cache via nav switch | Unchanged (in-memory only; opt-in via nav switch) |
+
 ## References
 
 - Code:
@@ -98,3 +110,4 @@ withUploadedPrivateKey(fn)
   - `src/crypto/privateKeyMaterial.ts` — import and key-id assertion
   - `src/crypto/sessionPrivateKeyStorage.ts` — in-memory cache
   - `src/utils/sessionPrivateKeyPreference.ts` — user preference (localStorage)
+- Related ADRs: [0016](./0016-electron-safe-storage-private-key-persistence.md) (Electron persistence extension)

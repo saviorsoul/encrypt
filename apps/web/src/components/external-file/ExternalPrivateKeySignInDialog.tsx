@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import {
   lookupPrivateKeyUser,
-  resolveUsernameFromPrivateKeyJwk,
+  completePrivateKeySignIn,
 } from '@/crypto/loginFromPrivateKey.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
@@ -50,11 +50,7 @@ export function ExternalPrivateKeySignInDialog({
 
   const completePrivateKeyLogin = useCallback(
     async (privateJwk: JsonWebKey, usernameHint?: string) => {
-      const result = await resolveUsernameFromPrivateKeyJwk(
-        privateJwk,
-        usernameHint,
-      );
-      login(result.username, { existingUser: result.existingUser });
+      await completePrivateKeySignIn(privateJwk, login, usernameHint);
       onComplete();
       navigate('/', { replace: true });
     },

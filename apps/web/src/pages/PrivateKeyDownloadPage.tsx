@@ -141,8 +141,9 @@ export function PrivateKeyDownloadPage() {
             color="text.secondary"
             sx={{ fontFamily: 'monospace' }}
           >
-            Download the key file before continuing. The app cannot recover it
-            later.
+            {import.meta.env.VITE_ELECTRON
+              ? 'Save your private key to continue. On desktop, it is stored encrypted in your OS keychain. Download a backup file before continuing — the app cannot recover it later.'
+              : 'Download the key file before continuing. The app cannot recover it later.'}
           </Typography>
         </Stack>
 
@@ -174,8 +175,10 @@ export function PrivateKeyDownloadPage() {
               {loading
                 ? 'Preparing your keys…'
                 : downloading || privateKeySaved
-                  ? 'Downloading…'
-                  : 'Download private key'}
+                  ? 'Saving…'
+                  : import.meta.env.VITE_ELECTRON
+                    ? 'Save private key'
+                    : 'Download private key'}
             </Button>
           )}
         </Box>

@@ -1,3 +1,4 @@
+import { registerElectronPrivateKeyOnLogin } from '@/crypto/electronSafeStoragePrivateKey.ts';
 import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
@@ -74,4 +75,26 @@ export async function resolveUsernameFromPrivateKeyJwk(
 
   await saveStoredPublicKey(keyId, publicJwk, trimmedHint, true);
   return { username: trimmedHint, existingUser: false };
+}
+
+export type PrivateKeySignInOptions = {
+  existingUser?: boolean;
+};
+
+/**
+ * Resolve username, establish the session, and on Electron persist the private
+ * key to safeStorage immediately (no in-memory JWK stash).
+ */
+export async function completePrivateKeySignIn(
+  privateJwk: JsonWebKey,
+  login: (username: string, options?: PrivateKeySignInOptions) => void,
+  usernameHint?: string,
+): Promise<PrivateKeyLoginResult> {
+  const result = await resolveUsernameFromPrivateKeyJwk(
+    privateJwk,
+    usernameHint,
+  );
+  await registerElectronPrivateKeyOnLogin(privateJwk);
+  login(result.username, { existingUser: result.existingUser });
+  return result;
 }

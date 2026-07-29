@@ -36,6 +36,24 @@ contextBridge.exposeInMainWorld('electron', {
   },
   pickPrivateKeyJwkText: () =>
     ipcRenderer.invoke('private-key:pick-from-dialog'),
+  privateKeySafeStorage: {
+    getStatus: () => ipcRenderer.invoke('private-key:safe-storage:get-status'),
+    beginSession: (keyId) =>
+      ipcRenderer.invoke('private-key:safe-storage:begin-session', keyId),
+    has: (keyId) => ipcRenderer.invoke('private-key:safe-storage:has', keyId),
+    store: (keyId, jwkText) =>
+      ipcRenderer.invoke('private-key:safe-storage:store', keyId, jwkText),
+    load: (keyId) =>
+      ipcRenderer.invoke('private-key:safe-storage:load', keyId),
+    armSession: (keyId) =>
+      ipcRenderer.invoke('private-key:safe-storage:arm-session', keyId),
+    clearAllForCleanLocalData: () =>
+      ipcRenderer.invoke(
+        'private-key:safe-storage:clear-all-for-clean-local-data',
+      ),
+    getSessionState: () =>
+      ipcRenderer.invoke('private-key:safe-storage:get-session-state'),
+  },
   showMainWindow: () => ipcRenderer.invoke('window:show'),
   flashTraySuccess: () => ipcRenderer.invoke('tray:flash-success'),
   onTrayEncryptCopiedMessage: (callback) => {

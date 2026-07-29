@@ -11,8 +11,10 @@ import {
   markPrivateKeyDownloadedForUsername,
   saveStoredPublicKeyForUsername,
 } from '@/services/db/storedPublicKeys.ts';
+import { registerElectronPrivateKey } from '@/crypto/electronSafeStoragePrivateKey.ts';
 import { markOnboardingComplete } from '@/components/providers/AuthProvider.tsx';
 import { useAuth } from '@/hooks/useAuth.ts';
+import { isElectronApp } from '@/utils/isElectronApp.ts';
 import { downloadJsonFile } from '@/utils/downloadJson.ts';
 import { privateKeyDownloadFilename } from '@/utils/privateKeyFilename.ts';
 
@@ -198,6 +200,9 @@ export function useKeys(): UseKeysReturn {
         setPendingPrivateKeyJwk,
         setPrivateKeyDownloadFilenameState,
       });
+      if (isElectronApp() && prepared.privateJwk) {
+        await registerElectronPrivateKey(prepared.privateJwk);
+      }
     } finally {
       setLoading(false);
     }
@@ -276,6 +281,12 @@ export function useKeys(): UseKeysReturn {
       privateKeyDownloadFilenameState ?? privateKeyDownloadFilename(username);
     downloadJsonFile(pendingPrivateKeyJwk, filename);
     await markPrivateKeyDownloadedForUsername(username);
+
+    if (isElectronApp()) {
+      // Keys are already written to safeStorage in ensurePendingPrivateKey; re-register is
+      // idempotent and only warms cache if the user skipped auto-prepare.
+      await registerElectronPrivateKey(pendingPrivateKeyJwk);
+    }
 
     setPrivateKeySaved(true);
     setPendingPrivateKeyJwk(null);

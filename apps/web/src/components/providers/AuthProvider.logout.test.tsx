@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { AuthProvider } from '@/components/providers/AuthProvider.tsx';
 import {
   cachePrivateKeyMaterial,
@@ -7,6 +7,12 @@ import {
 } from '@/crypto/sessionPrivateKeyStorage.ts';
 import { setSessionPrivateKeyStorageEnabled } from '@/utils/sessionPrivateKeyPreference.ts';
 import { useAuth } from '@/hooks/useAuth.ts';
+
+const clearElectronSafeStoragePrivateKeys = vi.hoisted(() => vi.fn());
+
+vi.mock('@/crypto/electronSafeStoragePrivateKey.ts', () => ({
+  clearElectronSafeStoragePrivateKeys,
+}));
 
 function LogoutProbe() {
   const { login, logout } = useAuth();
@@ -26,10 +32,14 @@ describe('AuthProvider logout', () => {
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
+    clearElectronSafeStoragePrivateKeys.mockClear();
     setSessionPrivateKeyStorageEnabled(true);
     cachePrivateKeyMaterial({
+      keyId: 'test-key-id',
+      publicKey: { x: 'x', y: 'y' },
       ecdhPrivateKey: {} as CryptoKey,
       ecdsaSignPrivateKey: {} as CryptoKey,
+      senderPublicKey: {} as CryptoKey,
     });
   });
 
@@ -45,5 +55,17 @@ describe('AuthProvider logout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
 
     expect(getCachedPrivateKeyMaterial()).toBeNull();
+  });
+
+  it('does not delete OS keychain entries on logout', () => {
+    render(
+      <AuthProvider>
+        <LogoutProbe />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+
+    expect(clearElectronSafeStoragePrivateKeys).not.toHaveBeenCalled();
   });
 });

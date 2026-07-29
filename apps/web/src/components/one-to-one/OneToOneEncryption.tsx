@@ -31,6 +31,7 @@ import {
 } from '@/services/db/storedPublicKeys.ts';
 import { recoverPeerPublicJwkFromStoredThread } from '@/crypto/oneToOneMessageParties.ts';
 import { errorMessage } from '@/utils/errorMessage.ts';
+import { isElectronApp } from '@/utils/isElectronApp.ts';
 import {
   loadLastOneToOneRecipientUsername,
   resolveInitialOneToOneRecipientUsername,
@@ -102,7 +103,13 @@ export function OneToOneEncryption({
   const [senderEncryptBusy, setSenderEncryptBusy] = useState(false);
   const [encryptDialogOpen, setEncryptDialogOpen] = useState(false);
 
-  const senderKeys = usePublicKeyJwkInput(senderJwkText);
+  const senderJwkTextForInput = isElectronApp()
+    ? keys?.publicKeyJwk
+      ? formatEcPublicKeyText(keys.publicKeyJwk)
+      : ''
+    : senderJwkText;
+
+  const senderKeys = usePublicKeyJwkInput(senderJwkTextForInput);
   const recipientKeys = usePublicKeyJwkInput(recipientJwkText);
   const {
     usernames: storedUsernames,
@@ -128,7 +135,7 @@ export function OneToOneEncryption({
     !senderEncryptBusy &&
     bothKeysValid;
 
-  if (keys?.publicKeyJwk && !senderJwkPrefilled) {
+  if (!isElectronApp() && keys?.publicKeyJwk && !senderJwkPrefilled) {
     setSenderJwkText(formatEcPublicKeyText(keys.publicKeyJwk));
     setSenderJwkPrefilled(true);
   }
@@ -349,6 +356,11 @@ export function OneToOneEncryption({
 
       setError(null);
 
+      if (isElectronApp() && (!user?.username || !keys?.publicKeyJwk)) {
+        setError('Sign in and wait for your public key to load.');
+        return false;
+      }
+
       if (!bothKeysValid) {
         setError('Both sender and recipient need valid public keys.');
         return false;
@@ -430,6 +442,8 @@ export function OneToOneEncryption({
       recipientKeys,
       senderTitle,
       recipientTitle,
+      user?.username,
+      keys?.publicKeyJwk,
       onEncryptedMessage,
       copyAndNotify,
     ],
@@ -513,7 +527,7 @@ export function OneToOneEncryption({
               disabled
             />
           }
-          publicKeyJwkText={senderJwkText}
+          publicKeyJwkText={senderJwkTextForInput}
           jwkError={senderKeys.jwkError}
           jwkImporting={senderKeys.importing}
           keysValid={senderKeys.isValid}

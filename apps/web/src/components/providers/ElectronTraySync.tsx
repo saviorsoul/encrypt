@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
 import { formatEcPublicKeyText } from '@/crypto/ecPublicKey.ts';
+import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
 
 export function ElectronTraySync() {
   const { user } = useAuth();
@@ -20,12 +21,29 @@ export function ElectronTraySync() {
   }, [canExportPublicKey, publicKeyJwk]);
 
   useEffect(() => {
-    window.electron?.setTrayAuthState({
-      canExportPublicKey,
-      publicKeyText,
-      isLoggedIn: Boolean(user),
-    });
-  }, [canExportPublicKey, publicKeyText, user]);
+    let cancelled = false;
+
+    void (async () => {
+      const keyId =
+        user && publicKeyJwk
+          ? await ecPublicJwkThumbprintSha256(publicKeyJwk)
+          : null;
+      if (cancelled) {
+        return;
+      }
+
+      window.electron?.setTrayAuthState({
+        canExportPublicKey,
+        publicKeyText,
+        isLoggedIn: Boolean(user),
+        keyId,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canExportPublicKey, publicKeyText, publicKeyJwk, user]);
 
   useEffect(() => {
     window.electron?.setTrayRecipients({
