@@ -10,7 +10,7 @@ export type KeysContextValue = {
   pendingPrivateKeyJwk: JsonWebKey | null;
   privateKeyDownloadFilename: string | null;
   ensurePendingPrivateKey: () => Promise<void>;
-  downloadPendingPrivateKey: () => Promise<void>;
+  downloadPendingPrivateKey: () => Promise<string>;
 };
 
 export const KeysContext = createContext<KeysContextValue | null>(null);

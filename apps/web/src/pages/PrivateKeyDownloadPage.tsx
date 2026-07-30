@@ -13,6 +13,7 @@ import { usePrivateKeyOnboardingGuard } from '@/hooks/usePrivateKeyOnboardingGua
 import { getImportDestinationRoute } from '@/utils/importDestination.ts';
 import { NotFoundPage } from '@/pages/NotFoundPage.tsx';
 import Stack from '@mui/material/Stack';
+import { CopiedToClipboardSnackbar } from '@/components/CopiedToClipboardSnackbar.tsx';
 
 export function PrivateKeyDownloadPage() {
   const { user } = useAuth();
@@ -28,6 +29,9 @@ export function PrivateKeyDownloadPage() {
   } = useKeysContext();
   const [downloading, setDownloading] = useState(false);
   const [showNext, setShowNext] = useState(false);
+  const [savedToSnackbarOpen, setSavedToSnackbarOpen] = useState(false);
+  const [savedToMessage, setSavedToMessage] = useState('');
+  const [savedToSnackbarKey, setSavedToSnackbarKey] = useState(0);
   const [prevPrivateKeySaved, setPrevPrivateKeySaved] =
     useState(privateKeySaved);
 
@@ -99,7 +103,10 @@ export function PrivateKeyDownloadPage() {
     if (!pendingPrivateKeyJwk) return;
     setDownloading(true);
     try {
-      await downloadPendingPrivateKey();
+      const message = await downloadPendingPrivateKey();
+      setSavedToMessage(message);
+      setSavedToSnackbarKey((key) => key + 1);
+      setSavedToSnackbarOpen(true);
     } finally {
       setDownloading(false);
     }
@@ -183,6 +190,13 @@ export function PrivateKeyDownloadPage() {
           )}
         </Box>
       </Paper>
+      <CopiedToClipboardSnackbar
+        open={savedToSnackbarOpen}
+        severity="success"
+        onClose={() => setSavedToSnackbarOpen(false)}
+        snackbarKey={savedToSnackbarKey}
+        successMessage={savedToMessage}
+      />
     </Box>
   );
 }

@@ -95,7 +95,7 @@ export function RecipientPickerDialogs({
         await saveStoredRecipientForUsername(username, slimPublicJwk);
         await refresh();
 
-        downloadJsonFile(
+        void downloadJsonFile(
           jwkWithoutKeyOps(privateJwk),
           privateKeyDownloadFilename(username),
         );

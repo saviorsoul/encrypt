@@ -33,7 +33,7 @@ export type UseKeysReturn = {
   /** Ensure a pending private key exists for the download page. */
   ensurePendingPrivateKey: () => Promise<void>;
   /** Trigger the private key file download and mark it saved in IndexedDB. */
-  downloadPendingPrivateKey: () => Promise<void>;
+  downloadPendingPrivateKey: () => Promise<string>;
 };
 
 type PreparedKeys = {
@@ -279,7 +279,10 @@ export function useKeys(): UseKeysReturn {
 
     const filename =
       privateKeyDownloadFilenameState ?? privateKeyDownloadFilename(username);
-    downloadJsonFile(pendingPrivateKeyJwk, filename);
+    const savedToMessage = await downloadJsonFile(
+      pendingPrivateKeyJwk,
+      filename,
+    );
     await markPrivateKeyDownloadedForUsername(username);
 
     if (isElectronApp()) {
@@ -290,6 +293,7 @@ export function useKeys(): UseKeysReturn {
 
     setPrivateKeySaved(true);
     setPendingPrivateKeyJwk(null);
+    return savedToMessage;
   }, [user?.username, pendingPrivateKeyJwk, privateKeyDownloadFilenameState]);
 
   return {

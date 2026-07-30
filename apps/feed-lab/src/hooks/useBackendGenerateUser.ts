@@ -89,7 +89,7 @@ export function useBackendGenerateUser(
           return result.keyId;
         }
 
-        downloadJsonFile(
+        void downloadJsonFile(
           jwkWithoutKeyOps(privateJwk),
           privateKeyDownloadFilename(trimmedName),
         );

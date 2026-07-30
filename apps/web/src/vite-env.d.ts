@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_ELECTRON?: string;
+  readonly VITE_CAPACITOR?: string;
 }
 
 interface ImportMeta {
@@ -128,8 +129,13 @@ interface ElectronBridge {
   setTrayRecipients: (state: TrayRecipientsState) => void;
 }
 
+type CapacitorBridge = {
+  saveTextFile: (text: string, filename: string) => Promise<string>;
+};
+
 declare global {
   interface Window {
     electron?: ElectronBridge;
+    capacitorBridge?: CapacitorBridge;
   }
 }

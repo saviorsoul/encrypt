@@ -14,14 +14,18 @@ import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivate
 import { StoragePersistenceProvider } from '@/components/providers/StoragePersistenceProvider.tsx';
 import { ProtocolHandlerProvider } from '@/components/providers/ProtocolHandlerProvider.tsx';
 
-const Router = import.meta.env.VITE_ELECTRON ? HashRouter : BrowserRouter;
+const useHashRouter = Boolean(
+  import.meta.env.VITE_ELECTRON || import.meta.env.VITE_CAPACITOR,
+);
+
+const Router = useHashRouter ? HashRouter : BrowserRouter;
 
 type AppProvidersProps = {
   children: ReactNode;
 };
 
 export function AppProviders({ children }: AppProvidersProps) {
-  const routerProps = import.meta.env.VITE_ELECTRON
+  const routerProps = useHashRouter
     ? {}
     : { basename: import.meta.env.BASE_URL };
 

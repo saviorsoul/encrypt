@@ -71,7 +71,7 @@ export function PublicKeyDialog({
     if (!exportablePublicKeyJwk) {
       return;
     }
-    downloadJsonFile(exportablePublicKeyJwk, exportFilename);
+    void downloadJsonFile(exportablePublicKeyJwk, exportFilename);
   }, [exportablePublicKeyJwk, exportFilename]);
 
   return (

@@ -195,7 +195,7 @@ export function useShareMessage({
         });
         const filename = shareExportFilename();
 
-        downloadTextFile(payloadJson, filename);
+        void downloadTextFile(payloadJson, filename);
         window.setTimeout(() => onExported?.(), 0);
       } catch (e) {
         if (isPrivateKeyFileSelectionCancelled(e)) {
