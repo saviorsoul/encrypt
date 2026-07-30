@@ -28,7 +28,7 @@ describe('withUploadedPrivateKey', () => {
     vi.restoreAllMocks();
     vi.spyOn(
       electronSafeStoragePrivateKey,
-      'hasElectronSafeStorageBridge',
+      'hasPlatformSafeStorageBridge',
     ).mockReturnValue(false);
     vi.spyOn(privateKeyJwkPickers, 'pickPrivateKeyJwkFile').mockResolvedValue(
       {},

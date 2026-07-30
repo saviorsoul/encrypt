@@ -129,8 +129,17 @@ interface ElectronBridge {
   setTrayRecipients: (state: TrayRecipientsState) => void;
 }
 
+type CapacitorAuthState = {
+  isLoggedIn: boolean;
+  keyId?: string | null;
+};
+
+type PrivateKeySafeStorageBridge = ElectronBridge['privateKeySafeStorage'];
+
 type CapacitorBridge = {
   saveTextFile: (text: string, filename: string) => Promise<string>;
+  setAuthState: (state: CapacitorAuthState) => void;
+  privateKeySafeStorage: PrivateKeySafeStorageBridge;
 };
 
 declare global {

@@ -1,3 +1,4 @@
+import { isCapacitorApp } from '@/utils/isCapacitorApp.ts';
 import { isElectronApp } from '@/utils/isElectronApp.ts';
 
 export const SESSION_PRIVATE_KEY_STORAGE_PREFERENCE_KEY =
@@ -8,6 +9,10 @@ const DISABLED_VALUE = '0';
 
 let enabledInMemory = false;
 let initialized = false;
+
+function usesPlatformSecureStorage(): boolean {
+  return isElectronApp() || isCapacitorApp();
+}
 
 function readStoredPreference(): boolean | null {
   try {
@@ -27,7 +32,7 @@ function readStoredPreference(): boolean | null {
 }
 
 export function initSessionPrivateKeyStoragePreference(): boolean {
-  if (isElectronApp()) {
+  if (usesPlatformSecureStorage()) {
     enabledInMemory = true;
   } else {
     const stored = readStoredPreference();
@@ -44,7 +49,7 @@ function ensureSessionPrivateKeyStoragePreferenceInitialized(): void {
 }
 
 export function hasExplicitlyDisabledPrivateKeyStorage(): boolean {
-  if (isElectronApp()) {
+  if (usesPlatformSecureStorage()) {
     return false;
   }
   return readStoredPreference() === false;
@@ -56,7 +61,7 @@ export function isSessionPrivateKeyStorageEnabled(): boolean {
 }
 
 export function isPrivateKeyMemoryCacheEnabled(): boolean {
-  if (isElectronApp()) {
+  if (usesPlatformSecureStorage()) {
     return true;
   }
   ensureSessionPrivateKeyStoragePreferenceInitialized();
@@ -67,7 +72,7 @@ export function isPrivateKeyMemoryCacheEnabled(): boolean {
 }
 
 export function setSessionPrivateKeyStorageEnabled(enabled: boolean): void {
-  if (isElectronApp()) {
+  if (usesPlatformSecureStorage()) {
     enabledInMemory = true;
     initialized = true;
     return;
@@ -86,7 +91,7 @@ export function setSessionPrivateKeyStorageEnabled(enabled: boolean): void {
 }
 
 export function clearSessionPrivateKeyStoragePreference(): void {
-  if (isElectronApp()) {
+  if (usesPlatformSecureStorage()) {
     initialized = true;
     enabledInMemory = true;
     return;

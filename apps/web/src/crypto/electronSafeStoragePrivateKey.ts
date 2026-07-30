@@ -8,6 +8,7 @@ import {
   importUploadedPrivateKeyMaterial,
   PrivateKeyMismatchError,
 } from '@/crypto/privateKeyMaterial.ts';
+import { isCapacitorApp } from '@/utils/isCapacitorApp.ts';
 import { isElectronApp } from '@/utils/isElectronApp.ts';
 import type { PrivateKeySafeStorageStatus } from '@/vite-env.d.ts';
 import {
@@ -16,7 +17,7 @@ import {
   ELECTRON_KEYCHAIN_OPERATION_NOT_ALLOWED,
   ELECTRON_KEYCHAIN_SESSION_NOT_BOUND,
   ELECTRON_KEYCHAIN_UNAVAILABLE,
-} from '@electron/privateKeySafeStorageSessionErrors.js';
+} from '@/crypto/privateKeySafeStorageSessionErrors.ts';
 
 export {
   ELECTRON_KEYCHAIN_LOCKED,
@@ -37,8 +38,23 @@ const ELECTRON_KEYCHAIN_SESSION_ERRORS = new Set([
   ELECTRON_KEYCHAIN_LOOKUP_NOT_ALLOWED,
 ]);
 
-export function hasElectronSafeStorageBridge(): boolean {
-  return isElectronApp() && Boolean(window.electron?.privateKeySafeStorage);
+function getPrivateKeySafeStorageBridge():
+  | NonNullable<Window['electron']>['privateKeySafeStorage']
+  | NonNullable<Window['capacitorBridge']>['privateKeySafeStorage']
+  | null {
+  if (isElectronApp() && window.electron?.privateKeySafeStorage) {
+    return window.electron.privateKeySafeStorage;
+  }
+
+  if (isCapacitorApp() && window.capacitorBridge?.privateKeySafeStorage) {
+    return window.capacitorBridge.privateKeySafeStorage;
+  }
+
+  return null;
+}
+
+export function hasPlatformSafeStorageBridge(): boolean {
+  return Boolean(getPrivateKeySafeStorageBridge());
 }
 
 export function isElectronKeychainSessionError(error: unknown): boolean {
@@ -53,11 +69,11 @@ export function isElectronKeychainLockedError(error: unknown): boolean {
 }
 
 export async function getElectronPrivateKeyEncryptionStatus(): Promise<PrivateKeySafeStorageStatus | null> {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return null;
   }
 
-  return window.electron!.privateKeySafeStorage.getStatus();
+  return getPrivateKeySafeStorageBridge()!.getStatus();
 }
 
 export async function isElectronPrivateKeyEncryptionAvailable(): Promise<boolean> {
@@ -68,29 +84,29 @@ export async function isElectronPrivateKeyEncryptionAvailable(): Promise<boolean
 export async function beginElectronPrivateKeySession(
   keyId: string,
 ): Promise<void> {
-  if (!hasElectronSafeStorageBridge() || !keyId) {
+  if (!hasPlatformSafeStorageBridge() || !keyId) {
     return;
   }
 
-  await window.electron!.privateKeySafeStorage.beginSession(keyId);
+  await getPrivateKeySafeStorageBridge()!.beginSession(keyId);
 }
 
 export async function hasElectronStoredPrivateKey(
   keyId: string,
 ): Promise<boolean> {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return false;
   }
 
   await beginElectronPrivateKeySession(keyId);
-  return window.electron!.privateKeySafeStorage.has(keyId);
+  return getPrivateKeySafeStorageBridge()!.has(keyId);
 }
 
 export async function persistPrivateKeyJwkToElectronSafeStorage(
   keyId: string,
   jwk: JsonWebKey,
 ): Promise<void> {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return;
   }
 
@@ -103,18 +119,18 @@ export async function persistPrivateKeyJwkToElectronSafeStorage(
 
   await beginElectronPrivateKeySession(keyId);
   const jwkText = JSON.stringify(slimEcPrivateJwk(jwk));
-  await window.electron!.privateKeySafeStorage.store(keyId, jwkText);
+  await getPrivateKeySafeStorageBridge()!.store(keyId, jwkText);
 }
 
 export async function loadPrivateKeyJwkFromElectronSafeStorage(
   keyId: string,
 ): Promise<JsonWebKey | null> {
-  if (!hasElectronSafeStorageBridge() || !keyId) {
+  if (!hasPlatformSafeStorageBridge() || !keyId) {
     return null;
   }
 
   await beginElectronPrivateKeySession(keyId);
-  const result = await window.electron!.privateKeySafeStorage.load(keyId);
+  const result = await getPrivateKeySafeStorageBridge()!.load(keyId);
   if (!result?.jwkText) {
     return null;
   }
@@ -128,21 +144,29 @@ export async function loadPrivateKeyJwkFromElectronSafeStorage(
 }
 
 export function clearElectronSafeStoragePrivateKeys(): void {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return;
   }
 
-  void window.electron!.privateKeySafeStorage.clearAllForCleanLocalData();
+  void getPrivateKeySafeStorageBridge()!.clearAllForCleanLocalData();
 }
 
-function syncElectronLoggedInKeySession(keyId: string): void {
-  if (!hasElectronSafeStorageBridge()) {
+function syncPlatformLoggedInKeySession(keyId: string): void {
+  if (!hasPlatformSafeStorageBridge()) {
     return;
   }
 
-  window.electron!.setTrayAuthState({
-    canExportPublicKey: false,
-    publicKeyText: null,
+  if (isElectronApp() && window.electron) {
+    window.electron.setTrayAuthState({
+      canExportPublicKey: false,
+      publicKeyText: null,
+      isLoggedIn: true,
+      keyId,
+    });
+    return;
+  }
+
+  window.capacitorBridge?.setAuthState({
     isLoggedIn: true,
     keyId,
   });
@@ -155,12 +179,12 @@ function syncElectronLoggedInKeySession(keyId: string): void {
 export async function registerElectronPrivateKeyOnLogin(
   jwk: JsonWebKey,
 ): Promise<void> {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return;
   }
 
   const material = await importUploadedPrivateKeyMaterial(jwk);
-  syncElectronLoggedInKeySession(material.keyId);
+  syncPlatformLoggedInKeySession(material.keyId);
   await registerElectronPrivateKey(jwk);
 }
 
@@ -168,7 +192,7 @@ export async function registerElectronPrivateKeyOnLogin(
 export async function registerElectronPrivateKey(
   jwk: JsonWebKey,
 ): Promise<void> {
-  if (!hasElectronSafeStorageBridge()) {
+  if (!hasPlatformSafeStorageBridge()) {
     return;
   }
 
@@ -220,7 +244,7 @@ export async function warmSessionPrivateKeyFromSafeStorage(
   }
 
   await beginElectronPrivateKeySession(keyId);
-  const hasStored = await window.electron!.privateKeySafeStorage.has(keyId);
+  const hasStored = await getPrivateKeySafeStorageBridge()!.has(keyId);
   if (!hasStored) {
     return false;
   }

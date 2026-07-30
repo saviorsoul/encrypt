@@ -1,6 +1,6 @@
 import {
   ELECTRON_STORED_KEY_UNLOCK_FAILED,
-  hasElectronSafeStorageBridge,
+  hasPlatformSafeStorageBridge,
   hasElectronStoredPrivateKey,
   importElectronPrivateKeyForAccount,
   loadPrivateKeyJwkFromElectronSafeStorage,
@@ -11,6 +11,7 @@ import {
   pickPrivateKeyJwkFile,
   pickPrivateKeyJwkInElectronNativeDialog,
 } from '@/crypto/privateKeyJwkPickers.ts';
+import { isElectronApp } from '@/utils/isElectronApp.ts';
 import { readPrivateKeyJwkFromText } from '@/crypto/privateKeyJwkText.ts';
 import {
   cachePrivateKeyMaterial,
@@ -119,7 +120,7 @@ export async function withUploadedPrivateKey<T>(
     return runWithCachedPrivateKeyMaterial(cached, fn);
   }
 
-  if (hasElectronSafeStorageBridge()) {
+  if (hasPlatformSafeStorageBridge()) {
     const keyId = getActivePrivateKeyId();
     if (!keyId) {
       throw new Error('Sign in and wait for your public key to load.');
@@ -131,12 +132,25 @@ export async function withUploadedPrivateKey<T>(
 }
 
 /**
+ * Import a private key file for the current account and store it in secure storage.
+ * Electron uses the native file dialog; Capacitor uses the web file picker.
+ */
+export async function importPlatformPrivateKeyFromFile(
+  keyId: string,
+): Promise<void> {
+  const jwk =
+    isElectronApp() && hasPlatformSafeStorageBridge()
+      ? await pickPrivateKeyJwkInElectronNativeDialog()
+      : await pickPrivateKeyJwkFile();
+  await importElectronPrivateKeyForAccount(keyId, jwk);
+}
+
+/**
  * Import a private key file for the current Electron account and store it in
  * safeStorage. Used on first login for an account on this device.
  */
 export async function importElectronPrivateKeyFromFile(
   keyId: string,
 ): Promise<void> {
-  const jwk = await pickPrivateKeyJwkInElectronNativeDialog();
-  await importElectronPrivateKeyForAccount(keyId, jwk);
+  await importPlatformPrivateKeyFromFile(keyId);
 }

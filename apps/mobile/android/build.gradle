@@ -7,8 +7,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.2'
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.google.gms:google-services:4.4.4'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -21,6 +21,16 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+// Capacitor 8 requires Java 21. Force the compiler toolchain even when Gradle
+// itself runs on an older JDK (e.g. Android Studio's bundled JBR 17).
+subprojects { subproject ->
+    subproject.tasks.withType(JavaCompile).configureEach {
+        javaCompiler = subproject.javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
 }
 

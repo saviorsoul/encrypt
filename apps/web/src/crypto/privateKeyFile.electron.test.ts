@@ -33,7 +33,7 @@ describe('withUploadedPrivateKey (Electron safeStorage)', () => {
     setActivePrivateKeyId(testMaterial.keyId);
     vi.spyOn(
       electronSafeStoragePrivateKey,
-      'hasElectronSafeStorageBridge',
+      'hasPlatformSafeStorageBridge',
     ).mockReturnValue(true);
     vi.spyOn(
       electronSafeStoragePrivateKey,

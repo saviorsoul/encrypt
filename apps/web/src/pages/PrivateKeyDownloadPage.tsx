@@ -116,6 +116,9 @@ export function PrivateKeyDownloadPage() {
     navigate(postOnboardingRoute, { replace: true });
   };
 
+  const usesSecureStorage =
+    import.meta.env.VITE_ELECTRON || import.meta.env.VITE_CAPACITOR;
+
   return (
     <Box
       sx={{
@@ -148,8 +151,8 @@ export function PrivateKeyDownloadPage() {
             color="text.secondary"
             sx={{ fontFamily: 'monospace' }}
           >
-            {import.meta.env.VITE_ELECTRON
-              ? 'Save your private key to continue. On desktop, it is stored encrypted in your OS keychain. Download a backup file before continuing — the app cannot recover it later.'
+            {usesSecureStorage
+              ? 'Save your private key to continue. It is stored encrypted in your device secure storage. Download a backup file before continuing — the app cannot recover it later.'
               : 'Download the key file before continuing. The app cannot recover it later.'}
           </Typography>
         </Stack>
@@ -183,7 +186,7 @@ export function PrivateKeyDownloadPage() {
                 ? 'Preparing your keys…'
                 : downloading || privateKeySaved
                   ? 'Saving…'
-                  : import.meta.env.VITE_ELECTRON
+                  : usesSecureStorage
                     ? 'Save private key'
                     : 'Download private key'}
             </Button>

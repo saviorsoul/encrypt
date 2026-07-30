@@ -1,13 +1,22 @@
 import { clearElectronSafeStoragePrivateKeys } from '@/crypto/electronSafeStoragePrivateKey.ts';
 import type { UploadedPrivateKeyMaterial } from '@/crypto/privateKeyMaterial.ts';
+import { isCapacitorApp } from '@/utils/isCapacitorApp.ts';
 import { isElectronApp } from '@/utils/isElectronApp.ts';
 import { isPrivateKeyMemoryCacheEnabled } from '@/utils/sessionPrivateKeyPreference.ts';
 
 let cachedPrivateKeyMaterial: UploadedPrivateKeyMaterial | null = null;
 
-function armElectronPrivateKeySession(keyId: string): void {
+function armPlatformPrivateKeySession(keyId: string): void {
   if (isElectronApp() && window.electron?.privateKeySafeStorage?.armSession) {
     void window.electron.privateKeySafeStorage.armSession(keyId);
+    return;
+  }
+
+  if (
+    isCapacitorApp() &&
+    window.capacitorBridge?.privateKeySafeStorage?.armSession
+  ) {
+    void window.capacitorBridge.privateKeySafeStorage.armSession(keyId);
   }
 }
 
@@ -29,7 +38,7 @@ export function cachePrivateKeyMaterial(
     return;
   }
   cachedPrivateKeyMaterial = material;
-  armElectronPrivateKeySession(material.keyId);
+  armPlatformPrivateKeySession(material.keyId);
 }
 
 export function getCachedPrivateKeyMaterial(): UploadedPrivateKeyMaterial | null {

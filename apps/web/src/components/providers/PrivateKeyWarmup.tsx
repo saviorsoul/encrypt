@@ -7,7 +7,7 @@ import {
   warmSessionPrivateKeyFromSafeStorage,
 } from '@/crypto/electronSafeStoragePrivateKey.ts';
 import {
-  importElectronPrivateKeyFromFile,
+  importPlatformPrivateKeyFromFile,
   isPrivateKeyFileSelectionCancelled,
 } from '@/crypto/privateKeyFile.ts';
 import { ecPublicJwkThumbprintSha256 } from '@/crypto/jwkThumbprint.ts';
@@ -15,7 +15,7 @@ import { getCachedPrivateKeyMaterial } from '@/crypto/sessionPrivateKeyStorage.t
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 
-export function ElectronPrivateKeyWarmup() {
+export function PrivateKeyWarmup() {
   const { user } = useAuth();
   const keys = useKeysContext();
   const importAttemptedForKeyIdRef = useRef<string | null>(null);
@@ -101,7 +101,7 @@ export function ElectronPrivateKeyWarmup() {
       importAttemptedForKeyIdRef.current = keyId;
 
       try {
-        await importElectronPrivateKeyFromFile(keyId);
+        await importPlatformPrivateKeyFromFile(keyId);
       } catch (error) {
         if (!isPrivateKeyFileSelectionCancelled(error)) {
           console.error(error);
