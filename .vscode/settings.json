@@ -4,12 +4,26 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
   "eslint.validate": [
     "javascript",
     "javascriptreact",
     "typescript",
     "typescriptreact"
   ],
+  "tailwindCSS.experimental.configFile": "apps/landing-page/src/index.css",
+  "tailwindCSS.configFile": "apps/landing-page/src/index.css",
+  "tailwindCSS.classAttributes": ["class", "className", "classList", "ngClass"],
+  "tailwindCSS.classFunctions": ["cn", "clsx"],
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.showPixelEquivalents": true,
+  "css.validate": false,
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -20,7 +34,10 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.quickSuggestions": {
+      "strings": "on"
+    }
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"

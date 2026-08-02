@@ -53,6 +53,26 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/landing-page/**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+    },
+    plugins: {
+      prettier,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'prettier/prettier': 'error',
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+  {
     files: ['apps/feed-lab/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -153,6 +173,12 @@ export default tseslint.config(
   },
   {
     files: ['apps/feed-lab/vite.config.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['apps/landing-page/vite.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
