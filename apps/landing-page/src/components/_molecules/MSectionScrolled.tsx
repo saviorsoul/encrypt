@@ -5,7 +5,7 @@ import { useScrollProgress } from '@/hooks/useScrollProgress.ts';
 const DEFAULT_SCROLL_DISTANCE = '400vh';
 const DEFAULT_SECTION_CLASS = 'relative';
 const DEFAULT_CONTAINER_CLASS =
-  'sticky top-0 flex h-svh items-center justify-center';
+  'sticky top-0 flex h-lvh items-center justify-center';
 
 type SectionScrolledProps = {
   children: (progress: number) => ReactNode;

@@ -16,9 +16,21 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  background-color: var(--color-neutral-950);
-  color: var(--color-neutral-100);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  @media (width < theme(--breakpoint-md)) {
+    p + p {
+      @apply mt-4;
+    }
+  }
+
+  @media (width >= theme(--breakpoint-md)) {
+    .paragraph-spacing p + p {
+      @apply mt-4;
+    }
+  }
 }

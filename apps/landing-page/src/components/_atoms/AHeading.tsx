@@ -19,6 +19,15 @@ const HEADING_TAGS = {
   6: 'h6',
 } as const;
 
+const HEADING_STYLES: Record<HeadingLevel, string> = {
+  1: 'text-4xl font-bold tracking-tight',
+  2: 'text-3xl font-bold',
+  3: 'text-2xl font-semibold',
+  4: 'text-xl font-semibold',
+  5: 'text-lg font-medium',
+  6: 'text-base font-medium',
+};
+
 export function Heading({
   level,
   children,
@@ -29,7 +38,14 @@ export function Heading({
   const Tag = HEADING_TAGS[level];
 
   return (
-    <Tag className={cn(visuallyHidden && 'sr-only', className)} {...props}>
+    <Tag
+      className={cn(
+        HEADING_STYLES[level],
+        visuallyHidden && 'sr-only',
+        className,
+      )}
+      {...props}
+    >
       {children}
     </Tag>
   );

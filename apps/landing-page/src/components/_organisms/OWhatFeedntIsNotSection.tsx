@@ -5,16 +5,16 @@ import { Section } from '@/components/_molecules/MSection.tsx';
 
 const NOT_STATEMENTS = [
   'a feed app that is selling your attention.',
-  'an app that wants to know you better.',
+  'a company that wants to know you better.',
   'a product that hides from you what it does.',
 ] as const;
 
-export function ContentSection() {
+export function WhatFeedntIsNotSection() {
   return (
     <Section containerClassName="grid gap-y-12">
       <div>
-        <Heading className="text-center text-3xl font-bold" level={2}>
-          What <FeedntText /> is not?
+        <Heading className="text-center" level={2}>
+          What <FeedntText /> is not
         </Heading>
       </div>
 

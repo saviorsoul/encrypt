@@ -1,13 +1,17 @@
-import { ContentSection } from '@/components/_organisms/OContentSection.tsx';
-import { ContentSection as ContentSection2 } from '@/components/_organisms/OContentSection2.tsx';
+import { AboutFeedntSection } from '@/components/_organisms/OAboutFeedntSection.tsx';
+import { SeeYouSoonSection } from '@/components/_organisms/OSeeYouSoonSection.tsx';
+import { WhatFeedntIsNotSection } from '@/components/_organisms/OWhatFeedntIsNotSection.tsx';
+import { WhatFeedntIsSection } from '@/components/_organisms/OWhatFeedntIsSection.tsx';
 import { HeroSection } from '@/components/_organisms/OHeroSection.tsx';
 
 export function LandingPage() {
   return (
     <main>
       <HeroSection />
-      <ContentSection />
-      <ContentSection2 />
+      <WhatFeedntIsNotSection />
+      <WhatFeedntIsSection />
+      <AboutFeedntSection />
+      <SeeYouSoonSection />
     </main>
   );
 }

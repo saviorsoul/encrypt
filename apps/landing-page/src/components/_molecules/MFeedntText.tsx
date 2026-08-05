@@ -13,7 +13,7 @@ export function FeedntText({
   return (
     <AccentHeadlineText
       blinkApostrophe={blinkApostrophe}
-      className={cn('text-brand', className)}
+      className={cn('text-brand font-bold', className)}
       text="Feedn't"
     />
   );
