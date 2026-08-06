@@ -33,9 +33,7 @@ export function AboutFeedntSection() {
           selling their own users' data is also something that is pushing this
           project forward.
         </p>
-        <p className="font-bold border-l mt-8">
-          <div className="pl-2">Why bother?</div>
-        </p>
+        <p className="font-bold border-l mt-8 pl-2">Why bother?</p>
         <p>
           The issue of today's social media platforms starts with the ability to
           gather an enormous amount of data about their users. What happens
@@ -64,8 +62,8 @@ export function AboutFeedntSection() {
           nowadays call AI gives additional powers to the pattern recognition on
           massive datasets. The risk of uncontrolled data collection has risen.
         </p>
-        <p className="font-bold border-l mt-8">
-          <div className="pl-2">What can we do to minimize the risks?</div>
+        <p className="font-bold border-l mt-8 pl-2">
+          What can we do to minimize the risks?
         </p>
         <p>
           The goal of <FeedntText /> is to show that we can build open-source
@@ -78,8 +76,8 @@ export function AboutFeedntSection() {
           platforms, <FeedntText /> has open-source backend code, so you know
           exactly how data is being stored and served.
         </p>
-        <p className="font-bold border-l mt-8">
-          <div className="pl-2">What about moderation/censorship?</div>
+        <p className="font-bold border-l mt-8 pl-2">
+          What about moderation/censorship?
         </p>
         <p>
           Encryption of feed messages and comments has its consequence in data
@@ -103,10 +101,8 @@ export function AboutFeedntSection() {
           see in the future, adjust your network or block particular user's
           messages.
         </p>
-        <p className="font-bold border-l mt-8">
-          <div className="pl-2">
-            What is the algorithm behind feed generation?
-          </div>
+        <p className="font-bold border-l mt-8 pl-2">
+          What is the algorithm behind feed generation?
         </p>
         <p>
           Simply, there is no algorithm. Users are able to sort messages by
