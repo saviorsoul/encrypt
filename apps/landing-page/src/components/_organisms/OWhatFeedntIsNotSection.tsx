@@ -21,9 +21,12 @@ export function WhatFeedntIsNotSection() {
       <div className="grid grid-cols-1 gap-x-12 gap-y-4 text-2xl md:grid-cols-3">
         {NOT_STATEMENTS.map((statement) => (
           <p key={statement}>
-            <PaintHighlight className="font-semibold text-brand">
+            <PaintHighlight
+              attachSpace="after"
+              className="font-semibold text-brand"
+            >
               Not
-            </PaintHighlight>{' '}
+            </PaintHighlight>
             {statement}
           </p>
         ))}

@@ -14,28 +14,40 @@ export function WhatFeedntIsSection() {
 
       <div className="grid grid-cols-1 gap-x-12 gap-y-4 text-2xl md:grid-cols-3">
         <p>
-          An{' '}
-          <PaintHighlight className="font-semibold text-brand">
+          An
+          <PaintHighlight
+            attachSpace="both"
+            className="font-semibold text-brand"
+          >
             ethical
-          </PaintHighlight>{' '}
+          </PaintHighlight>
           answer to predatory social monetization.
         </p>
         <p>
-          A tool that knows almost{' '}
-          <PaintHighlight className="font-semibold text-brand">
+          A tool that knows almost
+          <PaintHighlight
+            attachSpace="both"
+            className="font-semibold text-brand"
+          >
             nothing
-          </PaintHighlight>{' '}
+          </PaintHighlight>
           about you, by design.
         </p>
         <p>
-          An{' '}
-          <PaintHighlight className="font-semibold text-brand">
+          An
+          <PaintHighlight
+            attachSpace="both"
+            className="font-semibold text-brand"
+          >
             open-source
-          </PaintHighlight>{' '}
-          app that helps you{' '}
-          <PaintHighlight className="font-semibold text-brand">
+          </PaintHighlight>
+          app that helps you
+          <PaintHighlight
+            attachSpace="both"
+            className="font-semibold text-brand"
+          >
             encrypt
-          </PaintHighlight>{' '}
+          </PaintHighlight>
           your messages.
         </p>
       </div>
