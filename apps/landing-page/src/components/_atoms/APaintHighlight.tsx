@@ -13,7 +13,7 @@ export function PaintHighlight({
   highlightClassName = 'text-brand',
 }: PaintHighlightProps) {
   return (
-    <span className="relative inline whitespace-nowrap">
+    <span className="relative inline">
       <svg
         aria-hidden
         className={cn(
@@ -34,7 +34,9 @@ export function PaintHighlight({
           opacity="0.22"
         />
       </svg>
-      <span className={cn('relative', className)}>{children}</span>
+      <span className={cn('relative whitespace-nowrap', className)}>
+        {children}
+      </span>
     </span>
   );
 }

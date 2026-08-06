@@ -22,14 +22,11 @@ export function AccentHeadlineText({
 
   return (
     <span ref={ref}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden>
-        <span className={className}>{text.slice(0, apostropheIndex)}</span>
-        <span className={apostropheVisible ? undefined : 'opacity-0'}>
-          {text[apostropheIndex]}
-        </span>
-        <span className={className}>{text.slice(apostropheIndex + 1)}</span>
+      <span className={className}>{text.slice(0, apostropheIndex)}</span>
+      <span className={apostropheVisible ? undefined : 'opacity-0'}>
+        {text[apostropheIndex]}
       </span>
+      <span className={className}>{text.slice(apostropheIndex + 1)}</span>
     </span>
   );
 }
