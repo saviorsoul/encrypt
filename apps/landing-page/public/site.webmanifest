@@ -1,0 +1,17 @@
+{
+  "name": "Feedn't",
+  "short_name": "Feedn't",
+  "description": "An open-source feed app for end-to-end encrypted messaging.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#02baa5",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

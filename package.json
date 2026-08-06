@@ -45,6 +45,7 @@
     "dev:api": "npm run dev -w @encrypt/api",
     "dev:lab": "npm run dev -w @encrypt/feed-lab",
     "dev:landing": "npm run dev -w @encrypt/landing-page",
+    "build:landing": "npm run build -w @encrypt/landing-page",
     "dev:mobile": "npm run dev -w @encrypt/mobile",
     "build:mobile": "npm run build -w @encrypt/mobile",
     "mobile:sync": "npm run build:mobile && npm run cap:sync -w @encrypt/mobile",
