@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn.ts';
 
-const NBSP = '\u00A0';
+const SPACE_AFTER = ' ';
 
 type PaintHighlightProps = {
   children: ReactNode;
   className?: string;
   highlightClassName?: string;
-  attachSpace?: 'before' | 'after' | 'both';
+  attachSpace?: 'after';
 };
 
 export function PaintHighlight({
@@ -16,15 +16,11 @@ export function PaintHighlight({
   highlightClassName = 'text-brand',
   attachSpace,
 }: PaintHighlightProps) {
-  const spaceBefore = attachSpace === 'before' || attachSpace === 'both';
-  const spaceAfter = attachSpace === 'after' || attachSpace === 'both';
-
   return (
     <>
-      {spaceBefore ? NBSP : null}
       <mark
         className={cn(
-          'relative inline-block whitespace-nowrap bg-transparent',
+          'relative inline whitespace-nowrap bg-transparent',
           className,
         )}
       >
@@ -50,7 +46,7 @@ export function PaintHighlight({
         </svg>
         {children}
       </mark>
-      {spaceAfter ? NBSP : null}
+      {attachSpace === 'after' ? SPACE_AFTER : null}
     </>
   );
 }

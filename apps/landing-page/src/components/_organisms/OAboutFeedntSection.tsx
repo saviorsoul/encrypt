@@ -22,7 +22,7 @@ export function AboutFeedntSection() {
             text="n't"
           />{' '}
           part in the name is to describe that you, as a user, are not feeding
-          it with your own messages. The messages are end-to-end encrypted
+          it with your own messages. The communication is end-to-end encrypted
           (E2EE) on the users' side. What is kept on the server is the encrypted
           message that only you and recipients can read.
         </p>
