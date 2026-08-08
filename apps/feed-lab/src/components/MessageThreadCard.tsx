@@ -654,7 +654,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
     ) {
       return;
     }
-    // Retry if message decrypt's comment fetch failed and comments are available here.
+    // Decrypt comments once loaded when the message is already decrypted.
     autoDecryptCommentsAttemptedRef.current = true;
     void onDecryptComments({
       messageId: message.id,
