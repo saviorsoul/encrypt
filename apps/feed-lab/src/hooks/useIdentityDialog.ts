@@ -11,6 +11,7 @@ type UseIdentityDialogOptions = {
   addLocalUser: (input: { keyId: string; username: string }) => void;
   friendKeyIds: string[];
   onFriendshipsChanged?: () => void | Promise<void>;
+  onOpen?: () => void;
 };
 
 export function useIdentityDialog({
@@ -20,6 +21,7 @@ export function useIdentityDialog({
   addLocalUser,
   friendKeyIds,
   onFriendshipsChanged,
+  onOpen,
 }: UseIdentityDialogOptions) {
   const [open, setOpen] = useState(false);
   const [identity, setIdentity] = useState<IdentityDialogTarget | null>(null);
@@ -30,12 +32,13 @@ export function useIdentityDialog({
 
   const openIdentity = useCallback(
     (next: IdentityDialogTarget) => {
+      onOpen?.();
       friendshipRequests.clearError();
       friendshipRequests.clearInfo();
       setIdentity(next);
       setOpen(true);
     },
-    [friendshipRequests],
+    [friendshipRequests, onOpen],
   );
 
   const closeIdentity = useCallback(() => {

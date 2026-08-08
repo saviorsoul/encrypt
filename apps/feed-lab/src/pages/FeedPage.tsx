@@ -34,11 +34,15 @@ export function FeedPage() {
   const [sentMessageNotice, setSentMessageNotice] = useState<{
     messageId: string;
   } | null>(null);
+  const [loadFriendships, setLoadFriendships] = useState(false);
 
+  const shouldLoadFriendships =
+    loadFriendships || createMessageDialogOpen || shareDialogOpen;
   const friendships = useFeedLabFriendships(
     keys.keyId,
     usernameByKeyId,
     addLocalUser,
+    { enabled: shouldLoadFriendships },
   );
   const identity = useIdentityDialog({
     keyId: keys.keyId,
@@ -47,6 +51,7 @@ export function FeedPage() {
     addLocalUser,
     friendKeyIds: friendships.friendKeyIds,
     onFriendshipsChanged: friendships.refresh,
+    onOpen: () => setLoadFriendships(true),
   });
   const recipients = useFeedLabRecipients({
     viewerKeyId: keys.keyId,

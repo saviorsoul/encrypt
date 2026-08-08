@@ -52,7 +52,9 @@ export function useFeedLabFriendships(
   ownerKeyId: string | null,
   usernameByKeyId: Record<string, string>,
   addLocalUser?: (input: { keyId: string; username: string }) => void,
+  options: { enabled?: boolean } = {},
 ) {
+  const enabled = options.enabled ?? true;
   const api = useFeedApi();
   const [rawFriendships, setRawFriendships] = useState<Friendship[]>([]);
   const [invitationLabelByToken, setInvitationLabelByToken] = useState<
@@ -88,8 +90,11 @@ export function useFeedLabFriendships(
   }, [api, ownerKeyId]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   useEffect(() => {
     if (!ownerKeyId || !addLocalUser || rawFriendships.length === 0) {

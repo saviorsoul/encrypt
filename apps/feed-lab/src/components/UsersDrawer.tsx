@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -16,6 +16,16 @@ type UsersDrawerProps = {
 };
 
 export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
+  const [hasOpened, setHasOpened] = useState(open);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setHasOpened(true);
+    }
+  }
+
   return (
     <Drawer
       anchor="bottom"
@@ -48,7 +58,7 @@ export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
             </IconButton>
           </Stack>
           <Box sx={{ overflow: 'auto' }}>
-            <UsersPage />
+            {hasOpened ? <UsersPage /> : null}
           </Box>
         </Stack>
       </Container>
