@@ -86,7 +86,7 @@ export const MessageFeedCard = memo(function MessageFeedCard({
   }, [message]);
 
   return (
-    <Card variant={preview ? 'outlined' : 'elevation'}>
+    <Card variant={preview ? 'outlined' : 'elevation'} sx={{ minWidth: 0 }}>
       <CardContent sx={{ pb: preview ? 2 : 1 }}>
         <Stack spacing={1.5}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
@@ -113,6 +113,8 @@ export const MessageFeedCard = memo(function MessageFeedCard({
             variant="body2"
             sx={{
               whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
               color: decryptedText !== null ? 'text.primary' : 'text.secondary',
               fontStyle: decryptedText !== null ? 'normal' : 'italic',
             }}

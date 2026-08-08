@@ -114,6 +114,8 @@ function CommentItem({
           variant="body2"
           sx={{
             whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
             color: decryptedText !== null ? 'text.primary' : 'text.secondary',
             fontStyle: decryptedText !== null ? 'normal' : 'italic',
           }}
