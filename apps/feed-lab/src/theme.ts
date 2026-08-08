@@ -6,9 +6,20 @@ import {
 } from '@mui/material/styles';
 import type { AlertProps } from '@mui/material/Alert';
 
+export const brandColor = '#02baa5';
+
+export const brandFontFamily = [
+  '"Geist"',
+  'ui-sans-serif',
+  'system-ui',
+  'sans-serif',
+].join(', ');
+
 declare module '@mui/material/styles' {
   interface Theme {
     feedLab: {
+      brand: string;
+      brandFontFamily: string;
       encBg: string;
       accentBg: string;
       cardShadow: string;
@@ -16,6 +27,8 @@ declare module '@mui/material/styles' {
   }
   interface ThemeOptions {
     feedLab?: {
+      brand?: string;
+      brandFontFamily?: string;
       encBg?: string;
       accentBg?: string;
       cardShadow?: string;
@@ -121,6 +134,8 @@ function createStoneTheme(mode: 'light' | 'dark') {
       divider: stone.border,
     },
     feedLab: {
+      brand: brandColor,
+      brandFontFamily: brandFontFamily,
       encBg: stone.encBg,
       accentBg: stone.accentBg,
       cardShadow: stone.cardShadow,

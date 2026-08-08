@@ -191,6 +191,9 @@ services:
       - '5174:5174'
     volumes:
       - ./apps/feed-lab/src:/app/apps/feed-lab/src
+      - ./apps/feed-lab/public:/app/apps/feed-lab/public
+      - ./apps/feed-lab/index.html:/app/apps/feed-lab/index.html
+      - ./apps/feed-lab/vite.config.ts:/app/apps/feed-lab/vite.config.ts
       - ./packages/core/src:/app/packages/core/src
       - ./apps/web/src:/app/apps/web/src
       - ./.env.docker:/app/.env:ro

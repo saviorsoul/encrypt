@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, IconButton, Stack, Tooltip } from '@mui/material';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
+import { FeedntText } from '@lab/components/FeedntText.tsx';
 import { FeedLabSettingsMenu } from '@lab/components/FeedLabSettingsMenu.tsx';
 
 type FeedLabTopNavProps = {
@@ -18,23 +19,26 @@ export function FeedLabTopNav({
         direction="row"
         sx={{
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           gap: 0.5,
           width: '100%',
         }}
       >
-        <Tooltip title="Users">
-          <IconButton
-            size="small"
-            color={usersActive ? 'primary' : 'inherit'}
-            aria-label="Users"
-            aria-pressed={usersActive}
-            onClick={onOpenUsers}
-          >
-            <PeopleOutlinedIcon />
-          </IconButton>
-        </Tooltip>
-        <FeedLabSettingsMenu />
+        <FeedntText />
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+          <Tooltip title="Users">
+            <IconButton
+              size="small"
+              color={usersActive ? 'primary' : 'inherit'}
+              aria-label="Users"
+              aria-pressed={usersActive}
+              onClick={onOpenUsers}
+            >
+              <PeopleOutlinedIcon />
+            </IconButton>
+          </Tooltip>
+          <FeedLabSettingsMenu />
+        </Stack>
       </Stack>
     </Container>
   );

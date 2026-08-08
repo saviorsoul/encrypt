@@ -15,6 +15,13 @@ export default defineConfig(({ command }) => {
     envDir: repoRoot,
     plugins: [
       react(),
+      {
+        name: 'feed-lab-favicon-href',
+        transformIndexHtml(html, ctx) {
+          const href = ctx.server ? '/favicon.svg' : './favicon.svg';
+          return html.replace('%BASE_URL%favicon.svg', href);
+        },
+      },
       contentSecurityPolicyPlugin({
         isDevServer,
         apiUrl: process.env.VITE_API_URL,
