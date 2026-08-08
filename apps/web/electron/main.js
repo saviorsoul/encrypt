@@ -6,6 +6,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  powerMonitor,
   screen,
   session,
   Tray,
@@ -28,6 +29,12 @@ import {
   loadPrivateKeyJwk,
   storePrivateKeyJwk,
 } from './safeStoragePrivateKey.js';
+import {
+  prepareAppForQuit,
+  registerPowerMonitorShutdownHandler,
+  registerShutdownSignalHandlers,
+  registerWindowsSessionEndHandler,
+} from './shutdown.js';
 import {
   assertPrivateKeySafeStorageHas,
   assertPrivateKeySafeStorageLoad,
@@ -74,6 +81,28 @@ const LINUX_TRAY_ICON_SIZE = 24;
 
 /** @type {boolean} */
 let isQuitting = false;
+
+function requestGracefulQuit() {
+  if (isQuitting) {
+    return;
+  }
+
+  isQuitting = true;
+  app.quit();
+}
+
+function applyPreparedQuitState() {
+  const next = prepareAppForQuit({
+    isQuitting,
+    tray,
+    traySuccessIconTimeout,
+    mainWindow,
+  });
+  isQuitting = next.isQuitting;
+  tray = next.tray;
+  traySuccessIconTimeout = next.traySuccessIconTimeout;
+  mainWindow = next.mainWindow;
+}
 
 /** @type {boolean} */
 let trayCanExportPublicKey = false;
@@ -139,6 +168,17 @@ if (!gotTheLock) {
       return;
     }
     earlyOpenUrlDeepLink = url;
+  });
+
+  registerShutdownSignalHandlers({
+    process,
+    onShutdownSignal: requestGracefulQuit,
+  });
+
+  registerPowerMonitorShutdownHandler({
+    powerMonitor,
+    process,
+    onShutdownSignal: requestGracefulQuit,
   });
 }
 
@@ -700,8 +740,7 @@ function updateTrayMenu() {
     {
       label: 'Quit',
       click: () => {
-        isQuitting = true;
-        app.quit();
+        requestGracefulQuit();
       },
     },
   );
@@ -791,6 +830,18 @@ function createWindow({ showOnReady = true } = {}) {
       event.preventDefault();
       mainWindow?.hide();
     }
+  });
+
+  registerWindowsSessionEndHandler({
+    window: mainWindow,
+    process,
+    onSystemSessionEnd: () => {
+      if (isQuitting) {
+        return;
+      }
+
+      applyPreparedQuitState();
+    },
   });
 
   const devServerUrl = isElectronDevServer()
@@ -1073,7 +1124,7 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
-  isQuitting = true;
+  applyPreparedQuitState();
 });
 
 app.on('open-file', (event, filePath) => {

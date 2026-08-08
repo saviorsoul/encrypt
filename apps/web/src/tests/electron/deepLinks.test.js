@@ -49,10 +49,12 @@ describe('parseDeepLink', () => {
 
   it('accepts long encrypt text', () => {
     const longText = 'x'.repeat(10_000);
-    expect(parseDeepLink(buildDeepLink('encrypt', { text: longText }))).toEqual({
-      ok: true,
-      action: { type: 'encrypt', text: longText },
-    });
+    expect(parseDeepLink(buildDeepLink('encrypt', { text: longText }))).toEqual(
+      {
+        ok: true,
+        action: { type: 'encrypt', text: longText },
+      },
+    );
   });
 
   it('rejects unknown actions and params', () => {
@@ -74,7 +76,10 @@ describe('findDeepLinkInArgv', () => {
 
   it('finds quoted or embedded protocol URLs', () => {
     expect(
-      findDeepLinkInArgv(['/opt/Encrypt/encrypt', "'encrypt://copy-public-key'"]),
+      findDeepLinkInArgv([
+        '/opt/Encrypt/encrypt',
+        "'encrypt://copy-public-key'",
+      ]),
     ).toBe('encrypt://copy-public-key');
     expect(findDeepLinkInArgv(['something=encrypt://copy-public-key'])).toBe(
       'encrypt://copy-public-key',
