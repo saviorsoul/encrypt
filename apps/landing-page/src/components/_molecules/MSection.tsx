@@ -5,7 +5,7 @@ export const DEFAULT_SECTION_CLASS = 'px-6 py-24 sm:py-32';
 export const DEFAULT_CONTAINER_CLASS = 'mx-auto max-w-2xl';
 
 const SECTION_HEIGHT_CLASS = {
-  viewport: 'min-h-dvh',
+  viewport: 'min-h-svh',
   content: '',
 } as const;
 
