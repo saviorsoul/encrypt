@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildDeepLink,
   findDeepLinkInArgv,
+  isBackgroundFeedBridgeDeepLinkAction,
   parseDeepLink,
 } from '../../../electron/deepLinks.js';
 
@@ -60,6 +61,76 @@ describe('parseDeepLink', () => {
   it('rejects unknown actions and params', () => {
     expect(parseDeepLink('encrypt://nope').ok).toBe(false);
     expect(parseDeepLink('encrypt://encrypt?text=hi&extra=1').ok).toBe(false);
+  });
+
+  it('parses feed-pair', () => {
+    expect(
+      parseDeepLink(
+        'encrypt://feed-pair?origin=https%3A%2F%2Ffeednt.com&session=abc&callback=https%3A%2F%2Ffeednt.com%2F%23%2Fbridge-callback%2Fpair&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ',
+      ),
+    ).toEqual({
+      ok: true,
+      action: {
+        type: 'feed-pair',
+        origin: 'https://feednt.com',
+        session: 'abc',
+        callback: 'https://feednt.com/#/bridge-callback/pair',
+        bridgeSessionKeyId: 'b1',
+        bridgeSessionPublicJwk: 'eyJrMSI6InYifQ',
+      },
+    });
+  });
+
+  it('rejects feed-pair when callback origin mismatches origin param', () => {
+    expect(
+      parseDeepLink(
+        'encrypt://feed-pair?origin=https%3A%2F%2Ffeednt.com&session=abc&callback=https%3A%2F%2Fevil.example.com%2F%23%2Fbridge-callback%2Fpair',
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('rejects feed-pair when origin is not feednt.com', () => {
+    expect(
+      parseDeepLink(
+        'encrypt://feed-pair?origin=https%3A%2F%2Ffeed.example.com&session=abc&callback=https%3A%2F%2Ffeed.example.com%2F%23%2Fbridge-callback%2Fpair',
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('parses feed-op', () => {
+    expect(
+      parseDeepLink(
+        'encrypt://feed-op?session=s1&requestId=r1&op=ecdsa-sign&payload=eyJ0ZXN0IjoxfQ&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ',
+      ),
+    ).toEqual({
+      ok: true,
+      action: {
+        type: 'feed-op',
+        session: 's1',
+        requestId: 'r1',
+        op: 'ecdsa-sign',
+        payload: 'eyJ0ZXN0IjoxfQ',
+        origin: '',
+        callback: '',
+        bridgeSessionKeyId: 'b1',
+        bridgeSessionPublicJwk: 'eyJrMSI6InYifQ',
+      },
+    });
+  });
+
+  it('detects background op-quick feed-op actions', () => {
+    expect(
+      isBackgroundFeedBridgeDeepLinkAction({
+        type: 'feed-op',
+        op: 'op-quick',
+      }),
+    ).toBe(true);
+    expect(
+      isBackgroundFeedBridgeDeepLinkAction({
+        type: 'feed-op',
+        op: 'ecdsa-sign',
+      }),
+    ).toBe(false);
   });
 });
 

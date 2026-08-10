@@ -5,17 +5,35 @@
  * - encrypt://encrypt?text=<urlencoded>
  * - encrypt://decrypt?text=<urlencoded>
  * - encrypt://copy-public-key
+ * - encrypt://feed-pair?origin=…&session=…&callback=…
+ * - encrypt://feed-op?session=…&requestId=…&op=…&payload=…
  */
+
+import { validateFeedLabPairCallback } from './feedLabBridgeOpenExternal.js';
 
 /** Practical cap for decrypt JSON in a URL (OS argv / URL length limits). */
 export const MAX_DEEP_LINK_DECRYPT_TEXT_LENGTH = 32 * 1024;
 
+/** Practical cap for feed bridge payload in a URL. */
+export const MAX_FEED_BRIDGE_PAYLOAD_LENGTH = 32 * 1024;
+
 const PROTOCOL = 'encrypt:';
+
+const FEED_BRIDGE_OPS = new Set(['ecdh-agree', 'ecdsa-sign', 'op-quick']);
+
+/**
+ * @param {import('./deepLinks.js').DeepLinkAction | { type: string; op?: string }} action
+ */
+export function isBackgroundFeedBridgeDeepLinkAction(action) {
+  return action?.type === 'feed-op' && action.op === 'op-quick';
+}
 
 /**
  * @typedef {| { type: 'copy-public-key' }
  *   | { type: 'encrypt'; text: string }
  *   | { type: 'decrypt'; text: string }
+ *   | { type: 'feed-pair'; origin: string; session: string; callback: string }
+ *   | { type: 'feed-op'; session: string; requestId: string; op: string; payload: string }
  * } DeepLinkAction
  */
 
@@ -174,6 +192,135 @@ export function parseDeepLink(href) {
     }
 
     return { ok: true, action: { type: 'decrypt', text: textResult.text } };
+  }
+
+  if (action === 'feed-pair') {
+    const allowedKeys = new Set([
+      'origin',
+      'session',
+      'callback',
+      'bridgeSessionKeyId',
+      'bridgeSessionPublicJwk',
+    ]);
+    for (const key of params.keys()) {
+      if (!allowedKeys.has(key)) {
+        return {
+          ok: false,
+          error: `Unexpected query param "${key}" for encrypt://feed-pair.`,
+        };
+      }
+    }
+
+    const originResult = validateNonEmptyTextParam(
+      params.get('origin') ?? '',
+      'encrypt://feed-pair requires a non-empty origin param.',
+    );
+    if (!originResult.ok) {
+      return originResult;
+    }
+
+    const sessionResult = validateNonEmptyTextParam(
+      params.get('session') ?? '',
+      'encrypt://feed-pair requires a non-empty session param.',
+    );
+    if (!sessionResult.ok) {
+      return sessionResult;
+    }
+
+    const callbackResult = validateNonEmptyTextParam(
+      params.get('callback') ?? '',
+      'encrypt://feed-pair requires a non-empty callback param.',
+    );
+    if (!callbackResult.ok) {
+      return callbackResult;
+    }
+
+    const pairCallbackError = validateFeedLabPairCallback(
+      callbackResult.text,
+      originResult.text,
+    );
+    if (pairCallbackError) {
+      return { ok: false, error: pairCallbackError };
+    }
+
+    return {
+      ok: true,
+      action: {
+        type: 'feed-pair',
+        origin: originResult.text,
+        session: sessionResult.text,
+        callback: callbackResult.text,
+        bridgeSessionKeyId: params.get('bridgeSessionKeyId') ?? '',
+        bridgeSessionPublicJwk: params.get('bridgeSessionPublicJwk') ?? '',
+      },
+    };
+  }
+
+  if (action === 'feed-op') {
+    const allowedKeys = new Set([
+      'session',
+      'requestId',
+      'op',
+      'payload',
+      'origin',
+      'callback',
+      'bridgeSessionKeyId',
+      'bridgeSessionPublicJwk',
+    ]);
+    for (const key of params.keys()) {
+      if (!allowedKeys.has(key)) {
+        return {
+          ok: false,
+          error: `Unexpected query param "${key}" for encrypt://feed-op.`,
+        };
+      }
+    }
+
+    const sessionResult = validateNonEmptyTextParam(
+      params.get('session') ?? '',
+      'encrypt://feed-op requires a non-empty session param.',
+    );
+    if (!sessionResult.ok) {
+      return sessionResult;
+    }
+
+    const requestIdResult = validateNonEmptyTextParam(
+      params.get('requestId') ?? '',
+      'encrypt://feed-op requires a non-empty requestId param.',
+    );
+    if (!requestIdResult.ok) {
+      return requestIdResult;
+    }
+
+    const op = (params.get('op') ?? '').trim();
+    if (!FEED_BRIDGE_OPS.has(op)) {
+      return { ok: false, error: `Unknown feed bridge operation "${op}".` };
+    }
+
+    const payloadResult = validateTextParam(
+      params.get('payload') ?? '',
+      MAX_FEED_BRIDGE_PAYLOAD_LENGTH,
+      'encrypt://feed-op requires a non-empty payload param.',
+      `Feed bridge payload exceeds the maximum length (${MAX_FEED_BRIDGE_PAYLOAD_LENGTH} characters).`,
+    );
+    if (!payloadResult.ok) {
+      return payloadResult;
+    }
+
+    return {
+      ok: true,
+      action: {
+        type: 'feed-op',
+        session: sessionResult.text,
+        requestId: requestIdResult.text,
+        op,
+        payload: payloadResult.text,
+        origin: params.get('origin') ?? '',
+        callback: params.get('callback') ?? '',
+        bridgeSessionKeyId: params.get('bridgeSessionKeyId') ?? '',
+        bridgeSessionPublicJwk: params.get('bridgeSessionPublicJwk') ?? '',
+      },
+    };
   }
 
   return { ok: false, error: `Unknown encrypt:// action "${action}".` };

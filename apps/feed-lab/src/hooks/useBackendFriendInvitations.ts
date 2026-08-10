@@ -33,13 +33,7 @@ export function useBackendFriendInvitations(
       setLastInvitationHref(null);
 
       try {
-        const invitation = await keys.withPrivateKey(async () => {
-          return api.postFriendInvitation();
-        });
-
-        if (!invitation) {
-          return null;
-        }
+        const invitation = await api.postFriendInvitation();
 
         await saveSentInvitation(invitation.token, trimmedName, keys.keyId);
         const href = buildFeedLabInvitationHref(invitation.token);
@@ -64,13 +58,7 @@ export function useBackendFriendInvitations(
       setError(null);
 
       try {
-        const accepted = await keys.withPrivateKey(async () => {
-          await api.acceptFriendInvitation(token);
-        });
-
-        if (!accepted) {
-          return false;
-        }
+        await api.acceptFriendInvitation(token);
 
         await onChanged?.();
         return true;
@@ -83,7 +71,7 @@ export function useBackendFriendInvitations(
         setBusy(false);
       }
     },
-    [api, keys, onChanged],
+    [api, onChanged],
   );
 
   const clearError = useCallback(() => {

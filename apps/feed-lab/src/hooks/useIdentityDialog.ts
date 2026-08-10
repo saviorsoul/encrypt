@@ -10,6 +10,8 @@ type UseIdentityDialogOptions = {
   usernames: string[];
   addLocalUser: (input: { keyId: string; username: string }) => void;
   friendKeyIds: string[];
+  friendshipsLoading?: boolean;
+  friendshipsError?: string | null;
   onFriendshipsChanged?: () => void | Promise<void>;
   onOpen?: () => void;
 };
@@ -20,6 +22,8 @@ export function useIdentityDialog({
   usernames,
   addLocalUser,
   friendKeyIds,
+  friendshipsLoading = false,
+  friendshipsError = null,
   onFriendshipsChanged,
   onOpen,
 }: UseIdentityDialogOptions) {
@@ -42,9 +46,8 @@ export function useIdentityDialog({
   );
 
   const closeIdentity = useCallback(() => {
+    friendshipRequests.cancelInFlight();
     setOpen(false);
-    friendshipRequests.clearError();
-    friendshipRequests.clearInfo();
   }, [friendshipRequests]);
 
   const handleExited = useCallback(() => {
@@ -119,12 +122,15 @@ export function useIdentityDialog({
       isFriend,
       existingUsername,
       existingUsernames: usernames,
+      friendshipsLoading,
+      friendshipsError,
       busy: friendshipRequests.busy,
       error: friendshipRequests.error,
       info: friendshipRequests.info,
       onClose: closeIdentity,
       onExited: handleExited,
       onClearError: friendshipRequests.clearError,
+      onCancelInFlight: friendshipRequests.cancelInFlight,
       onAddFriend: addFriend,
       onSaveName: saveName,
     },

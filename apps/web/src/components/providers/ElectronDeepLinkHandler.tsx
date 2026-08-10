@@ -27,6 +27,10 @@ import {
 } from '@/utils/oneToOneRecipientSelect.ts';
 import { validateBaseJsonText } from '@/utils/validateBaseJsonText.ts';
 import type { DeepLinkAction, DeepLinkErrorPayload } from '@/vite-env.d.ts';
+import {
+  dispatchFeedLabBridgeAction,
+  isFeedLabBridgeDeepLinkAction,
+} from '@/utils/feedLabBridgeDispatch.ts';
 
 const DEEP_LINK_DECRYPT_SOURCE_NAME = 'Browser extension';
 
@@ -234,6 +238,10 @@ export function ElectronDeepLinkHandler() {
   );
 
   const queueActionForConfirm = useCallback((action: DeepLinkAction) => {
+    if (isFeedLabBridgeDeepLinkAction(action)) {
+      dispatchFeedLabBridgeAction(action);
+      return;
+    }
     setPendingAction(action);
   }, []);
 
@@ -269,6 +277,11 @@ export function ElectronDeepLinkHandler() {
   useEffect(() => {
     const unsubscribeAction = window.electron?.onDeepLinkActionRequest(
       (action) => {
+        if (isFeedLabBridgeDeepLinkAction(action)) {
+          queueActionForConfirmRef.current(action);
+          return;
+        }
+
         void revealWindow();
         queueActionForConfirmRef.current(action);
       },
@@ -281,7 +294,7 @@ export function ElectronDeepLinkHandler() {
     );
 
     void window.electron?.consumePendingDeepLinkAction?.().then((action) => {
-      if (action) {
+      if (action && !isFeedLabBridgeDeepLinkAction(action)) {
         queueActionForConfirmRef.current(action);
       }
     });

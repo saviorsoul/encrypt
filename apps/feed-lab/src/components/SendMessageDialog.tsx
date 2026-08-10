@@ -12,8 +12,7 @@ import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
 type SendMessageDialogProps = {
   open: boolean;
-  withPrivateKey: ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
-  keyId: string | null;
+  keys: ReturnType<typeof usePrivateKeySession>;
   recipients: ReturnType<typeof useFeedLabRecipients>;
   onClose: () => void;
   onSendSuccess: () => Promise<void>;
@@ -25,8 +24,7 @@ type SendMessageDialogProps = {
 
 export function SendMessageDialog({
   open,
-  withPrivateKey,
-  keyId,
+  keys,
   recipients,
   onClose,
   onSendSuccess,
@@ -98,8 +96,7 @@ export function SendMessageDialog({
         <Box sx={{ minWidth: 0, width: '100%' }}>
           <SendMessagePanel
             variant="plain"
-            withPrivateKey={withPrivateKey}
-            keyId={keyId}
+            keys={keys}
             recipients={recipients}
             onSendSuccess={handleSendSuccess}
             onMessageSent={onMessageSent}

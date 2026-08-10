@@ -125,7 +125,15 @@ export function FeedLabSettingsMenu() {
       >
         {keys.keyId ? (
           <>
-            {keys.privateKeyFileName ? (
+            {keys.isSystemAppSession ? (
+              <MenuItem disabled sx={{ ...menuItemSx, opacity: 1 }}>
+                <ListItemText
+                  primary="Signing via Encrypt app"
+                  secondary="Private key stays in the system app"
+                  {...listItemTextProps}
+                />
+              </MenuItem>
+            ) : keys.privateKeyFileName ? (
               <MenuItem disabled sx={{ ...menuItemSx, opacity: 1 }}>
                 <ListItemText
                   primary="Private key file"
@@ -182,6 +190,7 @@ export function FeedLabSettingsMenu() {
         </MenuItem>
         <MenuItem
           onClick={toggleRequestsApprovalDialog}
+          disabled={keys.isSystemAppSession}
           sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}
         >
           Requests approval dialog
@@ -189,6 +198,7 @@ export function FeedLabSettingsMenu() {
             size="small"
             edge="end"
             checked={requestsApprovalDialog}
+            disabled={keys.isSystemAppSession}
             tabIndex={-1}
             disableRipple
             onClick={(event) => event.stopPropagation()}

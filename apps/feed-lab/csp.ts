@@ -11,9 +11,13 @@ const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';
 const DEV_CONNECT_SOURCES: readonly string[] = [
   "'self'",
   'http://localhost:*',
+  'https://localhost:*',
   'ws://localhost:*',
+  'wss://localhost:*',
   'http://127.0.0.1:*',
+  'https://127.0.0.1:*',
   'ws://127.0.0.1:*',
+  'wss://127.0.0.1:*',
 ];
 
 type CspOptions = {

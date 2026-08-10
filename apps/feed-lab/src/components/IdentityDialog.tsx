@@ -33,12 +33,15 @@ type IdentityDialogProps = {
   isFriend: boolean;
   existingUsername: string;
   existingUsernames: string[];
+  friendshipsLoading: boolean;
+  friendshipsError: string | null;
   busy: boolean;
   error: string | null;
   info: string | null;
   onClose: () => void;
   onExited?: () => void;
   onClearError: () => void;
+  onCancelInFlight: () => void;
   onAddFriend: (name: string) => Promise<{ ok: boolean }>;
   onSaveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
 };
@@ -66,12 +69,15 @@ export function IdentityDialog({
   isFriend,
   existingUsername,
   existingUsernames,
+  friendshipsLoading,
+  friendshipsError,
   busy,
   error,
   info,
   onClose,
   onExited,
   onClearError,
+  onCancelInFlight,
   onAddFriend,
   onSaveName,
 }: IdentityDialogProps) {
@@ -130,7 +136,6 @@ export function IdentityDialog({
   const duplicateError = nameExists
     ? `"${trimmedName}" already exists. Choose a unique name.`
     : null;
-  const displayError = open ? (duplicateError ?? saveError ?? error) : null;
   const formBusy = busy || saveBusy;
   const canAddFriend =
     Boolean(identity) &&
@@ -138,7 +143,10 @@ export function IdentityDialog({
     !isFriend &&
     trimmedName.length > 0 &&
     !formBusy &&
-    !nameExists;
+    !nameExists &&
+    !friendshipsLoading &&
+    !friendshipsError &&
+    !error;
   const canSaveName =
     Boolean(identity) &&
     !isSelf &&
@@ -150,12 +158,12 @@ export function IdentityDialog({
 
   const handleClose = useCallback(() => {
     if (formBusy) {
-      return;
+      onCancelInFlight();
     }
     onClearError();
     setSaveError(null);
     onClose();
-  }, [formBusy, onClearError, onClose]);
+  }, [formBusy, onCancelInFlight, onClearError, onClose]);
 
   const handleAddFriend = useCallback(() => {
     if (!canAddFriend) {
@@ -291,9 +299,10 @@ export function IdentityDialog({
                   }}
                   fullWidth
                   disabled={formBusy}
-                  error={Boolean(displayError)}
+                  error={Boolean(duplicateError ?? saveError)}
                   helperText={
-                    displayError ??
+                    duplicateError ??
+                    saveError ??
                     (isFriend
                       ? 'Update the local name shown in your feed.'
                       : 'This name appears in your friends list.')
@@ -311,15 +320,17 @@ export function IdentityDialog({
                     }
                   }}
                 />
+                {friendshipsError ? (
+                  <Alert severity="error">{friendshipsError}</Alert>
+                ) : null}
+                {error ? <Alert severity="error">{error}</Alert> : null}
                 {info ? <Alert severity="info">{info}</Alert> : null}
               </>
             )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} disabled={formBusy}>
-            Close
-          </Button>
+          <Button onClick={handleClose}>Close</Button>
           {!isSelf && isFriend ? (
             <Button
               variant="contained"

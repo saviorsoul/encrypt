@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('private-key:safe-storage:get-session-state'),
   },
   showMainWindow: () => ipcRenderer.invoke('window:show'),
+  hideMainWindow: () => ipcRenderer.invoke('window:hide'),
+  isMainWindowVisible: () => ipcRenderer.invoke('window:is-visible'),
   flashTraySuccess: () => ipcRenderer.invoke('tray:flash-success'),
   onTrayEncryptCopiedMessage: (callback) => {
     const listener = (_event, payload) => {
@@ -95,4 +97,6 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('protocol:get-handler-status'),
   restoreDefaultProtocolHandler: () =>
     ipcRenderer.invoke('protocol:restore-default-handler'),
+  openExternal: (url, options) =>
+    ipcRenderer.invoke('shell:open-external', url, options),
 });

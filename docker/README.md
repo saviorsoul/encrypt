@@ -46,9 +46,16 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
    - `api-migrate` (Prisma migrate + Citus distribution)
 
 8. **Open the apps**:
-   - feed-lab: http://localhost:5174
+   - feed-lab: http://localhost:5174 (or `https://` when `FEED_LAB_DEV_HTTPS=true` in `.env.docker`)
    - API health: http://localhost:3000/health
    - Postgres: `psql`, DBeaver, etc. at `localhost:<POSTGRES_PORT>` with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` from `.env.docker`
+
+After changing `apps/feed-lab/package.json` or root `package-lock.json`, rebuild feed-lab:
+
+```bash
+docker compose --env-file .env.docker build feed-lab
+docker compose --env-file .env.docker up -d feed-lab
+```
 
 ## Everyday commands
 

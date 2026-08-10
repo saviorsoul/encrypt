@@ -13,8 +13,12 @@ import {
 } from '@lab/lib/commentsPanelTiming.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
+import {
+  collectManifestMessageIds,
+  serializeManifestLookup,
+} from '@lab/lib/manifestLookupWire.ts';
 
-type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
+type KeysSession = ReturnType<typeof usePrivateKeySession>;
 
 type CommentContext = {
   allDeliveries: Parameters<typeof resolveParentMessageAccessFromFeed>[2];
@@ -24,7 +28,7 @@ type CommentContext = {
 export function useBackendComments(
   messageId: string | null,
   recipientKeyId: string | null,
-  withPrivateKey: WithPrivateKey,
+  keys: KeysSession,
 ) {
   const api = useFeedApi();
   const [comments, setComments] = useState<StoredComment[]>([]);
@@ -97,7 +101,34 @@ export function useBackendComments(
           return null;
         }
 
-        const newComment = await withPrivateKey(async (material) => {
+        if (keys.isSystemAppSession && keys.keyId) {
+          const access = await resolveParentMessageAccessFromFeed(
+            threadId,
+            keys.keyId,
+            allDeliveries,
+            manifestLookup,
+          );
+          if (!access) {
+            throw new Error('You cannot comment on this message.');
+          }
+          const manifestEntries = await serializeManifestLookup(
+            manifestLookup,
+            collectManifestMessageIds(threadId, access.parentMessageId),
+            [keys.keyId],
+          );
+          const encrypted = await keys.systemEncryptComment({
+            messageId: threadId,
+            text,
+            access,
+            manifestEntries,
+          });
+          const { id } = await api.postComment(encrypted.payload);
+          const loaded = await api.getComments(threadId);
+          setComments(loaded);
+          return loaded.find((comment) => comment.id === id) ?? null;
+        }
+
+        const newComment = await keys.withPrivateKey(async (material) => {
           const access = await resolveParentMessageAccessFromFeed(
             threadId,
             material.keyId,
@@ -132,12 +163,37 @@ export function useBackendComments(
         setPostBusy(false);
       }
     },
-    [api, withPrivateKey],
+    [api, keys],
   );
 
   const decryptCommentText = useCallback(
     async (comment: StoredComment, context: CommentContext) => {
-      return withPrivateKey(async (material) => {
+      if (keys.isSystemAppSession && keys.keyId) {
+        const access = await resolveParentMessageAccessFromFeed(
+          comment.messageId,
+          keys.keyId,
+          context.allDeliveries,
+          context.manifestLookup,
+        );
+        if (!access) {
+          throw new Error('Cannot decrypt comment — no message access.');
+        }
+        const result = await keys.systemDecryptComment({
+          comment,
+          allDeliveries: context.allDeliveries,
+          manifestEntries: await serializeManifestLookup(
+            context.manifestLookup,
+            collectManifestMessageIds(
+              comment.messageId,
+              access.parentMessageId,
+            ),
+            [keys.keyId],
+          ),
+        });
+        return result.plaintext;
+      }
+
+      return keys.withPrivateKey(async (material) => {
         const access = await resolveParentMessageAccessFromFeed(
           comment.messageId,
           material.keyId,
@@ -157,7 +213,7 @@ export function useBackendComments(
         );
       });
     },
-    [withPrivateKey],
+    [keys],
   );
 
   return {

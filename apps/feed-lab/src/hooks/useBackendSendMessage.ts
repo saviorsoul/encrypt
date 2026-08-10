@@ -4,14 +4,15 @@ import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/priva
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
 import { isPrivateKeyFileSelectionCancelled } from '@web/crypto/privateKeyFile.ts';
+import { isBridgeCancellationError } from '@lab/crypto/systemAppSigner.ts';
 import { assembleMessageCopyPayloadFromWire } from '@lab/lib/assembleMessageCopyPayload.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 
-type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
+type KeysSession = ReturnType<typeof usePrivateKeySession>;
 
 export function useBackendSendMessage(
-  withPrivateKey: WithPrivateKey,
+  keys: KeysSession,
   expectedKeyId: string | null,
 ) {
   const api = useFeedApi();
@@ -44,7 +45,30 @@ export function useBackendSendMessage(
 
       setBusy(true);
       try {
-        const sent = await withPrivateKey(async (material) => {
+        if (keys.isSystemAppSession) {
+          const encrypted = await keys.systemEncryptMessage(
+            plaintext,
+            recipients,
+          );
+          if (!encrypted) {
+            return null;
+          }
+          const result = await api.postMessage(
+            encrypted.body as Parameters<typeof api.postMessage>[0],
+          );
+          const sent = {
+            id: result.id,
+            copyPayload: assembleMessageCopyPayloadFromWire(
+              result.id,
+              encrypted.body,
+            ),
+          };
+          setLastMessageId(sent.id);
+          setLastMessageCopyPayload(sent.copyPayload);
+          return sent;
+        }
+
+        const sent = await keys.withPrivateKey(async (material) => {
           if (expectedKeyId) {
             assertUploadedPrivateKeyMatchesKeyId(
               material,
@@ -77,7 +101,10 @@ export function useBackendSendMessage(
         setLastMessageCopyPayload(sent.copyPayload);
         return sent;
       } catch (e) {
-        if (isPrivateKeyFileSelectionCancelled(e)) {
+        if (
+          isPrivateKeyFileSelectionCancelled(e) ||
+          isBridgeCancellationError(e)
+        ) {
           return null;
         }
         setError(e instanceof Error ? e.message : 'Failed to send message.');
@@ -86,7 +113,7 @@ export function useBackendSendMessage(
         setBusy(false);
       }
     },
-    [api, expectedKeyId, withPrivateKey],
+    [api, expectedKeyId, keys],
   );
 
   const clearError = useCallback(() => {

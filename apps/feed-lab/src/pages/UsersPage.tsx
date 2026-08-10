@@ -12,9 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
-import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
-import { useFeedLabFriendshipRequests } from '@lab/hooks/useFeedLabFriendshipRequests.ts';
-import { useFeedLabPendingInvitations } from '@lab/hooks/useFeedLabPendingInvitations.ts';
+import { useFeedLabFriendships } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
 import { useBackendFriendshipRequests } from '@lab/hooks/useBackendFriendshipRequests.ts';
 import {
   AcceptFriendRequestDialog,
@@ -55,21 +53,11 @@ export function UsersPage() {
   } | null>(null);
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
-  const friendships = useFeedLabFriendships(
-    keys.keyId,
-    usernameByKeyId,
-    addLocalUser,
-  );
-  const friendshipRequestList = useFeedLabFriendshipRequests(keys.keyId);
-  const pendingInvitations = useFeedLabPendingInvitations(keys.keyId);
+  const friendships = useFeedLabFriendships();
 
   const refreshFriendData = useCallback(async () => {
-    await Promise.all([
-      friendships.refresh(),
-      friendshipRequestList.refresh(),
-      pendingInvitations.refresh(),
-    ]);
-  }, [friendships, friendshipRequestList, pendingInvitations]);
+    await friendships.refresh({ force: true });
+  }, [friendships]);
 
   const friendInvitations = useBackendFriendInvitations(refreshFriendData);
 
@@ -174,11 +162,9 @@ export function UsersPage() {
   );
 
   const outgoingInvitationTokens = new Set(
-    friendshipRequestList.outgoingRequests.map(
-      (request) => request.invitationToken,
-    ),
+    friendships.outgoingRequests.map((request) => request.invitationToken),
   );
-  const shareablePendingInvitations = pendingInvitations.invitations.filter(
+  const shareablePendingInvitations = friendships.pendingInvitations.filter(
     (invitation) => !outgoingInvitationTokens.has(invitation.token),
   );
   const invitationLabels = shareablePendingInvitations
@@ -197,17 +183,17 @@ export function UsersPage() {
           <Typography variant="body2" color="text.secondary">
             Authenticate with your private key to manage friendships.
           </Typography>
-        ) : friendships.loading ? (
+        ) : friendships.usersLoading ? (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CircularProgress size={18} />
             <Typography variant="body2">Loading friendships…</Typography>
           </Stack>
         ) : (
           <Stack spacing={2}>
-            {friendshipRequestList.incomingRequests.length > 0 ? (
+            {friendships.incomingRequests.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Incoming requests</Typography>
-                {friendshipRequestList.incomingRequests.map((request) => {
+                {friendships.incomingRequests.map((request) => {
                   const localName =
                     usernameByKeyId[request.requesterKeyId]?.trim() || null;
                   return (
@@ -289,10 +275,10 @@ export function UsersPage() {
               </Stack>
             ) : null}
 
-            {friendshipRequestList.outgoingRequests.length > 0 ? (
+            {friendships.outgoingRequests.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Outgoing requests</Typography>
-                {friendshipRequestList.outgoingRequests.map((request) => {
+                {friendships.outgoingRequests.map((request) => {
                   const entry = formatFriendListEntry(
                     request.targetKeyId,
                     usernameByKeyId,
@@ -321,8 +307,8 @@ export function UsersPage() {
             {shareablePendingInvitations.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">
-                  Pending invitation links (
-                  {shareablePendingInvitations.length})
+                  Pending invitation links ({shareablePendingInvitations.length}
+                  )
                 </Typography>
                 {shareablePendingInvitations.map((invitation) => (
                   <Stack
@@ -339,7 +325,7 @@ export function UsersPage() {
                           storedLabel={invitation.label}
                           existingNames={existingLocalNames}
                           onSaved={(label) =>
-                            pendingInvitations.updateLabel(
+                            friendships.updateInvitationLabel(
                               invitation.token,
                               label,
                             )
@@ -448,13 +434,9 @@ export function UsersPage() {
           </Stack>
         )}
 
-        {friendships.error ||
-        friendshipRequestList.error ||
-        pendingInvitations.error ? (
+        {friendships.usersError ? (
           <Alert severity="warning" sx={{ mt: 2 }}>
-            {friendships.error ??
-              friendshipRequestList.error ??
-              pendingInvitations.error}
+            {friendships.usersError}
           </Alert>
         ) : null}
       </Paper>
@@ -474,6 +456,7 @@ export function UsersPage() {
         onClose={() => setAddFriendDialogOpen(false)}
         onClearInvitationError={friendInvitations.clearError}
         onClearRequestError={friendshipRequests.clearError}
+        onCancelInFlight={friendshipRequests.cancelInFlight}
         onCreateInvitation={(name) =>
           void friendInvitations.createInvitation(name)
         }

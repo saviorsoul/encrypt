@@ -28,8 +28,7 @@ type SendMode = 'message' | 'json';
 
 type SendMessagePanelProps = {
   variant?: 'paper' | 'plain';
-  withPrivateKey: ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
-  keyId: string | null;
+  keys: ReturnType<typeof usePrivateKeySession>;
   recipients: ReturnType<typeof useFeedLabRecipients>;
   onSendSuccess: () => Promise<void>;
   onMessageSent?: (detail: {
@@ -41,15 +40,14 @@ type SendMessagePanelProps = {
 
 export function SendMessagePanel({
   variant = 'paper',
-  withPrivateKey,
-  keyId,
+  keys,
   recipients,
   onSendSuccess,
   onMessageSent,
   onClose,
 }: SendMessagePanelProps) {
   const importSend = useSendImportToBackend();
-  const sendMessage = useBackendSendMessage(withPrivateKey, keyId);
+  const sendMessage = useBackendSendMessage(keys, keys.keyId);
   const [importPayload, setImportPayload] = useState('');
   const [sendMode, setSendMode] = useState<SendMode>('message');
   const [messageText, setMessageText] = useState('');

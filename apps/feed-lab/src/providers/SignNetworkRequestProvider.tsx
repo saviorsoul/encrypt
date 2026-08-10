@@ -17,8 +17,9 @@ import {
 } from '@lab/lib/formatSignRequest.ts';
 import { getApiBaseUrl } from '@lab/lib/feedApiClient.ts';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
+import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
-const SIGN_CANCELLED_ERROR = 'Network request signing was cancelled.';
+export const SIGN_CANCELLED_ERROR = 'Network request signing was cancelled.';
 
 type PendingApproval = {
   preview: SignRequestPreview;
@@ -31,6 +32,7 @@ type SignNetworkRequestContextValue = {
     descriptor: AuthRequestDescriptor,
     _options?: FeedApiAuthHeaderOptions,
   ) => Promise<void>;
+  cancelPendingSignRequests: () => void;
 };
 
 const SignNetworkRequestContext =
@@ -50,6 +52,7 @@ export function SignNetworkRequestProvider({
   children: ReactNode;
 }) {
   const { requestsApprovalDialog } = useFeedLabSettings();
+  const { keys } = useFeedLabSession();
   const requestsApprovalDialogRef = useRef(requestsApprovalDialog);
   const currentRef = useRef<PendingApproval | null>(null);
   const queueRef = useRef<PendingApproval[]>([]);
@@ -85,7 +88,7 @@ export function SignNetworkRequestProvider({
 
   const requestSignApproval = useCallback(
     (descriptor: AuthRequestDescriptor): Promise<void> => {
-      if (!requestsApprovalDialogRef.current) {
+      if (keys.isSystemAppSession || !requestsApprovalDialogRef.current) {
         return Promise.resolve();
       }
 
@@ -115,17 +118,26 @@ export function SignNetworkRequestProvider({
       inflightByKeyRef.current.set(requestKey, promise);
       return promise;
     },
-    [enqueuePending],
+    [enqueuePending, keys.isSystemAppSession],
   );
 
-  const handleCancel = useCallback(() => {
+  const cancelPendingSignRequests = useCallback(() => {
     const current = currentRef.current;
-    if (!current) {
-      return;
+    if (current) {
+      current.reject(new Error(SIGN_CANCELLED_ERROR));
     }
-    current.reject(new Error(SIGN_CANCELLED_ERROR));
-    dequeueNext();
-  }, [dequeueNext]);
+    for (const pending of queueRef.current) {
+      pending.reject(new Error(SIGN_CANCELLED_ERROR));
+    }
+    queueRef.current = [];
+    inflightByKeyRef.current.clear();
+    currentRef.current = null;
+    syncDialog();
+  }, [syncDialog]);
+
+  const handleCancel = useCallback(() => {
+    cancelPendingSignRequests();
+  }, [cancelPendingSignRequests]);
 
   const handleSign = useCallback(() => {
     const current = currentRef.current;
@@ -136,7 +148,10 @@ export function SignNetworkRequestProvider({
     dequeueNext();
   }, [dequeueNext]);
 
-  const value = useMemo(() => ({ requestSignApproval }), [requestSignApproval]);
+  const value = useMemo(
+    () => ({ requestSignApproval, cancelPendingSignRequests }),
+    [cancelPendingSignRequests, requestSignApproval],
+  );
 
   return (
     <SignNetworkRequestContext.Provider value={value}>

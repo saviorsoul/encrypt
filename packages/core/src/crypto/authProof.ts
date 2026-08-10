@@ -148,12 +148,29 @@ export function parseAuthRequestBodyInit(
   throw new Error('Unsupported request body type for API auth.');
 }
 
+/** Parse a request URL for auth signing (supports same-origin relative paths). */
+export function parseAuthRequestUrl(url: string | URL): URL {
+  if (url instanceof URL) {
+    return url;
+  }
+  try {
+    return new URL(url);
+  } catch {
+    const base =
+      typeof globalThis.location?.origin === 'string' &&
+      globalThis.location.origin !== 'null'
+        ? globalThis.location.origin
+        : 'http://localhost';
+    return new URL(url, base);
+  }
+}
+
 export function buildAuthRequestDescriptorFromParts(
   method: string,
   url: string | URL,
   body?: BodyInit | null | undefined,
 ): AuthRequestDescriptor {
-  const parsed = typeof url === 'string' ? new URL(url) : url;
+  const parsed = parseAuthRequestUrl(url);
   return {
     method: method.toUpperCase(),
     path: parsed.pathname,

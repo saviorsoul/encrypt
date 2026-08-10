@@ -38,6 +38,8 @@ type KeyNonceState = {
   pending: string | null;
   inFlightCount: number;
   waiters: Array<() => void>;
+  /** Nonce reserved by {@link commitNonceUse} until sign succeeds or rolls back. */
+  rollbackNonce: StoredAuthNonce | null;
 };
 
 const NONCE_STORAGE_PREFIX = 'encrypt:feed-api-nonce:';
@@ -216,7 +218,12 @@ export function handleFeedApiAuthStorageEvent(event: StorageEvent): void {
 function getKeyNonceState(keyId: string): KeyNonceState {
   let state = keyNonceStates.get(keyId);
   if (!state) {
-    state = { pending: null, inFlightCount: 0, waiters: [] };
+    state = {
+      pending: null,
+      inFlightCount: 0,
+      waiters: [],
+      rollbackNonce: null,
+    };
     keyNonceStates.set(keyId, state);
   }
   return state;
@@ -241,11 +248,53 @@ function waitForInFlightNonce(keyId: string): Promise<void> {
   });
 }
 
-function commitNonceUse(keyId: string): void {
+function readCommittedNonceSnapshot(
+  keyId: string,
+  state: KeyNonceState,
+): StoredAuthNonce | null {
+  const storage = getNoncePersistence();
+  if (storage) {
+    const record = parseStoredNonceRecord(
+      storage.getItem(nonceStorageKey(keyId)),
+    );
+    if (record) {
+      return record;
+    }
+  }
+  if (state.pending) {
+    return {
+      nonce: state.pending,
+      expiresAt: nonceExpiresAtMs(),
+    };
+  }
+  return null;
+}
+
+export function commitNonceUse(keyId: string): void {
   const state = getKeyNonceState(keyId);
+  state.rollbackNonce = readCommittedNonceSnapshot(keyId, state);
   state.pending = null;
   removeStoredPendingNonce(keyId);
   state.inFlightCount += 1;
+}
+
+/** Signing succeeded; the reserved nonce will be spent on the outbound request. */
+export function confirmNonceUse(keyId: string): void {
+  getKeyNonceState(keyId).rollbackNonce = null;
+}
+
+/** Undo {@link commitNonceUse} when auth header generation fails before a request completes. */
+export function rollbackNonceUse(keyId: string): void {
+  const state = getKeyNonceState(keyId);
+  if (state.inFlightCount > 0) {
+    state.inFlightCount -= 1;
+  }
+  const rollback = state.rollbackNonce;
+  state.rollbackNonce = null;
+  if (rollback && nonceHasMinRemaining(rollback.expiresAt)) {
+    rememberPendingNonce(keyId, rollback.nonce, rollback.expiresAt);
+  }
+  notifyNonceWaiters(keyId);
 }
 
 export function clearFeedApiAuthState(): void {
@@ -264,7 +313,7 @@ export function releaseFeedApiAuthKeySwitch(previousKeyId: string): void {
   authLocks.delete(previousKeyId);
 }
 
-async function withKeyAuthLock<T>(
+export async function withKeyAuthLock<T>(
   keyId: string,
   fn: () => Promise<T>,
 ): Promise<T> {
@@ -327,7 +376,7 @@ async function requestChallengeNonce(
   return { nonce: body.nonce, expiresAt };
 }
 
-async function resolvePendingNonce(
+export async function resolvePendingNonce(
   config: FeedApiAuthProviderConfig,
   material: UploadedPrivateKeyMaterial,
   bypassClientCache: boolean,
@@ -391,12 +440,18 @@ async function buildAuthHeaderRecordForMaterial(
       options?.bypassClientNonceCache === true,
     );
     commitNonceUse(material.keyId);
-    const headers = await buildAuthHeadersFromMaterial(
-      material,
-      request,
-      nonce,
-    );
-    return authHeadersToRecord(headers);
+    try {
+      const headers = await buildAuthHeadersFromMaterial(
+        material,
+        request,
+        nonce,
+      );
+      confirmNonceUse(material.keyId);
+      return authHeadersToRecord(headers);
+    } catch (error) {
+      rollbackNonceUse(material.keyId);
+      throw error;
+    }
   });
 }
 
@@ -441,12 +496,18 @@ export function createFeedApiAuthProvider(
           options?.bypassClientNonceCache === true,
         );
         commitNonceUse(material.keyId);
-        const headers = await buildAuthHeadersFromMaterial(
-          material,
-          request,
-          nonce,
-        );
-        return headers;
+        try {
+          const headers = await buildAuthHeadersFromMaterial(
+            material,
+            request,
+            nonce,
+          );
+          confirmNonceUse(material.keyId);
+          return headers;
+        } catch (error) {
+          rollbackNonceUse(material.keyId);
+          throw error;
+        }
       });
     },
   };

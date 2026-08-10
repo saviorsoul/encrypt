@@ -17,7 +17,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       react(),
       contentSecurityPolicyPlugin(isDevServer),
-      subresourceIntegrityPlugin(),
+      subresourceIntegrityPlugin({ enabled: !isElectron }),
     ],
     resolve: {
       alias: {

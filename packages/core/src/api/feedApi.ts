@@ -9,6 +9,7 @@ import {
 } from './feedApiAuth.ts';
 import {
   buildAuthRequestDescriptorFromParts,
+  parseAuthRequestUrl,
   type AuthRequestDescriptor,
 } from '../crypto/authProof.ts';
 
@@ -268,7 +269,7 @@ export function createFeedApi(config: FeedApiConfig) {
     },
 
     async getComments(messageId: string): Promise<StoredComment[]> {
-      const url = new URL(joinUrl(baseUrl, '/api/comments'));
+      const url = parseAuthRequestUrl(joinUrl(baseUrl, '/api/comments'));
       url.searchParams.set('messageId', messageId);
       const response = await authorizedFetchUrl(url.toString(), {});
       if (!response.ok) {

@@ -28,6 +28,7 @@ type AddFriendDialogProps = {
   onClose: () => void;
   onClearInvitationError: () => void;
   onClearRequestError: () => void;
+  onCancelInFlight: () => void;
   onCreateInvitation: (name: string) => void;
   onSendRequestByPublicKey: (
     publicKey: string,
@@ -48,6 +49,7 @@ export function AddFriendDialog({
   onClose,
   onClearInvitationError,
   onClearRequestError,
+  onCancelInFlight,
   onCreateInvitation,
   onSendRequestByPublicKey,
 }: AddFriendDialogProps) {
@@ -119,7 +121,17 @@ export function AddFriendDialog({
         : 'Copy invitation link';
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={() => {
+        if (busy) {
+          onCancelInFlight();
+        }
+        onClose();
+      }}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Add friend</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
@@ -233,7 +245,14 @@ export function AddFriendDialog({
       </DialogContent>
       <Divider />
       <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>
-        <Button onClick={onClose} disabled={busy}>
+        <Button
+          onClick={() => {
+            if (busy) {
+              onCancelInFlight();
+            }
+            onClose();
+          }}
+        >
           {invitationHref && tab === 'link' ? 'Close' : 'Cancel'}
         </Button>
         <Box>
@@ -259,7 +278,11 @@ export function AddFriendDialog({
             <Button
               variant="contained"
               disabled={
-                busy || !canInvite || !publicKey.trim() || !friendName.trim()
+                busy ||
+                !canInvite ||
+                !publicKey.trim() ||
+                !friendName.trim() ||
+                Boolean(requestError)
               }
               onClick={handleSendRequest}
             >

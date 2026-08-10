@@ -9,6 +9,7 @@ import {
   powerMonitor,
   screen,
   session,
+  shell,
   Tray,
 } from 'electron';
 import { getContentSecurityPolicy } from './csp.js';
@@ -16,7 +17,16 @@ import {
   MAX_IMPORT_JSON_FILE_BYTES,
   validateBaseJsonText,
 } from './validateBaseJsonText.js';
-import { findDeepLinkInArgv, parseDeepLink } from './deepLinks.js';
+import {
+  findDeepLinkInArgv,
+  parseDeepLink,
+  isBackgroundFeedBridgeDeepLinkAction,
+} from './deepLinks.js';
+import { validateFeedLabOpenExternalUrl } from './feedLabBridgeOpenExternal.js';
+import {
+  FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+  isFeedLabProtocolBridgeEnabled,
+} from './feedLabBridgeConfig.js';
 import {
   isLinuxEncryptProtocolHandlerDefault,
   queryLinuxEncryptProtocolHandler,
@@ -257,6 +267,14 @@ function restoreDefaultProtocolHandler() {
 }
 
 /**
+ * @param {import('./deepLinks.js').DeepLinkAction} action
+ * @returns {boolean}
+ */
+function isFeedLabBridgeDeepLinkAction(action) {
+  return action.type === 'feed-pair' || action.type === 'feed-op';
+}
+
+/**
  * @param {string} href
  */
 function handleDeepLinkUrl(href) {
@@ -273,6 +291,14 @@ function handleDeepLinkUrl(href) {
  * @param {import('./deepLinks.js').DeepLinkAction} action
  */
 function dispatchDeepLinkAction(action) {
+  if (
+    isFeedLabBridgeDeepLinkAction(action) &&
+    !isFeedLabProtocolBridgeEnabled()
+  ) {
+    sendDeepLinkError(FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE);
+    return;
+  }
+
   sendDeepLinkActionRequest(action);
 }
 
@@ -280,7 +306,13 @@ function dispatchDeepLinkAction(action) {
  * @param {import('./deepLinks.js').DeepLinkAction} action
  */
 function sendDeepLinkActionRequest(action) {
-  showMainWindow();
+  if (isBackgroundFeedBridgeDeepLinkAction(action)) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow({ showOnReady: false });
+    }
+  } else {
+    showMainWindow();
+  }
 
   if (!mainWindow || mainWindow.isDestroyed()) {
     pendingDeepLinkAction = action;
@@ -809,6 +841,8 @@ function createWindow({ showOnReady = true } = {}) {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Feed-lab op-quick must run while the window is hidden (tray).
+      backgroundThrottling: false,
     },
   });
 
@@ -1041,6 +1075,37 @@ ipcMain.handle('window:show', () => {
   showMainWindow();
 });
 
+ipcMain.handle('window:hide', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+  }
+});
+
+ipcMain.handle('window:is-visible', () => {
+  return Boolean(
+    mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible(),
+  );
+});
+
+ipcMain.handle('shell:open-external', async (event, url, options = {}) => {
+  assertPrivateKeyIpcSender(event);
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error('URL is required.');
+  }
+
+  const validationError = validateFeedLabOpenExternalUrl(url);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const externalOptions = {};
+  if (options?.background === true && process.platform === 'darwin') {
+    externalOptions.activate = false;
+  }
+
+  await shell.openExternal(url.trim(), externalOptions);
+});
+
 ipcMain.handle('deep-link:consume-pending-action', () => {
   return consumePendingDeepLinkAction();
 });
@@ -1100,7 +1165,12 @@ app.whenReady().then(() => {
   const startupDeepLink =
     earlyOpenUrlDeepLink ?? findDeepLinkInArgv(process.argv);
   earlyOpenUrlDeepLink = null;
+  let showWindowOnReady = true;
   if (startupDeepLink) {
+    const parsed = parseDeepLink(startupDeepLink);
+    if (parsed.ok && isBackgroundFeedBridgeDeepLinkAction(parsed.action)) {
+      showWindowOnReady = false;
+    }
     handleDeepLinkUrl(startupDeepLink);
   } else {
     enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
@@ -1108,7 +1178,7 @@ app.whenReady().then(() => {
 
   createTray();
   if (!mainWindow || mainWindow.isDestroyed()) {
-    createWindow();
+    createWindow({ showOnReady: showWindowOnReady });
   }
 
   app.on('activate', () => {

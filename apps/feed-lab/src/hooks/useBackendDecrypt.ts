@@ -16,8 +16,12 @@ import type {
 } from '@encrypt/core/feed/types';
 import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
+import {
+  collectManifestMessageIds,
+  serializeManifestLookup,
+} from '@lab/lib/manifestLookupWire.ts';
 
-type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
+type KeysSession = ReturnType<typeof usePrivateKeySession>;
 
 type DecryptContext = {
   delivery: StoredFeedDelivery;
@@ -144,7 +148,18 @@ function withoutKey<T extends Record<string, unknown>>(map: T, key: string): T {
   return next;
 }
 
-export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
+function buildDecryptManifestWire(
+  context: DecryptContext | DecryptCommentsContext,
+  keyId: string,
+): ReturnType<typeof serializeManifestLookup> {
+  const messageIds = collectManifestMessageIds(
+    'messageId' in context ? context.messageId : context.delivery.id,
+    ...context.allDeliveries.map((delivery) => delivery.id),
+  );
+  return serializeManifestLookup(context.manifestLookup, messageIds, [keyId]);
+}
+
+export function useBackendDecrypt(keys: KeysSession) {
   const [busyMessageId, setBusyMessageId] = useState<string | null>(null);
   const [decryptedMessages, setDecryptedMessages] = useState<
     Record<string, string>
@@ -164,7 +179,23 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
       const { messageId } = context;
       setCommentsErrors((prev) => withoutKey(prev, messageId));
       try {
-        const commentTexts = await withPrivateKey(async (material) =>
+        if (keys.isSystemAppSession && keys.keyId) {
+          const result = await keys.systemDecryptComments({
+            comments: context.comments,
+            allDeliveries: context.allDeliveries,
+            manifestEntries: await buildDecryptManifestWire(
+              context,
+              keys.keyId,
+            ),
+          });
+          setDecryptedCommentsByMessage((prev) => ({
+            ...prev,
+            [messageId]: result.decrypted,
+          }));
+          return result.decrypted;
+        }
+
+        const commentTexts = await keys.withPrivateKey(async (material) =>
           decryptCommentsWithMaterial(
             material,
             context.comments,
@@ -187,7 +218,7 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
         throw e;
       }
     },
-    [withPrivateKey],
+    [keys],
   );
 
   const decryptDelivery = useCallback(
@@ -197,7 +228,23 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
       setMessageErrors((prev) => withoutKey(prev, messageId));
       setCommentsErrors((prev) => withoutKey(prev, messageId));
       try {
-        const messageText = await withPrivateKey(async (material) =>
+        if (keys.isSystemAppSession && keys.keyId) {
+          const result = await keys.systemDecryptMessage({
+            delivery: context.delivery,
+            allDeliveries: context.allDeliveries,
+            manifestEntries: await buildDecryptManifestWire(
+              context,
+              keys.keyId,
+            ),
+          });
+          setDecryptedMessages((prev) => ({
+            ...prev,
+            [messageId]: result.plaintext,
+          }));
+          return result.plaintext;
+        }
+
+        const messageText = await keys.withPrivateKey(async (material) =>
           decryptWithMaterial(material, context),
         );
         if (messageText === null) {
@@ -216,7 +263,7 @@ export function useBackendDecrypt(withPrivateKey: WithPrivateKey) {
         setBusyMessageId(null);
       }
     },
-    [withPrivateKey],
+    [keys],
   );
 
   const clear = useCallback(() => {

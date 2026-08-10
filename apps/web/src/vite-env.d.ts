@@ -3,6 +3,10 @@
 interface ImportMetaEnv {
   readonly VITE_ELECTRON?: string;
   readonly VITE_CAPACITOR?: string;
+  readonly VITE_FEED_LAB_HOSTNAME?: string;
+  readonly VITE_FEED_LAB_DEV_HOSTNAME?: string;
+  readonly VITE_FEED_LAB_HASH_ROUTER?: string;
+  readonly VITE_FEED_LAB_PROTOCOL_BRIDGE?: string;
 }
 
 interface ImportMeta {
@@ -49,7 +53,15 @@ export type TrayEncryptCopiedMessagePayload =
 export type DeepLinkAction =
   | { type: 'copy-public-key' }
   | { type: 'encrypt'; text: string }
-  | { type: 'decrypt'; text: string };
+  | { type: 'decrypt'; text: string }
+  | { type: 'feed-pair'; origin: string; session: string; callback: string }
+  | {
+      type: 'feed-op';
+      session: string;
+      requestId: string;
+      op: string;
+      payload: string;
+    };
 
 export type DeepLinkErrorPayload = {
   message: string;
@@ -124,7 +136,13 @@ interface ElectronBridge {
     clearAllForCleanLocalData: () => Promise<void>;
   };
   showMainWindow: () => Promise<void>;
+  hideMainWindow: () => Promise<void>;
+  isMainWindowVisible: () => Promise<boolean>;
   flashTraySuccess: () => Promise<void>;
+  openExternal: (
+    url: string,
+    options?: { background?: boolean },
+  ) => Promise<void>;
   setTrayAuthState: (state: TrayAuthState) => void;
   setTrayRecipients: (state: TrayRecipientsState) => void;
 }

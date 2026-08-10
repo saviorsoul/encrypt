@@ -1,8 +1,14 @@
 import crypto from 'node:crypto';
-import type { IndexHtmlTransformContext, Plugin } from 'vite';
-import type { OutputAsset, OutputBundle, OutputChunk } from 'rollup';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { Plugin } from 'vite';
+import type { OutputBundle } from 'rollup';
 
 const SRI_ALGORITHM = 'sha384';
+
+type SubresourceIntegrityPluginOptions = {
+  enabled?: boolean;
+};
 
 function hashContent(source: string | Uint8Array): string {
   const data =
@@ -12,28 +18,23 @@ function hashContent(source: string | Uint8Array): string {
   return `${SRI_ALGORITHM}-${digest}`;
 }
 
-function buildIntegrityMap(bundle: OutputBundle): Map<string, string> {
+function buildIntegrityMapFromDisk(
+  bundle: OutputBundle,
+  outputDir: string,
+): Map<string, string> {
   const integrityByFile = new Map<string, string>();
 
-  for (const [fileName, item] of Object.entries(bundle)) {
-    if (item.type === 'chunk') {
-      integrityByFile.set(fileName, hashContent((item as OutputChunk).code));
-      continue;
-    }
-
-    if (item.type === 'asset') {
-      const source = (item as OutputAsset).source;
-      if (source !== undefined && source !== null) {
-        integrityByFile.set(fileName, hashContent(source));
-      }
-    }
+  for (const fileName of Object.keys(bundle)) {
+    const filePath = path.join(outputDir, fileName);
+    const content = fs.readFileSync(filePath);
+    integrityByFile.set(fileName, hashContent(content));
   }
 
   return integrityByFile;
 }
 
 function resolveBundleFileName(src: string): string | null {
-  const normalized = src.replace(/^\.\//, '');
+  const normalized = src.replace(/^\.\//, '').replace(/^\//, '');
   const assetsIndex = normalized.lastIndexOf('assets/');
 
   if (assetsIndex >= 0) {
@@ -69,14 +70,8 @@ function injectIntegrityAttributes(
 
 function applySubresourceIntegrity(
   html: string,
-  ctx: IndexHtmlTransformContext,
+  integrityByFile: Map<string, string>,
 ): string {
-  if (!ctx.bundle) {
-    return html;
-  }
-
-  const integrityByFile = buildIntegrityMap(ctx.bundle);
-
   html = html.replace(
     /<script\b([^>]*\ssrc="([^"]+)"[^>]*)>/g,
     (_match, attributes: string, src: string) =>
@@ -97,15 +92,33 @@ function applySubresourceIntegrity(
   return html;
 }
 
-export function subresourceIntegrityPlugin(): Plugin {
+export function subresourceIntegrityPlugin(
+  options: SubresourceIntegrityPluginOptions = {},
+): Plugin {
+  const enabled = options.enabled ?? true;
+
   return {
     name: 'subresource-integrity',
     apply: 'build',
-    transformIndexHtml: {
-      order: 'post',
-      handler(html, ctx) {
-        return applySubresourceIntegrity(html, ctx);
-      },
+    writeBundle(outputOptions, bundle) {
+      if (!enabled) {
+        return;
+      }
+
+      const outputDir = outputOptions.dir;
+      if (!outputDir) {
+        return;
+      }
+
+      const htmlPath = path.join(outputDir, 'index.html');
+      if (!fs.existsSync(htmlPath)) {
+        return;
+      }
+
+      const integrityByFile = buildIntegrityMapFromDisk(bundle, outputDir);
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      const updatedHtml = applySubresourceIntegrity(html, integrityByFile);
+      fs.writeFileSync(htmlPath, updatedHtml);
     },
   };
 }

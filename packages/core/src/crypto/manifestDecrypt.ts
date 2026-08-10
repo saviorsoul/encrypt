@@ -243,6 +243,24 @@ export async function decryptDekFromManifestEntry(
   };
 }
 
+/** Unwrap a manifest shard DEK using a pre-derived ECDH shared secret (feed-lab bridge path). */
+export async function unwrapRawDekFromManifestEntryWithSharedSecret(
+  entry: KeyManifestRecipientPayload,
+  sharedSecret: ArrayBuffer,
+): Promise<ArrayBuffer> {
+  const hkdfKeyMaterial =
+    await importSharedSecretAsHkdfKeyMaterial(sharedSecret);
+  const hkdfSalt = new Uint8Array(base64ToBytes(entry.salt));
+  const { kek } = await deriveAesGcmKekFromHkdfMaterial(hkdfKeyMaterial, {
+    salt: hkdfSalt,
+    extractable: false,
+    keyUsages: ['decrypt'],
+  });
+  const iv = base64ToBytes(entry.iv);
+  const encryptedDek = base64ToBytes(entry.encryptedDek);
+  return aesGcmDecryptEncryptedDek(kek, iv, encryptedDek);
+}
+
 export async function decryptMessageDekFromCore(
   messageCorePayload: string,
   entry: KeyManifestRecipientPayload,

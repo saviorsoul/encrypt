@@ -632,7 +632,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
     postBusy: commentsPostBusy,
     postComment,
     decryptCommentText,
-  } = useBackendComments(message.id, keys.keyId, keys.withPrivateKey);
+  } = useBackendComments(message.id, keys.keyId, keys);
 
   useEffect(() => {
     if (!commentsLoading) {
@@ -644,6 +644,11 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   useEffect(() => {
     if (!decryptPlaintext) {
       autoDecryptCommentsAttemptedRef.current = false;
+    }
+  }, [decryptPlaintext]);
+
+  useEffect(() => {
+    if (!decryptPlaintext) {
       return;
     }
     if (
@@ -661,6 +666,8 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
       comments,
       allDeliveries: feedContext.allDeliveries,
       manifestLookup: feedContext.manifestLookup,
+    }).catch(() => {
+      autoDecryptCommentsAttemptedRef.current = false;
     });
   }, [
     comments,

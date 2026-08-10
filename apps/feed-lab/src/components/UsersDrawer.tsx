@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Box,
+  CircularProgress,
   Container,
   Drawer,
   IconButton,
@@ -8,7 +9,9 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import { UsersPage } from '@lab/pages/UsersPage.tsx';
+import { useFeedLabFriendships } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
 
 type UsersDrawerProps = {
   open: boolean;
@@ -16,8 +19,13 @@ type UsersDrawerProps = {
 };
 
 export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
+  const { ensureUsersLoaded, refresh, usersLoading } = useFeedLabFriendships();
   const [hasOpened, setHasOpened] = useState(open);
   const [prevOpen, setPrevOpen] = useState(open);
+
+  const handleRefresh = useCallback(() => {
+    void refresh({ force: true });
+  }, [refresh]);
 
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -25,6 +33,12 @@ export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
       setHasOpened(true);
     }
   }
+
+  useEffect(() => {
+    if (open) {
+      void ensureUsersLoaded();
+    }
+  }, [ensureUsersLoaded, open]);
 
   return (
     <Drawer
@@ -53,9 +67,23 @@ export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
             sx={{ alignItems: 'center', justifyContent: 'space-between' }}
           >
             <Typography variant="h6">Users</Typography>
-            <IconButton aria-label="Close users" onClick={onClose} edge="end">
-              <CloseIcon />
-            </IconButton>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <IconButton
+                aria-label="Refresh users"
+                onClick={handleRefresh}
+                disabled={!open || usersLoading}
+                edge="end"
+              >
+                {usersLoading ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <RefreshOutlinedIcon />
+                )}
+              </IconButton>
+              <IconButton aria-label="Close users" onClick={onClose} edge="end">
+                <CloseIcon />
+              </IconButton>
+            </Stack>
           </Stack>
           <Box sx={{ overflow: 'auto' }}>
             {hasOpened ? <UsersPage /> : null}

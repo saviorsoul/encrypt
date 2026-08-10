@@ -25,6 +25,8 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0015](./0015-browser-integration-via-encrypt-protocol.md) | Browser integration via `encrypt://` custom protocol | Accepted |
 | [0016](./0016-electron-safe-storage-private-key-persistence.md) | Electron safeStorage private key persistence | Accepted |
 | [0017](./0017-electron-main-process-private-key-crypto.md) | Electron main-process private key crypto | Postponed |
+| [0018](./0018-feed-lab-bridge-via-encrypt-protocol.md) | Feed-lab bridge via `encrypt://` protocol and same-origin callback | Accepted |
+| [0019](./0019-feed-lab-bridge-selective-confirmation.md) | Feed-lab bridge: selective confirmation after pairing | Accepted |
 
 ## When to write an ADR
 

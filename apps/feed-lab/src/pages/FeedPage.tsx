@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, CircularProgress, Stack, Typography } from '@mui/material';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendShare } from '@lab/hooks/useBackendShare.ts';
-import { useFeedLabFriendships } from '@lab/hooks/useFeedLabFriendships.ts';
+import { useFeedLabFriendships } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
 import { useFeedLabRecipients } from '@lab/hooks/useFeedLabRecipients.ts';
 import { useIdentityDialog } from '@lab/hooks/useIdentityDialog.ts';
 import { IdentityDialog } from '@lab/components/IdentityDialog.tsx';
@@ -14,6 +14,7 @@ import { MessageSentSnackbar } from '@lab/components/MessageSentSnackbar.tsx';
 import { SendMessageDialog } from '@lab/components/SendMessageDialog.tsx';
 import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { cancelPendingSystemOps } from '@lab/crypto/systemAppSigner.ts';
 
 export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
@@ -34,32 +35,29 @@ export function FeedPage() {
   const [sentMessageNotice, setSentMessageNotice] = useState<{
     messageId: string;
   } | null>(null);
-  const [loadFriendships, setLoadFriendships] = useState(false);
 
-  const shouldLoadFriendships =
-    loadFriendships || createMessageDialogOpen || shareDialogOpen;
-  const friendships = useFeedLabFriendships(
-    keys.keyId,
-    usernameByKeyId,
-    addLocalUser,
-    { enabled: shouldLoadFriendships },
-  );
+  const friendships = useFeedLabFriendships();
+  const { ensureFriendshipsLoaded } = friendships;
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
     usernames,
     addLocalUser,
     friendKeyIds: friendships.friendKeyIds,
-    onFriendshipsChanged: friendships.refresh,
-    onOpen: () => setLoadFriendships(true),
+    friendshipsLoading: friendships.friendshipsLoading,
+    friendshipsError: friendships.friendshipsError,
+    onFriendshipsChanged: () => friendships.refresh({ force: true }),
+    onOpen: () => {
+      void friendships.ensureFriendshipsLoaded();
+    },
   });
   const recipients = useFeedLabRecipients({
     viewerKeyId: keys.keyId,
     friends: friendships.friends,
-    loadingFriends: friendships.loading,
-    friendsError: friendships.error,
+    loadingFriends: friendships.friendshipsLoading,
+    friendsError: friendships.friendshipsError,
   });
-  const decrypt = useBackendDecrypt(keys.withPrivateKey);
+  const decrypt = useBackendDecrypt(keys);
   const {
     clear: clearDecrypt,
     mergeDecryptedComments,
@@ -71,7 +69,7 @@ export function FeedPage() {
     decryptedCommentsByMessage,
     commentsErrors,
   } = decrypt;
-  const share = useBackendShare(keys.withPrivateKey, keys.keyId);
+  const share = useBackendShare(keys, keys.keyId);
   const {
     clearLastShare,
     clearError: clearShareError,
@@ -86,6 +84,12 @@ export function FeedPage() {
     [feed.allDeliveries, feed.manifestLookup],
   );
 
+  useEffect(() => {
+    if (createMessageDialogOpen) {
+      void ensureFriendshipsLoaded();
+    }
+  }, [createMessageDialogOpen, ensureFriendshipsLoaded]);
+
   const handleMessageInteract = useCallback((messageId: string) => {
     setLastInteractedMessageId(messageId);
   }, []);
@@ -98,6 +102,7 @@ export function FeedPage() {
         if (next.has(messageId)) {
           next.delete(messageId);
         } else {
+          cancelPendingSystemOps();
           next.add(messageId);
           clearLastShare();
         }
@@ -133,10 +138,11 @@ export function FeedPage() {
     (messageId: string) => {
       setLastInteractedMessageId(messageId);
       clearShareError();
+      void ensureFriendshipsLoaded();
       setShareTargetMessageId(messageId);
       setShareDialogOpen(true);
     },
-    [clearShareError],
+    [clearShareError, ensureFriendshipsLoaded],
   );
 
   const handleCloseShareDialog = useCallback(() => {
@@ -226,8 +232,7 @@ export function FeedPage() {
 
       <SendMessageDialog
         open={createMessageDialogOpen}
-        withPrivateKey={keys.withPrivateKey}
-        keyId={keys.keyId}
+        keys={keys}
         recipients={recipients}
         onClose={() => setCreateMessageDialogOpen(false)}
         onSendSuccess={handleSendSuccess}

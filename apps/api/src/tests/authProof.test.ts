@@ -7,10 +7,12 @@ import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKe
 import { bytesToBase64, base64ToBytes } from '@encrypt/core/utils/bytes';
 import {
   assertAuthKeyIdMatchesPublicKey,
+  buildAuthRequestDescriptorFromParts,
   buildAuthSignable,
   computeAuthTimeSlot,
   isAuthTimeSlotAccepted,
   parseAuthNonceHeader,
+  parseAuthRequestUrl,
   parseAuthTimeSlotHeader,
   signAuthProof,
   verifyAuthProof,
@@ -25,6 +27,22 @@ const TEST_NONCE = bytesToBase64(new Uint8Array(12).fill(0x11));
 const OTHER_NONCE = bytesToBase64(new Uint8Array(12).fill(0x22));
 
 describe('authProof', () => {
+  it('parseAuthRequestUrl accepts same-origin relative paths', () => {
+    const parsed = parseAuthRequestUrl('/api/friend-invitations/token');
+    expect(parsed.pathname).toBe('/api/friend-invitations/token');
+  });
+
+  it('buildAuthRequestDescriptorFromParts accepts relative request URLs', () => {
+    const descriptor = buildAuthRequestDescriptorFromParts(
+      'post',
+      '/api/friend-invitations/abc/accept',
+      JSON.stringify({}),
+    );
+    expect(descriptor.method).toBe('POST');
+    expect(descriptor.path).toBe('/api/friend-invitations/abc/accept');
+    expect(descriptor.body).toEqual({});
+  });
+
   it('generateAuthNonce returns 12-byte standard base64', () => {
     const nonce = generateAuthNonce();
     expect(parseAuthNonceHeader(nonce)).toBe(nonce);

@@ -1,8 +1,12 @@
 import { useCallback, useState } from 'react';
 import type { CreateFriendshipRequestResult } from '@encrypt/core/api/feedApi';
+import type { FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { useSignNetworkRequest } from '@lab/providers/SignNetworkRequestProvider.tsx';
+import { abortPendingBridgeWork } from '@lab/crypto/systemAppSigner.ts';
 import { ensureBackendUserFromPublicKey } from '@lab/lib/ensureBackendUserFromPublicKey.ts';
+import { friendshipRequestErrorMessage } from '@lab/lib/friendshipRequestErrors.ts';
 import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
 import { saveSentInvitation } from '@lab/services/db/sentInvitations.ts';
 
@@ -10,15 +14,73 @@ export type SendFriendRequestResult =
   | { ok: true; keyId: string; outcome: CreateFriendshipRequestResult }
   | { ok: false; error: string };
 
+type EnsureTargetUserResult =
+  | {
+      ok: true;
+      keyId: string;
+      publicKey: { x: string; y: string };
+    }
+  | { ok: false; error: string };
+
+async function resolveTargetUser(
+  api: ReturnType<typeof useFeedApi>,
+  publicKeyText: string,
+  auth?: FeedApiRequestOptions,
+): Promise<EnsureTargetUserResult> {
+  return ensureBackendUserFromPublicKey(api, publicKeyText, auth);
+}
+
+function validateFriendRequestName(
+  trimmedName: string,
+  targetKeyId: string,
+  viewerKeyId: string,
+  existingUsernames: string[],
+  usernameByKeyId: Record<string, string>,
+): { ok: true } | { ok: false; error: string } {
+  if (targetKeyId === viewerKeyId) {
+    return {
+      ok: false,
+      error: 'Cannot send a friend request to yourself.',
+    };
+  }
+
+  const existingUsernameForKey = usernameByKeyId[targetKeyId] ?? '';
+  const nameTaken =
+    existingUsernames.some(
+      (existing) =>
+        existing.localeCompare(trimmedName, undefined, {
+          sensitivity: 'accent',
+        }) === 0,
+    ) &&
+    trimmedName.localeCompare(existingUsernameForKey, undefined, {
+      sensitivity: 'accent',
+    }) !== 0;
+  if (nameTaken) {
+    return {
+      ok: false,
+      error: `"${trimmedName}" already exists. Choose a unique name.`,
+    };
+  }
+
+  return { ok: true };
+}
+
 export function useBackendFriendshipRequests(
   onChanged?: () => void | Promise<void>,
   onLocalUserSaved?: (input: { keyId: string; username: string }) => void,
 ) {
   const api = useFeedApi();
   const { keys } = useFeedLabSession();
+  const { cancelPendingSignRequests } = useSignNetworkRequest();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const cancelInFlight = useCallback(() => {
+    abortPendingBridgeWork();
+    cancelPendingSignRequests();
+    setBusy(false);
+  }, [cancelPendingSignRequests]);
 
   const run = useCallback(
     async (action: () => Promise<void>) => {
@@ -29,12 +91,29 @@ export function useBackendFriendshipRequests(
         await action();
         await onChanged?.();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Friendship request failed.');
+        setError(friendshipRequestErrorMessage(e));
       } finally {
         setBusy(false);
       }
     },
     [onChanged],
+  );
+
+  const runSignedApiCall = useCallback(
+    async (action: () => Promise<void>) => {
+      if (keys.isSystemAppSession) {
+        await action();
+        return;
+      }
+
+      const result = await keys.withPrivateKey(async () => {
+        await action();
+      });
+      if (result === null) {
+        throw new Error('Private key is required for this action.');
+      }
+    },
+    [keys],
   );
 
   const sendRequestByPublicKey = useCallback(
@@ -62,92 +141,67 @@ export function useBackendFriendshipRequests(
       setError(null);
       setInfo(null);
       try {
-        const result = await keys.withPrivateKey(async (material) => {
-          const auth = { auth: { authMaterial: material } };
+        const ensured = keys.isSystemAppSession
+          ? await resolveTargetUser(api, publicKeyText)
+          : await keys.withPrivateKey(async (material) =>
+              resolveTargetUser(api, publicKeyText, {
+                auth: { authMaterial: material },
+              }),
+            );
 
-          const ensured = await ensureBackendUserFromPublicKey(
-            api,
-            publicKeyText,
-            auth,
-          );
-          if (ensured.ok === false) {
-            return { ok: false as const, error: ensured.error };
-          }
-
-          if (ensured.keyId === authenticatedKeyId) {
-            return {
-              ok: false as const,
-              error: 'Cannot send a friend request to yourself.',
-            };
-          }
-
-          const existingUsernameForKey = usernameByKeyId[ensured.keyId] ?? '';
-          const nameTaken =
-            existingUsernames.some(
-              (existing) =>
-                existing.localeCompare(trimmedName, undefined, {
-                  sensitivity: 'accent',
-                }) === 0,
-            ) &&
-            trimmedName.localeCompare(existingUsernameForKey, undefined, {
-              sensitivity: 'accent',
-            }) !== 0;
-          if (nameTaken) {
-            return {
-              ok: false as const,
-              error: `"${trimmedName}" already exists. Choose a unique name.`,
-            };
-          }
-
-          await saveFeedLabUser(authenticatedKeyId, trimmedName, {
-            kty: 'EC',
-            crv: 'P-256',
-            x: ensured.publicKey.x,
-            y: ensured.publicKey.y,
-          });
-          onLocalUserSaved?.({ keyId: ensured.keyId, username: trimmedName });
-
-          const invitation = await api.postFriendInvitation();
-          await saveSentInvitation(
-            invitation.token,
-            trimmedName,
-            material.keyId,
-          );
-
-          const outcome = await api.postFriendshipRequest({
-            targetKeyId: ensured.keyId,
-            invitationToken: invitation.token,
-          });
-
-          return {
-            ok: true as const,
-            keyId: ensured.keyId,
-            outcome,
-          };
-        });
-
-        if (!result) {
+        if (!ensured) {
           const message = 'Private key is required to send a friend request.';
           setError(message);
           return { ok: false, error: message };
         }
 
-        if (!result.ok) {
-          setError(result.error);
-          return result;
+        if (ensured.ok === false) {
+          setError(ensured.error);
+          return ensured;
         }
 
-        if (result.outcome.status === 'accepted') {
+        const nameValidation = validateFriendRequestName(
+          trimmedName,
+          ensured.keyId,
+          authenticatedKeyId,
+          existingUsernames,
+          usernameByKeyId,
+        );
+        if (!nameValidation.ok) {
+          setError(nameValidation.error);
+          return nameValidation;
+        }
+
+        const invitation = await api.postFriendInvitation();
+        await saveSentInvitation(
+          invitation.token,
+          trimmedName,
+          authenticatedKeyId,
+        );
+
+        const outcome = await api.postFriendshipRequest({
+          targetKeyId: ensured.keyId,
+          invitationToken: invitation.token,
+        });
+
+        await saveFeedLabUser(authenticatedKeyId, trimmedName, {
+          kty: 'EC',
+          crv: 'P-256',
+          x: ensured.publicKey.x,
+          y: ensured.publicKey.y,
+        });
+        onLocalUserSaved?.({ keyId: ensured.keyId, username: trimmedName });
+
+        if (outcome.status === 'accepted') {
           setInfo('You are already friends with this person.');
         } else {
           setInfo('Friend request sent.');
         }
 
         await onChanged?.();
-        return result;
+        return { ok: true, keyId: ensured.keyId, outcome };
       } catch (e) {
-        const message =
-          e instanceof Error ? e.message : 'Friendship request failed.';
+        const message = friendshipRequestErrorMessage(e);
         setError(message);
         return { ok: false, error: message };
       } finally {
@@ -163,42 +217,41 @@ export function useBackendFriendshipRequests(
       setError(null);
       setInfo(null);
       try {
-        await keys.withPrivateKey(async () => {
+        await runSignedApiCall(async () => {
           await api.acceptFriendshipRequest({ requesterKeyId });
         });
         return null;
       } catch (e) {
-        const message =
-          e instanceof Error ? e.message : 'Friendship request failed.';
+        const message = friendshipRequestErrorMessage(e);
         setError(message);
         return message;
       } finally {
         setBusy(false);
       }
     },
-    [api, keys],
+    [api, runSignedApiCall],
   );
 
   const rejectRequest = useCallback(
     async (requesterKeyId: string) => {
       await run(async () => {
-        await keys.withPrivateKey(async () => {
+        await runSignedApiCall(async () => {
           await api.rejectFriendshipRequest({ requesterKeyId });
         });
       });
     },
-    [api, keys, run],
+    [run, runSignedApiCall],
   );
 
   const unfriend = useCallback(
     async (friendKeyId: string) => {
       await run(async () => {
-        await keys.withPrivateKey(async () => {
+        await runSignedApiCall(async () => {
           await api.deleteFriendship({ friendKeyId });
         });
       });
     },
-    [api, keys, run],
+    [run, runSignedApiCall],
   );
 
   const clearError = useCallback(() => {
@@ -217,6 +270,7 @@ export function useBackendFriendshipRequests(
     acceptRequest,
     rejectRequest,
     unfriend,
+    cancelInFlight,
     clearError,
     clearInfo,
   };

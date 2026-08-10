@@ -11,22 +11,25 @@ import { PrivateKeyWarmup } from '@/components/providers/PrivateKeyWarmup.tsx';
 import { CapacitorPrivateKeyAuthSync } from '@/components/providers/PlatformPrivateKeyAuthSync.tsx';
 import { ElectronDesktopEncryptHandler } from '@/components/providers/ElectronDesktopEncryptHandler.tsx';
 import { ElectronDeepLinkHandler } from '@/components/providers/ElectronDeepLinkHandler.tsx';
+import { FeedLabBridgeHandler } from '@/components/providers/FeedLabBridgeHandler.tsx';
 import { SessionPrivateKeyProvider } from '@/components/providers/SessionPrivateKeyProvider.tsx';
 import { StoragePersistenceProvider } from '@/components/providers/StoragePersistenceProvider.tsx';
 import { ProtocolHandlerProvider } from '@/components/providers/ProtocolHandlerProvider.tsx';
+import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
 
-const useHashRouter = Boolean(
-  import.meta.env.VITE_ELECTRON || import.meta.env.VITE_CAPACITOR,
-);
+const isElectron = Boolean(import.meta.env.VITE_ELECTRON);
+const isCapacitor = Boolean(import.meta.env.VITE_CAPACITOR);
+const isNativeShell = isElectron || isCapacitor;
+const feedLabProtocolBridgeEnabled = isFeedLabProtocolBridgeEnabled();
 
-const Router = useHashRouter ? HashRouter : BrowserRouter;
+const Router = isNativeShell ? HashRouter : BrowserRouter;
 
 type AppProvidersProps = {
   children: ReactNode;
 };
 
 export function AppProviders({ children }: AppProvidersProps) {
-  const routerProps = useHashRouter
+  const routerProps = isNativeShell
     ? {}
     : { basename: import.meta.env.BASE_URL };
 
@@ -40,16 +43,16 @@ export function AppProviders({ children }: AppProvidersProps) {
               <KeysProvider>
                 <ProtocolHandlerProvider>
                   <ExternalFileProvider>
-                    {import.meta.env.VITE_ELECTRON ||
-                    import.meta.env.VITE_CAPACITOR ? (
+                    {isNativeShell ? (
                       <>
                         <PrivateKeyWarmup />
-                        {import.meta.env.VITE_CAPACITOR ? (
-                          <CapacitorPrivateKeyAuthSync />
+                        {isCapacitor ? <CapacitorPrivateKeyAuthSync /> : null}
+                        {feedLabProtocolBridgeEnabled ? (
+                          <FeedLabBridgeHandler />
                         ) : null}
                       </>
                     ) : null}
-                    {import.meta.env.VITE_ELECTRON ? (
+                    {isElectron ? (
                       <>
                         <ElectronTraySync />
                         <ElectronDesktopEncryptHandler />

@@ -3,16 +3,21 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
+
+const protocolBridgeEnabled = isFeedLabProtocolBridgeEnabled();
 
 export function LoginPage() {
   const { keys } = useFeedLabSession();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [pairBusy, setPairBusy] = useState(false);
 
   const handleChooseFile = useCallback(async () => {
     keys.clearSessionError();
@@ -24,6 +29,19 @@ export function LoginPage() {
       }
     } finally {
       setBusy(false);
+    }
+  }, [keys, navigate]);
+
+  const handleConnectEncryptApp = useCallback(async () => {
+    keys.clearSessionError();
+    setPairBusy(true);
+    try {
+      const keyId = await keys.pairWithEncryptApp();
+      if (keyId) {
+        navigate('/feed', { replace: true });
+      }
+    } finally {
+      setPairBusy(false);
     }
   }, [keys, navigate]);
 
@@ -43,26 +61,49 @@ export function LoginPage() {
     >
       <Paper sx={{ p: 3, maxWidth: 444, width: '100%' }}>
         <Typography variant="h6" component="h1" gutterBottom>
-          Sign in with private key
+          Sign in
         </Typography>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            To use Feed Lab, select the private key file for the account you
-            want to sign in with.
-          </Typography>
-          <Typography variant="body2">
-            Click the button below to open your file picker and choose a{' '}
-            <strong>.jwk</strong> or <strong>.json</strong> private key file.
-          </Typography>
+          {protocolBridgeEnabled ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Use the Encrypt system app to sign requests without loading your
+                private key into this browser, or choose a private key file.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={pairBusy || busy}
+                onClick={() => void handleConnectEncryptApp()}
+                startIcon={
+                  pairBusy ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : null
+                }
+              >
+                {pairBusy ? 'Waiting for Encrypt app…' : 'Connect Encrypt app'}
+              </Button>
+              <Divider>or</Divider>
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Choose a private key file to sign in. Connect via the Encrypt
+              system app is disabled in this build.
+            </Typography>
+          )}
           {keys.sessionError ? (
             <Alert severity="error">{keys.sessionError}</Alert>
           ) : null}
+          <Typography variant="body2">
+            Choose a <strong>.jwk</strong> or <strong>.json</strong> private key
+            file to sign in with a browser-loaded key.
+          </Typography>
           <Button
-            variant="contained"
+            variant="outlined"
             size="large"
             fullWidth
-            autoFocus
-            disabled={busy}
+            disabled={busy || pairBusy}
             onClick={() => void handleChooseFile()}
             startIcon={
               busy ? <CircularProgress size={18} color="inherit" /> : null

@@ -6,20 +6,22 @@ import {
   resolveParentMessageAccessFromFeed,
 } from '@encrypt/core/feed/access';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
+import { jwkWithoutKeyOps } from '@encrypt/core/crypto/ecdhKeys';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
+import {
+  collectManifestMessageIds,
+  serializeManifestLookup,
+} from '@lab/lib/manifestLookupWire.ts';
 
-type WithPrivateKey = ReturnType<typeof usePrivateKeySession>['withPrivateKey'];
+type KeysSession = ReturnType<typeof usePrivateKeySession>;
 
 type ShareContext = {
   allDeliveries: Parameters<typeof resolveParentMessageAccessFromFeed>[2];
   manifestLookup: Parameters<typeof resolveParentMessageAccessFromFeed>[3];
 };
 
-export function useBackendShare(
-  withPrivateKey: WithPrivateKey,
-  expectedKeyId: string | null,
-) {
+export function useBackendShare(keys: KeysSession, expectedKeyId: string | null) {
   const api = useFeedApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,72 @@ export function useBackendShare(
 
       setBusy(true);
       try {
-        const shareId = await withPrivateKey(async (material) => {
+        if (keys.isSystemAppSession) {
+          const access = await resolveParentMessageAccessFromFeed(
+            messageId,
+            keys.keyId!,
+            allDeliveries,
+            manifestLookup,
+          );
+          if (!access) {
+            throw new Error('You cannot share this message.');
+          }
+
+          const filteredRecipients: ManifestRecipientKeys[] = [];
+          for (const recipient of recipients) {
+            if (
+              await recipientHasAccessToParentFromFeed(
+                messageId,
+                recipient.keyId,
+                allDeliveries,
+                manifestLookup,
+              )
+            ) {
+              continue;
+            }
+            filteredRecipients.push(recipient);
+          }
+
+          if (filteredRecipients.length === 0) {
+            throw new Error(
+              'Selected recipients already have access to this message.',
+            );
+          }
+
+          const recipientKeyIds = [
+            keys.keyId!,
+            ...filteredRecipients.map((recipient) => recipient.keyId),
+          ];
+          const manifestEntries = await serializeManifestLookup(
+            manifestLookup,
+            collectManifestMessageIds(messageId, access.parentMessageId),
+            recipientKeyIds,
+          );
+
+          const encrypted = await keys.systemEncryptShare({
+            access,
+            recipients: await Promise.all(
+              filteredRecipients.map(async (recipient) => ({
+                keyId: recipient.keyId,
+                publicJwk: jwkWithoutKeyOps(
+                  await crypto.subtle.exportKey('jwk', recipient.publicKey),
+                ),
+              })),
+            ),
+            manifestEntries,
+          });
+
+          const result = await api.postShare({
+            share: JSON.parse(encrypted.shareCoreJson) as Record<string, unknown>,
+            keyManifest: encrypted.keyManifest as Parameters<
+              typeof api.postShare
+            >[0]['keyManifest'],
+          });
+          setLastShare({ messageId, shareId: result.id });
+          return result.id;
+        }
+
+        const shareId = await keys.withPrivateKey(async (material) => {
           if (expectedKeyId) {
             assertUploadedPrivateKeyMatchesKeyId(
               material,
@@ -123,7 +190,7 @@ export function useBackendShare(
         setBusy(false);
       }
     },
-    [api, expectedKeyId, withPrivateKey],
+    [api, expectedKeyId, keys],
   );
 
   const clearError = useCallback(() => {
