@@ -89,7 +89,10 @@ describe('feedLabBridgeQuickOp', () => {
   });
 
   it('builds a strict api-auth-get payload from a GET signable', () => {
-    const signable = buildValidQuickOpPayload().auth;
+    const payload = buildValidQuickOpPayload();
+    const parsed = parseFeedLabBridgeQuickOpPayload(payload);
+    expect(parsed).not.toBeNull();
+    const signable = parsed!.auth;
     expect(buildFeedLabBridgeQuickOpApiAuthGetPayload(signable)).toEqual({
       v: FEED_BRIDGE_QUICK_OP_PAYLOAD_VERSION,
       kind: 'api-auth-get',
