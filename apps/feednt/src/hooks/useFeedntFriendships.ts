@@ -10,6 +10,10 @@ import { buildFeedntInvitationHref } from '@feednt/lib/invitationHref.ts';
 import { buildSentInvitationLabelByToken } from '@feednt/services/db/sentInvitations.ts';
 import { saveFeedntUser } from '@feednt/services/db/storedUsers.ts';
 import {
+  USERS_DRAWER_LOADING_MIN_MS,
+  waitForMinDuration,
+} from '@feednt/lib/usersDrawerTiming.ts';
+import {
   cacheHasFriendships,
   cacheHasUsersData,
   getFriendshipsCache,
@@ -267,6 +271,7 @@ export function useFeedntFriendshipsState(
           }
         }
 
+        const startedAt = Date.now();
         setUsersLoading(true);
         setUsersError(null);
         try {
@@ -328,6 +333,7 @@ export function useFeedntFriendshipsState(
           }
           setUsersError(message);
         } finally {
+          await waitForMinDuration(startedAt, USERS_DRAWER_LOADING_MIN_MS);
           setUsersLoading(false);
         }
       };

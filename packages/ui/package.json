@@ -19,6 +19,7 @@
     "./nameInitial": "./src/nameInitial.ts",
     "./copyState": "./src/copyState.ts",
     "./feedTheme": "./src/feedTheme.ts",
+    "./feedThreadCardStyles": "./src/feedThreadCardStyles.tsx",
     "./FeedntText": "./src/FeedntText.tsx"
   },
   "peerDependencies": {

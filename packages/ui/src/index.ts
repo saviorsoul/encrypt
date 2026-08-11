@@ -14,7 +14,10 @@ export {
   ImportJsonPayloadInput,
   type ImportJsonPayloadInputProps,
 } from './ImportJsonPayloadInput.tsx';
-export { KeyIdMultiSelect, type KeyIdMultiSelectProps } from './KeyIdMultiSelect.tsx';
+export {
+  KeyIdMultiSelect,
+  type KeyIdMultiSelectProps,
+} from './KeyIdMultiSelect.tsx';
 export { useRelativeTime } from './useRelativeTime.ts';
 export { formatRelativeTime } from './formatRelativeTime.ts';
 export { nameInitial } from './nameInitial.ts';

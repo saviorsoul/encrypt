@@ -3,6 +3,7 @@ import { AppBar, Box, Container, Stack } from '@mui/material';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FeedLabTopNav } from '@lab/components/FeedLabTopNav.tsx';
 import { UsersDrawer } from '@lab/components/UsersDrawer.tsx';
+import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { FeedLabFriendshipsProvider } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
 
 function usersDrawerOpenFromPathname(pathname: string): boolean {
@@ -24,7 +25,7 @@ export function FeedLabLayout() {
 
   return (
     <FeedLabFriendshipsProvider>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box sx={feedAppBackgroundSx}>
         <AppBar position="sticky">
           <FeedLabTopNav
             usersActive={usersDrawerOpen}

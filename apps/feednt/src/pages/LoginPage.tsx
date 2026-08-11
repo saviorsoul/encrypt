@@ -9,6 +9,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 
 export function LoginPage() {
@@ -49,13 +50,14 @@ export function LoginPage() {
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-      }}
+      sx={[
+        feedAppBackgroundSx,
+        {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      ]}
     >
       <Paper sx={{ p: 3, maxWidth: 444, width: '100%' }}>
         <Typography variant="h6" component="h1" gutterBottom>

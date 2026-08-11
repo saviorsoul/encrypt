@@ -8,12 +8,10 @@ import React, {
 } from 'react';
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   CircularProgress,
   Collapse,
-  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -53,6 +51,12 @@ import {
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
   validateContentPlaintext,
 } from '@encrypt/core/constants/contentLimits';
+import {
+  CommentGlassSurface,
+  MessageGlassSurface,
+  ThreadCardSurface,
+  ThreadGlassAvatar,
+} from '@encrypt/ui/feedThreadCardStyles';
 
 type FeedContext = {
   allDeliveries: Parameters<
@@ -104,20 +108,6 @@ const messageDecryptButtonSx = {
     }),
 };
 
-const ENC_PAPER_ELEVATION = 3;
-
-const encPaperSx = (theme: Theme) => ({
-  bgcolor: theme.feedLab.encBg,
-  borderRadius: 1.5,
-  border: 'none',
-  boxShadow: theme.shadows[ENC_PAPER_ELEVATION],
-  px: 1.625,
-  py: 1.375,
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-});
-
 const cardActionButtonSx = {
   color: 'text.primary',
   fontWeight: 500,
@@ -131,27 +121,6 @@ const cardActionButtonSx = {
     color: 'action.disabled',
   },
 };
-
-function threadAvatarSx(isOwn: boolean, size: number) {
-  return (theme: Theme) => ({
-    width: size,
-    height: size,
-    fontSize: size >= 32 ? '0.75rem' : '0.6875rem',
-    fontWeight: 700,
-    flexShrink: 0,
-    ...(isOwn
-      ? {
-          bgcolor: theme.feedLab.accentBg,
-          color: 'text.primary',
-          filter: 'none',
-        }
-      : {
-          bgcolor: theme.feedLab.accentBg,
-          color: 'text.primary',
-          filter: 'grayscale(20%)',
-        }),
-  });
-}
 
 const identityButtonSx = {
   display: 'inline-flex',
@@ -346,12 +315,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   }, [commentsForCopy, feedContext.allDeliveries, markInteracted, message]);
 
   return (
-    <Paper
-      sx={{
-        overflow: 'hidden',
-        borderColor: highlighted ? 'primary.main' : 'divider',
-      }}
-    >
+    <ThreadCardSurface highlighted={highlighted}>
       <Box sx={{ px: 2, py: 2 }}>
         <Stack
           direction="row"
@@ -379,9 +343,9 @@ export const MessageThreadCard = memo(function MessageThreadCard({
                   : `View identity for ${senderLabel ?? 'sender'}`
               }
             >
-              <Avatar sx={threadAvatarSx(isOwnMessage, 32)}>
-                {isOwnMessage ? 'You' : nameInitial(senderLabel ?? '?')}
-              </Avatar>
+              <ThreadGlassAvatar size={32} isOwn={isOwnMessage}>
+                {isOwnMessage ? 'U' : nameInitial(senderLabel ?? '?')}
+              </ThreadGlassAvatar>
             </Box>
             <Stack spacing={0.2} sx={{ minWidth: 0 }}>
               <Typography
@@ -445,7 +409,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           </Tooltip>
         </Stack>
 
-        <Paper elevation={ENC_PAPER_ELEVATION} sx={encPaperSx}>
+        <MessageGlassSurface>
           <Button
             size="small"
             variant={decryptPlaintext ? 'text' : 'contained'}
@@ -496,7 +460,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               maxPreviewWords={REDACTED_PREVIEW_WORDS}
             />
           )}
-        </Paper>
+        </MessageGlassSurface>
       </Box>
 
       {decryptError ? (
@@ -588,7 +552,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           onOpenIdentity={onOpenIdentity}
         />
       </Collapse>
-    </Paper>
+    </ThreadCardSurface>
   );
 });
 
@@ -912,7 +876,7 @@ const CommentRow = memo(function CommentRow({
   }, [authorIdentity, authorLabel, onOpenIdentity]);
 
   return (
-    <Paper elevation={ENC_PAPER_ELEVATION} sx={encPaperSx}>
+    <CommentGlassSurface>
       <Stack spacing={0.75}>
         <Box
           component="button"
@@ -926,9 +890,9 @@ const CommentRow = memo(function CommentRow({
               : `View identity for ${authorLabel ?? 'author'}`
           }
         >
-          <Avatar sx={threadAvatarSx(isOwnComment, 28)}>
-            {isOwnComment ? 'You' : nameInitial(authorLabel ?? '?')}
-          </Avatar>
+          <ThreadGlassAvatar size={28} isOwn={isOwnComment}>
+            {isOwnComment ? 'U' : nameInitial(authorLabel ?? '?')}
+          </ThreadGlassAvatar>
           <Typography
             variant="caption"
             title={
@@ -959,6 +923,6 @@ const CommentRow = memo(function CommentRow({
           />
         )}
       </Stack>
-    </Paper>
+    </CommentGlassSurface>
   );
 });

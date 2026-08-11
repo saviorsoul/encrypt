@@ -10,6 +10,10 @@ import { buildFeedLabInvitationHref } from '@lab/lib/invitationHref.ts';
 import { buildSentInvitationLabelByToken } from '@lab/services/db/sentInvitations.ts';
 import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
 import {
+  USERS_DRAWER_LOADING_MIN_MS,
+  waitForMinDuration,
+} from '@lab/lib/usersDrawerTiming.ts';
+import {
   cacheHasFriendships,
   cacheHasUsersData,
   getFriendshipsCache,
@@ -267,6 +271,7 @@ export function useFeedLabFriendshipsState(
           }
         }
 
+        const startedAt = Date.now();
         setUsersLoading(true);
         setUsersError(null);
         try {
@@ -328,6 +333,7 @@ export function useFeedLabFriendshipsState(
           }
           setUsersError(message);
         } finally {
+          await waitForMinDuration(startedAt, USERS_DRAWER_LOADING_MIN_MS);
           setUsersLoading(false);
         }
       };

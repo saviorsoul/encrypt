@@ -67,6 +67,40 @@ const stoneDark = {
   cardShadow: '0 1px 2px rgba(0,0,0,0.2), 0 3px 12px rgba(0,0,0,0.15)',
 };
 
+type StonePalette = typeof stoneLight;
+
+function feedAppBackgroundImage(mode: 'light' | 'dark') {
+  const isLight = mode === 'light';
+
+  return isLight
+    ? [
+        `radial-gradient(ellipse 60% 56% at 0% 0%, ${alpha(brandColor, 0.2)}, transparent 54%)`,
+        `radial-gradient(ellipse 70% 55% at 100% 100%, ${alpha('#78716c', 0.09)}, transparent 55%)`,
+      ].join(', ')
+    : [
+        `radial-gradient(ellipse 95% 65% at 0% 0%, ${alpha(brandColor, 0.18)}, transparent 62%)`,
+        `radial-gradient(ellipse 75% 60% at 100% 100%, ${alpha('#a8a29e', 0.14)}, transparent 58%)`,
+      ].join(', ');
+}
+
+function feedAppBackgroundStyles(mode: 'light' | 'dark', stone: StonePalette) {
+  return {
+    backgroundColor: stone.bg,
+    backgroundImage: feedAppBackgroundImage(mode),
+    backgroundAttachment: 'fixed',
+  };
+}
+
+/** Soft glass-like wash for full-page backgrounds (feed-lab / feednt). */
+export function feedAppBackgroundSx(theme: Theme) {
+  const stone = theme.palette.mode === 'light' ? stoneLight : stoneDark;
+
+  return {
+    minHeight: '100vh',
+    ...feedAppBackgroundStyles(theme.palette.mode, stone),
+  };
+}
+
 export const feedLabFontFamily = [
   '"Poppins"',
   '"Noto Sans"',
@@ -152,16 +186,17 @@ function createStoneTheme(mode: 'light' | 'dark') {
         styleOverrides: {
           body: {
             fontFamily: feedLabFontFamily,
-            backgroundColor: stone.bg,
+            minHeight: '100vh',
+            ...feedAppBackgroundStyles(mode, stone),
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: stone.card,
+            ...feedAppBackgroundStyles(mode, stone),
             color: stone.text,
-            borderBottom: `1px solid ${stone.border}`,
+            border: 'none',
             boxShadow: 'none',
           },
         },

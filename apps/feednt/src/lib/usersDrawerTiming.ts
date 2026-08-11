@@ -1,0 +1,3 @@
+export const USERS_DRAWER_LOADING_MIN_MS = 400;
+
+export { waitForMinDuration } from '@feednt/lib/commentsPanelTiming.ts';
