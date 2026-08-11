@@ -195,6 +195,8 @@ services:
       - ./apps/feed-lab/index.html:/app/apps/feed-lab/index.html
       - ./apps/feed-lab/vite.config.ts:/app/apps/feed-lab/vite.config.ts
       - ./packages/core/src:/app/packages/core/src
+      - ./packages/ui/src:/app/packages/ui/src
+      - ./packages/platform/src:/app/packages/platform/src
       - ./apps/web/src:/app/apps/web/src
       - ./.env.docker:/app/.env:ro
     depends_on:

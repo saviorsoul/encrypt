@@ -8,11 +8,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/feed-lab/package.json ./apps/feed-lab/
 COPY packages/core/package.json ./packages/core/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/platform/package.json ./packages/platform/
+COPY packages/csp/package.json ./packages/csp/
 COPY apps/web/package.json ./apps/web/
 
 RUN npm ci -w @encrypt/feed-lab --include-workspace-root --ignore-scripts
 
 COPY packages/core ./packages/core
+COPY packages/ui ./packages/ui
+COPY packages/platform ./packages/platform
+COPY packages/csp ./packages/csp
 COPY apps/feed-lab ./apps/feed-lab
 COPY apps/web/src ./apps/web/src
 
