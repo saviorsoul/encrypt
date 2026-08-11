@@ -196,6 +196,7 @@ services:
       - ./apps/feed-lab/vite.config.ts:/app/apps/feed-lab/vite.config.ts
       - ./packages/core/src:/app/packages/core/src
       - ./packages/ui/src:/app/packages/ui/src
+      - ./packages/ui/package.json:/app/packages/ui/package.json
       - ./packages/platform/src:/app/packages/platform/src
       - ./apps/web/src:/app/apps/web/src
       - ./.env.docker:/app/.env:ro
