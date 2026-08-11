@@ -143,6 +143,7 @@ interface ElectronBridge {
     url: string,
     options?: { background?: boolean },
   ) => Promise<void>;
+  setAuthState?: (state: CapacitorAuthState) => void;
   setTrayAuthState: (state: TrayAuthState) => void;
   setTrayRecipients: (state: TrayRecipientsState) => void;
 }
