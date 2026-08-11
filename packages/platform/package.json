@@ -1,0 +1,44 @@
+{
+  "name": "@encrypt/platform",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./privateKeyFile": "./src/privateKeyFile.ts",
+    "./privateKeyJwkText": "./src/privateKeyJwkText.ts",
+    "./privateKeyJwkPickers": "./src/privateKeyJwkPickers.ts",
+    "./sessionPrivateKeyStorage": "./src/sessionPrivateKeyStorage.ts",
+    "./electronSafeStoragePrivateKey": "./src/electronSafeStoragePrivateKey.ts",
+    "./privateKeySafeStorageSession": "./src/privateKeySafeStorageSession.ts",
+    "./privateKeySafeStorageSessionErrors": "./src/privateKeySafeStorageSessionErrors.ts",
+    "./activePrivateKeyId": "./src/activePrivateKeyId.ts",
+    "./isElectronApp": "./src/isElectronApp.ts",
+    "./isCapacitorApp": "./src/isCapacitorApp.ts",
+    "./runtime": "./src/runtime.ts",
+    "./electron/safeStoragePrivateKey": "./electron/safeStoragePrivateKey.js",
+    "./electron/privateKeySafeStorageSession": "./electron/privateKeySafeStorageSession.js",
+    "./capacitor/initCapacitorBridge": "./capacitor/initCapacitorBridge.ts",
+    "./feednt": "./src/feednt.ts"
+  },
+  "dependencies": {
+    "@encrypt/core": "*"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/filesystem": "^8.1.2",
+    "capacitor-secure-storage-plugin": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@capacitor/core": { "optional": true },
+    "@capacitor/filesystem": { "optional": true },
+    "capacitor-secure-storage-plugin": { "optional": true }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  }
+}

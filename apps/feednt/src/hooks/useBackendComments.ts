@@ -1,0 +1,173 @@
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import {
+  decryptComment,
+  encryptCommentWithMessageKey,
+  getCommentAuthorKeyIdFromPayload,
+} from '@encrypt/core/crypto/commentCrypto';
+import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
+import type { StoredComment } from '@encrypt/core/feed/types';
+import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
+import {
+  COMMENTS_PANEL_COLLAPSE_MS,
+  waitForMinDuration,
+} from '@feednt/lib/commentsPanelTiming.ts';
+import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
+import type { useFeedntPrivateKey } from '@feednt/hooks/useFeedntPrivateKey.ts';
+
+type KeysSession = ReturnType<typeof useFeedntPrivateKey>;
+
+type CommentContext = {
+  allDeliveries: Parameters<typeof resolveParentMessageAccessFromFeed>[2];
+  manifestLookup: Parameters<typeof resolveParentMessageAccessFromFeed>[3];
+};
+
+export function useBackendComments(
+  messageId: string | null,
+  recipientKeyId: string | null,
+  keys: KeysSession,
+) {
+  const api = useFeedApi();
+  const [comments, setComments] = useState<StoredComment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [postBusy, setPostBusy] = useState(false);
+
+  const reload = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!messageId) {
+        setComments([]);
+        setLoading(false);
+        return [];
+      }
+
+      const trackLoading = !options?.silent;
+      const startedAt = Date.now();
+
+      if (trackLoading) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const loaded = await api.getComments(messageId);
+        setComments(loaded);
+        return loaded;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load comments.');
+        setComments([]);
+        return [];
+      } finally {
+        if (trackLoading) {
+          await waitForMinDuration(startedAt, COMMENTS_PANEL_COLLAPSE_MS);
+          setLoading(false);
+        }
+      }
+    },
+    [api, messageId],
+  );
+
+  useLayoutEffect(() => {
+    if (messageId) {
+      setLoading(true);
+    } else {
+      setComments([]);
+      setLoading(false);
+    }
+  }, [messageId]);
+
+  useEffect(() => {
+    if (!messageId) {
+      return;
+    }
+    void reload();
+  }, [messageId, reload]);
+
+  const postComment = useCallback(
+    async ({
+      messageId: threadId,
+      allDeliveries,
+      manifestLookup,
+      text,
+    }: CommentContext & { messageId: string; text: string }) => {
+      setPostBusy(true);
+      setError(null);
+      try {
+        const plaintextError = validateContentPlaintext(text, 'comment');
+        if (plaintextError) {
+          setError(plaintextError);
+          return null;
+        }
+
+        const newComment = await keys.withPrivateKey(async (material) => {
+          const access = await resolveParentMessageAccessFromFeed(
+            threadId,
+            material.keyId,
+            allDeliveries,
+            manifestLookup,
+          );
+          if (!access) {
+            throw new Error('You cannot comment on this message.');
+          }
+
+          const payloadJson = await encryptCommentWithMessageKey(
+            text,
+            threadId,
+            access,
+            material.keyId,
+            material.ecdhPrivateKey,
+            material.senderPublicKey,
+            material.ecdsaSignPrivateKey,
+            manifestLookup,
+          );
+          const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+          const { id } = await api.postComment(payload);
+          const loaded = await api.getComments(threadId);
+          setComments(loaded);
+          return loaded.find((comment) => comment.id === id) ?? null;
+        });
+        return newComment ?? null;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to post comment.');
+        return null;
+      } finally {
+        setPostBusy(false);
+      }
+    },
+    [api, keys],
+  );
+
+  const decryptCommentText = useCallback(
+    async (comment: StoredComment, context: CommentContext) => {
+      return keys.withPrivateKey(async (material) => {
+        const access = await resolveParentMessageAccessFromFeed(
+          comment.messageId,
+          material.keyId,
+          context.allDeliveries,
+          context.manifestLookup,
+        );
+        if (!access) {
+          throw new Error('Cannot decrypt comment — no message access.');
+        }
+        return decryptComment(
+          comment.payload,
+          comment.messageId,
+          access,
+          material.keyId,
+          material.ecdhPrivateKey,
+          context.manifestLookup,
+        );
+      });
+    },
+    [keys],
+  );
+
+  return {
+    comments,
+    loading,
+    error,
+    postBusy,
+    reload,
+    postComment,
+    decryptCommentText,
+    getCommentAuthorKeyIdFromPayload,
+  };
+}

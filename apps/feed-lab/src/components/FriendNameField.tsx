@@ -61,6 +61,7 @@ export function FriendNameField({
       variant="body2"
       role="button"
       tabIndex={disabled ? -1 : 0}
+      title={storedUsername ?? label}
       onClick={() => {
         if (!disabled) {
           setEditing(true);
@@ -77,8 +78,12 @@ export function FriendNameField({
       }}
       sx={{
         cursor: disabled ? 'default' : 'pointer',
-        width: 'fit-content',
-        maxWidth: 320,
+        display: 'block',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
         borderRadius: 0.5,
         '&:hover': disabled
           ? undefined

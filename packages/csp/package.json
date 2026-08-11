@@ -1,0 +1,22 @@
+{
+  "name": "@encrypt/csp",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./network": "./src/networkAppCsp.ts",
+    "./encrypt": "./src/encryptCsp.ts",
+    "./vite-plugin": "./src/viteContentSecurityPolicyPlugin.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

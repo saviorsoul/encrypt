@@ -1,0 +1,300 @@
+import React, { useCallback, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Paper,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import { KeyIdMultiSelect } from '@encrypt/ui/KeyIdMultiSelect';
+import { ImportJsonPayloadInput } from '@encrypt/ui/ImportJsonPayloadInput';
+import { validateJsonSyntaxText } from '@feednt/lib/validateJsonSyntax.ts';
+import { useSendImportToBackend } from '@feednt/hooks/useSendImportToBackend.ts';
+import { useBackendSendMessage } from '@feednt/hooks/useBackendSendMessage.ts';
+import type { useFeedntRecipients } from '@feednt/hooks/useFeedntRecipients.ts';
+import type { useFeedntPrivateKey } from '@feednt/hooks/useFeedntPrivateKey.ts';
+import {
+  encryptedContentCiphertextBase64Length,
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+} from '@encrypt/core/constants/contentLimits';
+
+type SendMode = 'message' | 'json';
+
+type SendMessagePanelProps = {
+  variant?: 'paper' | 'plain';
+  keys: ReturnType<typeof useFeedntPrivateKey>;
+  recipients: ReturnType<typeof useFeedntRecipients>;
+  onSendSuccess: () => Promise<void>;
+  onMessageSent?: (detail: {
+    messageId: string;
+    copyPayload: string | null;
+  }) => void;
+  onClose?: () => void;
+};
+
+export function SendMessagePanel({
+  variant = 'paper',
+  keys,
+  recipients,
+  onSendSuccess,
+  onMessageSent,
+  onClose,
+}: SendMessagePanelProps) {
+  const importSend = useSendImportToBackend();
+  const sendMessage = useBackendSendMessage(keys, keys.keyId);
+  const [importPayload, setImportPayload] = useState('');
+  const [sendMode, setSendMode] = useState<SendMode>('message');
+  const [messageText, setMessageText] = useState('');
+
+  const messageCiphertextLength = messageText
+    ? encryptedContentCiphertextBase64Length(messageText)
+    : 0;
+  const messageOverLimit =
+    messageCiphertextLength > MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH;
+
+  const handleSendImport = useCallback(async () => {
+    const ok = await importSend.sendImport(importPayload.trim());
+    if (ok) {
+      setImportPayload('');
+      await onSendSuccess();
+    }
+  }, [importSend, importPayload, onSendSuccess]);
+
+  const handleSendMessage = useCallback(async () => {
+    const sent = await sendMessage.sendMessage(
+      messageText,
+      recipients.recipients,
+    );
+    if (sent) {
+      setMessageText('');
+      onMessageSent?.({
+        messageId: sent.id,
+        copyPayload: sent.copyPayload,
+      });
+      await onSendSuccess();
+    }
+  }, [
+    sendMessage,
+    messageText,
+    recipients.recipients,
+    onMessageSent,
+    onSendSuccess,
+  ]);
+
+  const handleMessageTextChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setMessageText(event.target.value);
+      if (sendMessage.error) {
+        sendMessage.clearError();
+      }
+    },
+    [sendMessage],
+  );
+
+  const content = (
+    <>
+      <Stack
+        direction="row"
+        sx={{
+          mb: variant === 'plain' ? 1.5 : 2,
+          justifyContent: variant === 'plain' ? 'flex-start' : 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1,
+        }}
+      >
+        {variant === 'paper' ? (
+          <Typography variant="h6">Send Message</Typography>
+        ) : null}
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={sendMode}
+          onChange={(_, next: SendMode | null) => {
+            if (next) {
+              setSendMode(next);
+            }
+          }}
+        >
+          <ToggleButton
+            value="message"
+            sx={{
+              paddingTop: '0.2em',
+              paddingBottom: '0.2em',
+            }}
+          >
+            Send message
+          </ToggleButton>
+          <ToggleButton
+            value="json"
+            sx={{
+              paddingTop: '0.2em',
+              paddingBottom: '0.2em',
+            }}
+          >
+            Send JSON
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
+      {sendMode === 'message' ? (
+        <Stack spacing={2}>
+          <TextField
+            label="Message"
+            value={messageText}
+            onChange={handleMessageTextChange}
+            multiline
+            minRows={5}
+            fullWidth
+            placeholder="Enter text to encrypt..."
+            disabled={sendMessage.busy}
+            error={messageOverLimit}
+            helperText={`${messageCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
+          />
+
+          {recipients.loadingFriends || recipients.loadingRecipientKeys ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">
+                Loading recipients…
+              </Typography>
+            </Box>
+          ) : recipients.recipientOptions.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No friends yet. Add or accept a friend in Users before messaging.
+            </Typography>
+          ) : variant === 'plain' ? (
+            <KeyIdMultiSelect
+              options={recipients.recipientOptions}
+              value={recipients.selectedKeyIds}
+              onChange={recipients.setSelectedKeyIds}
+              getOptionLabel={recipients.getOptionLabel}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <KeyIdMultiSelect
+                options={recipients.recipientOptions}
+                value={recipients.selectedKeyIds}
+                onChange={recipients.setSelectedKeyIds}
+                getOptionLabel={recipients.getOptionLabel}
+              />
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                disabled={
+                  sendMessage.busy ||
+                  !messageText.trim() ||
+                  messageOverLimit ||
+                  recipients.recipients.length === 0
+                }
+                onClick={() => void handleSendMessage()}
+              >
+                Send message
+              </Button>
+            </Box>
+          )}
+
+          {variant === 'plain' ? (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              {onClose ? (
+                <Button variant="outlined" onClick={onClose}>
+                  Close
+                </Button>
+              ) : null}
+              <Button
+                variant="contained"
+                startIcon={<SendIcon />}
+                disabled={
+                  sendMessage.busy ||
+                  !messageText.trim() ||
+                  messageOverLimit ||
+                  recipients.recipients.length === 0
+                }
+                onClick={() => void handleSendMessage()}
+              >
+                Send message
+              </Button>
+            </Box>
+          ) : null}
+
+          {recipients.error ? (
+            <Typography color="error" variant="body2">
+              {recipients.error}
+            </Typography>
+          ) : null}
+          {sendMessage.error ? (
+            <Alert severity="error">{sendMessage.error}</Alert>
+          ) : null}
+        </Stack>
+      ) : (
+        <>
+          <ImportJsonPayloadInput
+            payload={importPayload}
+            onPayloadChange={setImportPayload}
+            disabled={importSend.busy}
+            description={
+              <Typography variant="body2" color="text.secondary">
+                Paste or load JSON to POST to the backend. Syntax warnings are
+                informational only; the API validates the request body.
+              </Typography>
+            }
+            getPayloadError={(text) => importSend.validatePayloadText(text)}
+            validateFileContent={validateJsonSyntaxText}
+            onClearErrors={importSend.clearError}
+          />
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 1,
+              mt: 2,
+            }}
+          >
+            {onClose ? (
+              <Button variant="outlined" onClick={onClose}>
+                Close
+              </Button>
+            ) : null}
+            <Button
+              variant="contained"
+              startIcon={<SendIcon />}
+              disabled={importSend.busy || !importPayload.trim()}
+              onClick={() => void handleSendImport()}
+            >
+              {importSend.busy ? 'Sending…' : 'Send imported data'}
+            </Button>
+          </Box>
+          {importSend.error ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {importSend.error}
+            </Alert>
+          ) : null}
+          {importSend.lastResult ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {importSend.lastResult}
+            </Alert>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+
+  if (variant === 'plain') {
+    return content;
+  }
+
+  return <Paper sx={{ p: 2 }}>{content}</Paper>;
+}

@@ -1,20 +1,18 @@
 import type { Plugin } from 'vite';
-import { getMetaContentSecurityPolicy } from '../csp.ts';
-
-type ContentSecurityPolicyPluginOptions = {
-  isDevServer: boolean;
-  apiUrl?: string;
-};
+import {
+  buildNetworkAppMetaCsp,
+  type NetworkAppCspOptions,
+} from '../csp.ts';
 
 export function contentSecurityPolicyPlugin(
-  options: ContentSecurityPolicyPluginOptions,
+  options: NetworkAppCspOptions,
 ): Plugin {
   return {
     name: 'content-security-policy',
     transformIndexHtml: {
       order: 'pre',
       handler() {
-        const policy = getMetaContentSecurityPolicy(options);
+        const policy = buildNetworkAppMetaCsp(options);
 
         return [
           {

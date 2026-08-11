@@ -20,9 +20,9 @@ import {
 } from '@lab/components/AcceptFriendRequestDialog.tsx';
 import { AddFriendDialog } from '@lab/components/AddFriendDialog.tsx';
 import { PublicKeyDialog } from '@lab/components/PublicKeyDialog.tsx';
-import { CopiedToClipboardSnackbar } from '@web/components/CopiedToClipboardSnackbar.tsx';
+import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
-import { useCopiedToClipboardSnackbar } from '@web/hooks/useCopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
   saveFeedLabUser,
   loadFeedLabUserByKeyId,
@@ -392,9 +392,9 @@ export function UsersPage() {
                       key={friend.keyId}
                       direction="row"
                       spacing={1}
-                      sx={{ alignItems: 'center' }}
+                      sx={{ alignItems: 'center', minWidth: 0 }}
                     >
-                      <Box sx={{ flex: 1 }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
                         <FriendNameField
                           friendKeyId={friend.keyId}
                           label={friend.label}
@@ -408,7 +408,14 @@ export function UsersPage() {
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ display: 'block' }}
+                          title={friend.keyId}
+                          sx={{
+                            display: 'block',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
                         >
                           {friend.keyId}
                         </Typography>
@@ -417,6 +424,7 @@ export function UsersPage() {
                         size="small"
                         color="error"
                         disabled={friendshipRequests.busy || !keys.keyId}
+                        sx={{ flexShrink: 0 }}
                         onClick={() => {
                           if (!keys.keyId) {
                             return;

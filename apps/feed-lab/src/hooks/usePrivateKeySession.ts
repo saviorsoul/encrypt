@@ -16,12 +16,12 @@ import {
   cachePrivateKeyMaterial,
   clearSessionPrivateKeyStorage,
   getCachedPrivateKeyMaterial,
-} from '@web/crypto/sessionPrivateKeyStorage.ts';
+} from '@encrypt/platform/sessionPrivateKeyStorage';
 import {
+  isPrivateKeyFileSelectionCancelled,
   pickPrivateKeyJwkFile,
   pickPrivateKeyJwkFileWithName,
-  isPrivateKeyFileSelectionCancelled,
-} from '@web/crypto/privateKeyFile.ts';
+} from '@encrypt/platform/privateKeyFile';
 import {
   disconnectSystemAppBridge,
   getFeedLabSessionMode,

@@ -127,7 +127,8 @@ Flag is read in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabB
 
 ### Embed feed-lab in Electron/Capacitor WebView
 
-- Simpler (`window.electron` / `window.capacitorBridge`); rejected — product requirement is external browser
+- Simpler (`window.electron` / `window.capacitorBridge`); rejected — product requirement is external browser for **feed-lab**
+- **Feednt** ([ADR 0020](./0020-feednt-standalone-native-app.md)) is a separate native product that holds keys in-app and does not use the bridge; the external-browser constraint does not apply there
 
 ### Fat payload ops in the system app (`encrypt-message`, `decrypt-message`, …)
 

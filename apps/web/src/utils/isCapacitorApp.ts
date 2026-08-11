@@ -1,3 +1,1 @@
-export function isCapacitorApp(): boolean {
-  return Boolean(import.meta.env.VITE_CAPACITOR);
-}
+export * from '@encrypt/platform/isCapacitorApp';

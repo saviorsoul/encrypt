@@ -12,7 +12,7 @@ import Button from '@mui/material/Button';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import Typography from '@mui/material/Typography';
-import { AppDialog } from '@web/components/shared/AppDialog.tsx';
+import { AppDialog } from '@encrypt/ui/AppDialog';
 import { abortPendingBridgeWork } from '@lab/crypto/systemAppSigner.ts';
 import {
   ENCRYPT_APP_DEEP_LINK_CANCELLED_ERROR,

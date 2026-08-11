@@ -1,0 +1,84 @@
+{
+  "name": "@feednt/local",
+  "version": "0.4.0",
+  "private": true,
+  "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
+  "license": "MIT",
+  "homepage": "https://feednt.com",
+  "bugs": "https://github.com/saviorsoul/encrypt/issues",
+  "type": "module",
+  "main": "electron/main.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5180 && node scripts/electron-dev.mjs\"",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "build:electron": "npm run build",
+    "electron:dev": "npm run dev",
+    "electron:preview": "npm run build && node scripts/electron-run.mjs",
+    "electron:run": "node scripts/electron-run.mjs",
+    "electron:build": "npm run build && electron-builder",
+    "electron:package": "electron-builder --publish never",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@encrypt/core": "*",
+    "@encrypt/csp": "*",
+    "@encrypt/platform": "*",
+    "@encrypt/ui": "*",
+    "@feednt/app": "*",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^6.30.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@vitejs/plugin-react": "^4.5.0",
+    "concurrently": "^9.2.1",
+    "electron": "35.7.5",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.feednt.app",
+    "productName": "Feednt",
+    "artifactName": "${productName}_${version}_${arch}.${ext}",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Network",
+      "syncDesktopName": true
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.social-networking"
+    }
+  }
+}

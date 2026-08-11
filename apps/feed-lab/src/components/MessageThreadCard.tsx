@@ -25,9 +25,9 @@ import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import { useRelativeTime } from '@web/hooks/useRelativeTime.ts';
-import { nameInitial } from '@web/utils/nameInitial.ts';
-import type { CopyState } from '@web/types/copyState.ts';
+import { useRelativeTime } from '@encrypt/ui/useRelativeTime';
+import { nameInitial } from '@encrypt/ui/nameInitial';
+import type { CopyState } from '@encrypt/ui/copyState';
 import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
@@ -919,7 +919,7 @@ const CommentRow = memo(function CommentRow({
           type="button"
           disabled={!authorIdentity}
           onClick={handleOpenAuthorIdentity}
-          sx={{ ...identityButtonSx, gap: 1 }}
+          sx={{ ...identityButtonSx, gap: 1, width: '100%', maxWidth: '100%' }}
           aria-label={
             isOwnComment
               ? 'View your identity'
@@ -929,7 +929,19 @@ const CommentRow = memo(function CommentRow({
           <Avatar sx={threadAvatarSx(isOwnComment, 28)}>
             {isOwnComment ? 'You' : nameInitial(authorLabel ?? '?')}
           </Avatar>
-          <Typography variant="caption">
+          <Typography
+            variant="caption"
+            title={
+              !isOwnComment && authorLabel ? authorLabel : undefined
+            }
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {isOwnComment ? 'Your own comment' : (authorLabel ?? '...')}
           </Typography>
         </Box>

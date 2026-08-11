@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { downloadJsonFile } from '@web/utils/downloadJson.ts';
-import { privateKeyDownloadFilename } from '@web/utils/privateKeyFilename.ts';
+import { downloadJsonFile } from '@encrypt/core/utils/downloadJson';
+import { privateKeyDownloadFilename } from '@encrypt/core/utils/privateKeyFilename';
 import {
   exportPublicKeyJwk,
   generateExtractableEcdhKeyPair,

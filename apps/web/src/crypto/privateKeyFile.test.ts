@@ -4,12 +4,13 @@ import {
   PrivateKeyMismatchError,
   type UploadedPrivateKeyMaterial,
 } from '@/crypto/privateKeyMaterial.ts';
-import * as privateKeyMaterial from '@/crypto/privateKeyMaterial.ts';
-import * as privateKeyJwkPickers from '@/crypto/privateKeyJwkPickers.ts';
+import * as privateKeyMaterial from '@encrypt/core/crypto/privateKeyMaterial';
+import * as privateKeyJwkPickers from '@encrypt/platform/privateKeyJwkPickers';
 import { withUploadedPrivateKey } from '@/crypto/privateKeyFile.ts';
 import {
   clearSessionPrivateKeyStorage,
   getCachedPrivateKeyMaterial,
+  setPrivateKeyMemoryCacheEnabled,
 } from '@/crypto/sessionPrivateKeyStorage.ts';
 import { setSessionPrivateKeyStorageEnabled } from '@/utils/sessionPrivateKeyPreference.ts';
 
@@ -24,6 +25,7 @@ const testMaterial = {
 describe('withUploadedPrivateKey', () => {
   beforeEach(() => {
     setSessionPrivateKeyStorageEnabled(true);
+    setPrivateKeyMemoryCacheEnabled(true);
     clearSessionPrivateKeyStorage();
     vi.restoreAllMocks();
     vi.spyOn(

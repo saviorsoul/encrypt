@@ -1,1 +1,1 @@
-export type CopyState = 'idle' | 'ok' | 'err';
+export type { CopyState } from '@encrypt/ui/copyState';

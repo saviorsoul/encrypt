@@ -3,7 +3,7 @@ import { encryptWithManifest } from '@encrypt/core/crypto/manifestEncrypt';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
-import { isPrivateKeyFileSelectionCancelled } from '@web/crypto/privateKeyFile.ts';
+import { isPrivateKeyFileSelectionCancelled } from '@encrypt/platform/privateKeyFile';
 import { isBridgeCancellationError } from '@lab/crypto/systemAppSigner.ts';
 import { assembleMessageCopyPayloadFromWire } from '@lab/lib/assembleMessageCopyPayload.ts';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';

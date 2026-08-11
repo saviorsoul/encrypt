@@ -16,12 +16,12 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
 
 3. **Docker env** — `.env.docker` at the repo root (committed defaults). Edit for custom Citus credentials or ports. Compose passes it via `env_file`, mounts it at `/app/.env` inside `api` and `feed-lab` (for dotenv / Vite `envDir`), and uses it for `${POSTGRES_*}` interpolation.
 
-   | File | Purpose |
-   |------|---------|
-   | `.env.example` | Template for local `.env` |
-   | `.env` | Gitignored local dev (copy from `.env.example`) |
-   | `.env.docker` | Docker stack (`POSTGRES_*`, API, feed-lab proxy) |
-   | `.env.electron` | Committed; `VITE_ELECTRON` for Electron builds |
+   | File            | Purpose                                          |
+   | --------------- | ------------------------------------------------ |
+   | `.env.example`  | Template for local `.env`                        |
+   | `.env`          | Gitignored local dev (copy from `.env.example`)  |
+   | `.env.docker`   | Docker stack (`POSTGRES_*`, API, feed-lab proxy) |
+   | `.env.electron` | Committed; `VITE_ELECTRON` for Electron builds   |
 
    `npm run dev:stack` passes `--env-file .env.docker` automatically.
 
@@ -49,6 +49,14 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
    - feed-lab: http://localhost:5174 (or `https://` when `FEED_LAB_DEV_HTTPS=true` in `.env.docker`)
    - API health: http://localhost:3000/health
    - Postgres: `psql`, DBeaver, etc. at `localhost:<POSTGRES_PORT>` with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` from `.env.docker`
+
+### Feednt Android + Docker API
+
+The API container publishes `3000:3000` on the host. Phones and emulators must use your **machine's LAN IP** — they cannot reach `localhost` on your PC.
+
+Capacitor WebView origin is `http://localhost`; ensure `.env.docker` includes `http://localhost` in `CORS_ALLOWED_ORIGINS` (default stack already does).
+
+Phone and PC must be on the same Wi‑Fi.
 
 After changing `apps/feed-lab/package.json` or root `package-lock.json`, rebuild feed-lab:
 

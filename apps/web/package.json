@@ -14,6 +14,8 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@encrypt/core": "*",
+    "@encrypt/platform": "*",
+    "@encrypt/ui": "*",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "@testing-library/dom": "^10.4.1",

@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "paths": {
-      "@web/*": ["../web/src/*"],
       "@lab/*": ["./src/*"]
     },
     "target": "ES2022",

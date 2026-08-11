@@ -41,7 +41,7 @@ import {
 import { InviteSuccessView } from '@lab/components/InviteSuccessView.tsx';
 import { loadFeedLabBridgePairing } from '@lab/crypto/systemAppPairingStorage.ts';
 import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
-import { prettifyJsonText } from '@web/utils/prettifyJsonText.ts';
+import { prettifyJsonText } from '@encrypt/core/utils/prettifyJsonText';
 import type { FriendInvitationPublic } from '@encrypt/core/api/feedApi';
 
 const protocolBridgeEnabled = isFeedLabProtocolBridgeEnabled();

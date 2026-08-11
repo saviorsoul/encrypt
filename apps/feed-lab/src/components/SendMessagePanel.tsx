@@ -12,8 +12,8 @@ import {
   Typography,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { RecipientMultiSelect } from '@web/components/encrypt/RecipientMultiSelect.tsx';
-import { ImportJsonPayloadInput } from '@web/components/shared/ImportJsonPayloadInput.tsx';
+import { KeyIdMultiSelect } from '@encrypt/ui/KeyIdMultiSelect';
+import { ImportJsonPayloadInput } from '@encrypt/ui/ImportJsonPayloadInput';
 import { validateJsonSyntaxText } from '@lab/lib/validateJsonSyntax.ts';
 import { useSendImportToBackend } from '@lab/hooks/useSendImportToBackend.ts';
 import { useBackendSendMessage } from '@lab/hooks/useBackendSendMessage.ts';
@@ -170,7 +170,7 @@ export function SendMessagePanel({
               No friends yet. Add or accept a friend in Users before messaging.
             </Typography>
           ) : variant === 'plain' ? (
-            <RecipientMultiSelect
+            <KeyIdMultiSelect
               options={recipients.recipientOptions}
               value={recipients.selectedKeyIds}
               onChange={recipients.setSelectedKeyIds}
@@ -185,7 +185,7 @@ export function SendMessagePanel({
                 flexWrap: 'wrap',
               }}
             >
-              <RecipientMultiSelect
+              <KeyIdMultiSelect
                 options={recipients.recipientOptions}
                 value={recipients.selectedKeyIds}
                 onChange={recipients.setSelectedKeyIds}

@@ -9,14 +9,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
-
-interface Window {
-  electron?: {
-    writeTextToClipboard?: (text: string) => Promise<void>;
-    pickPrivateKeyJwkText?: () => Promise<{
-      cancelled?: boolean;
-      error?: string;
-      text?: string;
-    }>;
-  };
-}

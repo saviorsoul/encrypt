@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Feednt</string>
+    <string name="title_activity_main">Feednt</string>
+    <string name="package_name">com.feednt.app</string>
+    <string name="custom_url_scheme">com.feednt.app</string>
+</resources>

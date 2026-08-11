@@ -1,0 +1,47 @@
+{
+  "name": "@feednt/mobile",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Capacitor shell for Feednt",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/ios": "^8.4.2",
+    "@encrypt/core": "*",
+    "@encrypt/csp": "*",
+    "@encrypt/platform": "*",
+    "@encrypt/ui": "*",
+    "@feednt/app": "*",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "capacitor-secure-storage-plugin": "^0.13.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^6.30.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

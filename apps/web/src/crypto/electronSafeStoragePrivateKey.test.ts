@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as privateKeyMaterial from '@/crypto/privateKeyMaterial.ts';
+import * as privateKeyMaterial from '@encrypt/core/crypto/privateKeyMaterial';
 import {
   ELECTRON_KEYCHAIN_LOCKED,
   registerElectronPrivateKey,

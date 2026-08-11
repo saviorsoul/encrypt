@@ -20,7 +20,7 @@ const DEV_CONNECT_SOURCES: readonly string[] = [
   'wss://127.0.0.1:*',
 ];
 
-type CspOptions = {
+export type NetworkAppCspOptions = {
   isDevServer: boolean;
   /** VITE_API_URL at build/serve time; empty means same-origin proxy in dev. */
   apiUrl?: string;
@@ -39,7 +39,7 @@ function parseApiConnectOrigin(apiUrl: string | undefined): string | null {
   }
 }
 
-function buildConnectSources({ isDevServer, apiUrl }: CspOptions): string[] {
+function buildConnectSources({ isDevServer, apiUrl }: NetworkAppCspOptions): string[] {
   if (isDevServer) {
     const sources: string[] = [...DEV_CONNECT_SOURCES];
     const apiOrigin = parseApiConnectOrigin(apiUrl);
@@ -57,7 +57,7 @@ function buildConnectSources({ isDevServer, apiUrl }: CspOptions): string[] {
   return sources;
 }
 
-function buildDirectives(options: CspOptions): Record<string, string[]> {
+function buildDirectives(options: NetworkAppCspOptions): Record<string, string[]> {
   const baseDirectives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': ["'self'"],
@@ -102,13 +102,25 @@ function withoutMetaIncompatibleDirectives(
   );
 }
 
-export function getContentSecurityPolicy(options: CspOptions): string {
+export function buildNetworkAppCsp(options: NetworkAppCspOptions): string {
   return serializeDirectives(buildDirectives(options));
 }
 
 /** For <meta http-equiv="Content-Security-Policy"> (Vite web builds). */
-export function getMetaContentSecurityPolicy(options: CspOptions): string {
+export function buildNetworkAppMetaCsp(options: NetworkAppCspOptions): string {
   return serializeDirectives(
     withoutMetaIncompatibleDirectives(buildDirectives(options)),
   );
+}
+
+/** @deprecated Use buildNetworkAppCsp */
+export function getContentSecurityPolicy(options: NetworkAppCspOptions): string {
+  return buildNetworkAppCsp(options);
+}
+
+/** @deprecated Use buildNetworkAppMetaCsp */
+export function getMetaContentSecurityPolicy(
+  options: NetworkAppCspOptions,
+): string {
+  return buildNetworkAppMetaCsp(options);
 }

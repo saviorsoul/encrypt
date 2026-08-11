@@ -9,8 +9,8 @@ import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
-import { CopiedToClipboardSnackbar } from '@web/components/CopiedToClipboardSnackbar.tsx';
-import { useCopiedToClipboardSnackbar } from '@web/hooks/useCopiedToClipboardSnackbar.tsx';
+import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 
 type InviteSuccessViewProps = {
   inviterName: string;
