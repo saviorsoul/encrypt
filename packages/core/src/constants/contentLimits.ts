@@ -34,6 +34,11 @@ export const MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH =
       3,
   ) * 4;
 
+/** Show ciphertext size helper once encrypted payload reaches half the wire limit. */
+export const CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD = Math.floor(
+  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH / 2,
+);
+
 /** Standard base64 length of a 12-byte IV (with padding). */
 export const AES_GCM_IV_BASE64_LENGTH = Math.ceil((AES_GCM_IV_BYTES * 4) / 3);
 

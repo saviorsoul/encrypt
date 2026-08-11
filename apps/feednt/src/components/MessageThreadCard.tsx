@@ -47,6 +47,7 @@ import { RedactedText } from '@feednt/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@feednt/lib/sanitizeDisplayText.ts';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import {
+  CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD,
   encryptedContentCiphertextBase64Length,
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
   validateContentPlaintext,
@@ -801,7 +802,11 @@ const CommentComposer = memo(function CommentComposer({
             },
           },
         }}
-        helperText={`${commentCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
+        helperText={
+          commentCiphertextLength >= CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD
+            ? `${commentCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`
+            : undefined
+        }
       />
       <Button
         variant="contained"
@@ -895,9 +900,7 @@ const CommentRow = memo(function CommentRow({
           </ThreadGlassAvatar>
           <Typography
             variant="caption"
-            title={
-              !isOwnComment && authorLabel ? authorLabel : undefined
-            }
+            title={!isOwnComment && authorLabel ? authorLabel : undefined}
             sx={{
               minWidth: 0,
               flex: 1,
