@@ -13,7 +13,7 @@ import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
-import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { CopiedToClipboardSnackbar, TooltipIconWrap } from '@encrypt/ui';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import { useNavigate } from 'react-router-dom';
 import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
@@ -42,7 +42,8 @@ const listItemTextProps = {
 export function FeedntSettingsMenu() {
   const navigate = useNavigate();
   const { session, signOut } = useFeedntSession();
-  const { colorMode, setColorMode } = useFeedntSettings();
+  const { automateDecryption, setAutomateDecryption, colorMode, setColorMode } =
+    useFeedntSettings();
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = anchorEl !== null;
@@ -84,17 +85,19 @@ export function FeedntSettingsMenu() {
   return (
     <>
       <Tooltip title="Settings">
-        <IconButton
-          size="small"
-          color="inherit"
-          aria-label="Settings"
-          aria-controls={open ? 'feednt-settings-menu' : undefined}
-          aria-haspopup="true"
-          aria-expanded={open ? 'true' : undefined}
-          onClick={handleOpen}
-        >
-          <SettingsOutlinedIcon fontSize="small" />
-        </IconButton>
+        <TooltipIconWrap>
+          <IconButton
+            size="small"
+            color="inherit"
+            aria-label="Settings"
+            aria-controls={open ? 'feednt-settings-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            onClick={handleOpen}
+          >
+            <SettingsOutlinedIcon fontSize="small" />
+          </IconButton>
+        </TooltipIconWrap>
       </Tooltip>
 
       <Menu
@@ -102,6 +105,7 @@ export function FeedntSettingsMenu() {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
+        transitionDuration={0}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{
@@ -150,6 +154,21 @@ export function FeedntSettingsMenu() {
             <Divider />
           </>
         ) : null}
+        <MenuItem
+          onClick={() => setAutomateDecryption(!automateDecryption)}
+          sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}
+        >
+          Automate decryption
+          <Switch
+            size="small"
+            edge="end"
+            checked={automateDecryption}
+            tabIndex={-1}
+            disableRipple
+            onClick={(event) => event.stopPropagation()}
+            onChange={(_, checked) => setAutomateDecryption(checked)}
+          />
+        </MenuItem>
         <MenuItem
           onClick={() => setColorMode(colorMode === 'dark' ? 'light' : 'dark')}
           sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}

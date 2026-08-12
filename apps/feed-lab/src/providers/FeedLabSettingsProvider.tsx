@@ -14,6 +14,7 @@ import {
 } from '@lab/services/feedLabSettingsStorage.ts';
 
 type FeedLabSettingsContextValue = FeedLabSettings & {
+  setAutomateDecryption: (enabled: boolean) => void;
   setRequestsApprovalDialog: (enabled: boolean) => void;
   setColorMode: (colorMode: FeedLabColorMode) => void;
 };
@@ -25,6 +26,14 @@ export function FeedLabSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<FeedLabSettings>(() =>
     loadFeedLabSettings(),
   );
+
+  const setAutomateDecryption = useCallback((enabled: boolean) => {
+    setSettings((current) => {
+      const next = { ...current, automateDecryption: enabled };
+      saveFeedLabSettings(next);
+      return next;
+    });
+  }, []);
 
   const setRequestsApprovalDialog = useCallback((enabled: boolean) => {
     setSettings((current) => {
@@ -45,10 +54,11 @@ export function FeedLabSettingsProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       ...settings,
+      setAutomateDecryption,
       setRequestsApprovalDialog,
       setColorMode,
     }),
-    [settings, setRequestsApprovalDialog, setColorMode],
+    [settings, setAutomateDecryption, setRequestsApprovalDialog, setColorMode],
   );
 
   return (

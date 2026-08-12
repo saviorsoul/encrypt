@@ -293,7 +293,6 @@ export function OneToOneMessageBubblePopover({
         anchorEl={popoverAnchorEl}
         onClose={closePopover}
         hideBackdrop
-        disableScrollLock
         anchorOrigin={{
           vertical: 'top',
           horizontal: alignEnd ? 'right' : 'left',

@@ -13,7 +13,7 @@ import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
-import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { CopiedToClipboardSnackbar, TooltipIconWrap } from '@encrypt/ui';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import { useNavigate } from 'react-router-dom';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
@@ -43,6 +43,8 @@ export function FeedLabSettingsMenu() {
   const navigate = useNavigate();
   const { keys } = useFeedLabSession();
   const {
+    automateDecryption,
+    setAutomateDecryption,
     requestsApprovalDialog,
     setRequestsApprovalDialog,
     colorMode,
@@ -86,6 +88,10 @@ export function FeedLabSettingsMenu() {
     navigate('/login', { replace: true });
   }, [handleClose, keys, navigate]);
 
+  const toggleAutomateDecryption = useCallback(() => {
+    setAutomateDecryption(!automateDecryption);
+  }, [automateDecryption, setAutomateDecryption]);
+
   const toggleRequestsApprovalDialog = useCallback(() => {
     setRequestsApprovalDialog(!requestsApprovalDialog);
   }, [requestsApprovalDialog, setRequestsApprovalDialog]);
@@ -97,17 +103,19 @@ export function FeedLabSettingsMenu() {
   return (
     <>
       <Tooltip title="Settings">
-        <IconButton
-          size="small"
-          color="inherit"
-          aria-label="Settings"
-          aria-controls={open ? 'feed-lab-settings-menu' : undefined}
-          aria-haspopup="true"
-          aria-expanded={open ? 'true' : undefined}
-          onClick={handleOpen}
-        >
-          <SettingsOutlinedIcon fontSize="small" />
-        </IconButton>
+        <TooltipIconWrap>
+          <IconButton
+            size="small"
+            color="inherit"
+            aria-label="Settings"
+            aria-controls={open ? 'feed-lab-settings-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            onClick={handleOpen}
+          >
+            <SettingsOutlinedIcon fontSize="small" />
+          </IconButton>
+        </TooltipIconWrap>
       </Tooltip>
 
       <Menu
@@ -115,6 +123,7 @@ export function FeedLabSettingsMenu() {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
+        transitionDuration={0}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{
@@ -173,6 +182,23 @@ export function FeedLabSettingsMenu() {
             <Divider />
           </>
         ) : null}
+        <MenuItem
+          onClick={toggleAutomateDecryption}
+          disabled={keys.isSystemAppSession}
+          sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}
+        >
+          Automate decryption
+          <Switch
+            size="small"
+            edge="end"
+            checked={keys.isSystemAppSession ? false : automateDecryption}
+            disabled={keys.isSystemAppSession}
+            tabIndex={-1}
+            disableRipple
+            onClick={(event) => event.stopPropagation()}
+            onChange={(_, checked) => setAutomateDecryption(checked)}
+          />
+        </MenuItem>
         <MenuItem
           onClick={toggleDarkMode}
           sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}

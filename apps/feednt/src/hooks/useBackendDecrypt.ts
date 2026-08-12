@@ -15,6 +15,7 @@ import type {
   StoredFeedDelivery,
 } from '@encrypt/core/feed/types';
 import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
+import { yieldToMain } from '@encrypt/core/utils/yieldToMain';
 import type { useFeedntPrivateKey } from '@feednt/hooks/useFeedntPrivateKey.ts';
 
 type KeysSession = ReturnType<typeof useFeedntPrivateKey>;
@@ -34,6 +35,11 @@ type DecryptCommentsContext = {
   allDeliveries: StoredFeedDelivery[];
   manifestLookup: DecryptContext['manifestLookup'];
 };
+
+type DecryptFeedContext = Pick<
+  DecryptContext,
+  'allDeliveries' | 'manifestLookup'
+>;
 
 async function decryptWithMaterial(
   material: UploadedPrivateKeyMaterial,
@@ -98,6 +104,33 @@ async function decryptWithMaterial(
   );
 }
 
+async function decryptDeliveriesWithMaterial(
+  material: UploadedPrivateKeyMaterial,
+  deliveries: StoredFeedDelivery[],
+  { allDeliveries, manifestLookup }: DecryptFeedContext,
+): Promise<{
+  decrypted: Record<string, string>;
+  errors: Record<string, string>;
+}> {
+  const decrypted: Record<string, string> = {};
+  const errors: Record<string, string> = {};
+
+  for (const delivery of deliveries) {
+    try {
+      decrypted[delivery.id] = await decryptWithMaterial(material, {
+        delivery,
+        allDeliveries,
+        manifestLookup,
+      });
+    } catch (e) {
+      errors[delivery.id] = e instanceof Error ? e.message : 'Decrypt failed.';
+    }
+    await yieldToMain();
+  }
+
+  return { decrypted, errors };
+}
+
 async function decryptCommentsWithMaterial(
   material: UploadedPrivateKeyMaterial,
   comments: StoredComment[],
@@ -130,6 +163,7 @@ async function decryptCommentsWithMaterial(
     } catch {
       // Skip comments that cannot be decrypted with this key.
     }
+    await yieldToMain();
   }
 
   return decrypted;
@@ -190,6 +224,23 @@ export function useBackendDecrypt(keys: KeysSession) {
     [keys],
   );
 
+  const decryptDeliveries = useCallback(
+    async (deliveries: StoredFeedDelivery[], context: DecryptFeedContext) => {
+      setMessageErrors({});
+      setCommentsErrors({});
+      const results = await keys.withPrivateKey(async (material) =>
+        decryptDeliveriesWithMaterial(material, deliveries, context),
+      );
+      if (results === null) {
+        return null;
+      }
+      setDecryptedMessages(results.decrypted);
+      setMessageErrors(results.errors);
+      return results;
+    },
+    [keys],
+  );
+
   const decryptDelivery = useCallback(
     async (context: DecryptContext) => {
       const messageId = context.delivery.id;
@@ -239,6 +290,7 @@ export function useBackendDecrypt(keys: KeysSession) {
 
   return {
     decryptDelivery,
+    decryptDeliveries,
     decryptComments,
     busyMessageId,
     decryptedMessages,

@@ -69,29 +69,43 @@ const stoneDark = {
 
 type StonePalette = typeof stoneLight;
 
-function feedAppBackgroundImage(mode: 'light' | 'dark') {
+function feedAppBackgroundImage(mode: 'light' | 'dark', stone: StonePalette) {
   const isLight = mode === 'light';
 
+  // vw/vh tie gradients to the viewport; background-attachment: fixed keeps them still while scrolling.
   return isLight
     ? [
-        `radial-gradient(ellipse 60% 56% at 0% 0%, ${alpha(brandColor, 0.2)}, transparent 54%)`,
-        `radial-gradient(ellipse 70% 55% at 100% 100%, ${alpha('#78716c', 0.09)}, transparent 55%)`,
+        `radial-gradient(ellipse 60vw 56vh at 0vw 0vh, ${alpha(brandColor, 0.1)}, transparent 54%)`,
+        `radial-gradient(ellipse 88vw 76vh at 50vw 52vh, ${alpha('#e7e5e4', 0.38)}, transparent 66%)`,
+        `radial-gradient(ellipse 78vw 62vh at 100vw 100vh, ${alpha('#a8a29e', 0.22)}, transparent 58%)`,
+        `linear-gradient(168deg, ${alpha(stone.bg, 0)} 42%, ${alpha('#f5f3ef', 0.5)} 68%, ${alpha('#d6d3d1', 0.34)} 100%)`,
       ].join(', ')
     : [
-        `radial-gradient(ellipse 95% 65% at 0% 0%, ${alpha(brandColor, 0.18)}, transparent 62%)`,
-        `radial-gradient(ellipse 75% 60% at 100% 100%, ${alpha('#a8a29e', 0.14)}, transparent 58%)`,
+        `radial-gradient(ellipse 95vw 65vh at 0vw 0vh, ${alpha(brandColor, 0.15)}, transparent 62%)`,
+        `radial-gradient(ellipse 75vw 60vh at 100vw 100vh, ${alpha('#a8a29e', 0.14)}, transparent 58%)`,
       ].join(', ');
 }
 
 function feedAppBackgroundStyles(mode: 'light' | 'dark', stone: StonePalette) {
   return {
     backgroundColor: stone.bg,
-    backgroundImage: feedAppBackgroundImage(mode),
+    backgroundImage: feedAppBackgroundImage(mode, stone),
     backgroundAttachment: 'fixed',
+    backgroundRepeat: 'no-repeat',
   };
 }
 
-/** Soft glass-like wash for full-page backgrounds (feed-lab / feednt). */
+const feedAppBarBackgroundStyles = (
+  mode: 'light' | 'dark',
+  stone: StonePalette,
+) => ({
+  ...feedAppBackgroundStyles(mode, stone),
+  color: stone.text,
+  border: 'none',
+  boxShadow: 'none',
+});
+
+/** Full-page background for login and other standalone screens. */
 export function feedAppBackgroundSx(theme: Theme) {
   const stone = theme.palette.mode === 'light' ? stoneLight : stoneDark;
 
@@ -192,13 +206,12 @@ function createStoneTheme(mode: 'light' | 'dark') {
         },
       },
       MuiAppBar: {
+        defaultProps: {
+          color: 'transparent',
+        },
         styleOverrides: {
-          root: {
-            ...feedAppBackgroundStyles(mode, stone),
-            color: stone.text,
-            border: 'none',
-            boxShadow: 'none',
-          },
+          root: feedAppBarBackgroundStyles(mode, stone),
+          colorTransparent: feedAppBarBackgroundStyles(mode, stone),
         },
       },
       MuiPaper: {
@@ -207,9 +220,11 @@ function createStoneTheme(mode: 'light' | 'dark') {
         },
         styleOverrides: {
           root: {
-            backgroundImage: 'none',
             border: `1px solid ${stone.border}`,
             boxShadow: stone.cardShadow,
+            '&:not(.MuiAppBar-root)': {
+              backgroundImage: 'none',
+            },
           },
         },
       },

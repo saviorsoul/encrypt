@@ -14,6 +14,7 @@ import {
 } from '@feednt/services/feedntSettingsStorage.ts';
 
 type FeedntSettingsContextValue = FeedntSettings & {
+  setAutomateDecryption: (enabled: boolean) => void;
   setColorMode: (colorMode: FeedntColorMode) => void;
 };
 
@@ -26,6 +27,14 @@ export function FeedntSettingsProvider({ children }: { children: ReactNode }) {
     loadFeedntSettings(),
   );
 
+  const setAutomateDecryption = useCallback((enabled: boolean) => {
+    setSettings((current) => {
+      const next = { ...current, automateDecryption: enabled };
+      saveFeedntSettings(next);
+      return next;
+    });
+  }, []);
+
   const setColorMode = useCallback((colorMode: FeedntColorMode) => {
     setSettings((current) => {
       const next = { ...current, colorMode };
@@ -37,9 +46,10 @@ export function FeedntSettingsProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       ...settings,
+      setAutomateDecryption,
       setColorMode,
     }),
-    [settings, setColorMode],
+    [settings, setAutomateDecryption, setColorMode],
   );
 
   return (

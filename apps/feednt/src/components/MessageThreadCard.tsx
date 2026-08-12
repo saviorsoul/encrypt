@@ -46,6 +46,7 @@ import {
 import { RedactedText } from '@feednt/components/RedactedText.tsx';
 import { sanitizeDisplayText } from '@feednt/lib/sanitizeDisplayText.ts';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
+import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
 import {
   CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD,
   encryptedContentCiphertextBase64Length,
@@ -403,7 +404,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               variant="caption"
               color="text.secondary"
               component="span"
-              sx={{ cursor: 'default', flexShrink: 0 }}
+              sx={{ cursor: 'default', flexShrink: 0, display: 'inline-block' }}
             >
               {sentAgo}
             </Typography>
@@ -591,6 +592,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   onOpenIdentity,
 }: MessageThreadExpandedPanelProps) {
   const { keys } = useFeedntSession();
+  const { automateDecryption } = useFeedntSettings();
   const {
     comments,
     loading: commentsLoading,
@@ -679,6 +681,9 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
     ],
   );
 
+  const waitToShowComments =
+    automateDecryption && comments.length > 0 && decryptedComments === null;
+
   return (
     <Box
       onClick={(event) => event.stopPropagation()}
@@ -717,7 +722,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
         </Alert>
       ) : null}
 
-      {comments.length > 0 && !commentsLoading ? (
+      {comments.length > 0 && !commentsLoading && !waitToShowComments ? (
         <Collapse in appear timeout={COMMENTS_PANEL_CONTENT_GROW_MS}>
           <Stack spacing={1}>
             {comments.map((comment) => {

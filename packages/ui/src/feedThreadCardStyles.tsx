@@ -6,6 +6,9 @@ import { alpha, type Theme } from '@mui/material/styles';
 
 export const threadCardPaperSx = (highlighted: boolean) => (theme: Theme) => ({
   overflow: 'hidden',
+  backgroundColor: 'transparent',
+  backgroundImage: 'none',
+  boxShadow: 'none',
   transition: theme.transitions.create('border-color', {
     duration: 1000,
   }),
@@ -119,8 +122,12 @@ export const commentGlassPaperSx = (theme: Theme) => {
       ? 'inset 0 1px 0 rgba(255,255,255,0.55)'
       : 'inset 0 1px 0 rgba(255,255,255,0.06)',
     backgroundColor: isLight ? alpha('#ffffff', 0.48) : alpha('#ffffff', 0.06),
-    backdropFilter: 'blur(12px) saturate(1.1)',
-    WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
+    backdropFilter: isLight
+      ? 'blur(12px) saturate(1.1)'
+      : 'blur(12px) saturate(1.1)',
+    WebkitBackdropFilter: isLight
+      ? 'blur(12px) saturate(1.1)'
+      : 'blur(12px) saturate(1.1)',
     backgroundImage: 'none',
     px: 1.25,
     py: 1,

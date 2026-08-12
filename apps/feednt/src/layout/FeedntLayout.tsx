@@ -3,7 +3,6 @@ import { AppBar, Box, Container, Stack } from '@mui/material';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FeedntTopNav } from '@feednt/components/FeedntTopNav.tsx';
 import { UsersDrawer } from '@feednt/components/UsersDrawer.tsx';
-import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { FeedntFriendshipsProvider } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
 
 function usersDrawerOpenFromPathname(pathname: string): boolean {
@@ -25,7 +24,7 @@ export function FeedntLayout() {
 
   return (
     <FeedntFriendshipsProvider>
-      <Box sx={feedAppBackgroundSx}>
+      <Box sx={{ minHeight: '100vh' }}>
         <AppBar position="sticky">
           <FeedntTopNav
             usersActive={usersDrawerOpen}

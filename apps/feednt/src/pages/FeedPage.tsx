@@ -1,19 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, CircularProgress, Stack, Typography } from '@mui/material';
-import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@feednt/hooks/useBackendFeedData.ts';
 import { useBackendDecrypt } from '@feednt/hooks/useBackendDecrypt.ts';
+import { useVisibleFeedMessages } from '@feednt/hooks/useVisibleFeedMessages.ts';
 import { useBackendShare } from '@feednt/hooks/useBackendShare.ts';
 import { useFeedntFriendships } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
 import { useFeedntRecipients } from '@feednt/hooks/useFeedntRecipients.ts';
 import { useIdentityDialog } from '@feednt/hooks/useIdentityDialog.ts';
 import { IdentityDialog } from '@feednt/components/IdentityDialog.tsx';
 import { MessageThreadCard } from '@feednt/components/MessageThreadCard.tsx';
+import {
+  FeedMessageEnter,
+  FeedRefreshButtonIcon,
+  ButtonIconSlot,
+  feedActionButtonSx,
+  useFeedMessageEnterState,
+  useFeedRefreshFeedback,
+} from '@encrypt/ui';
 import { MessageSentSnackbar } from '@feednt/components/MessageSentSnackbar.tsx';
 import { SendMessageDialog } from '@feednt/components/SendMessageDialog.tsx';
 import { ShareMessageDialog } from '@feednt/components/ShareMessageDialog.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
+import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
 
 export function FeedPage() {
   const { session, keys, feedntUsers } = useFeedntSession();
@@ -56,11 +65,13 @@ export function FeedPage() {
     loadingFriends: friendships.friendshipsLoading,
     friendsError: friendships.friendshipsError,
   });
+  const { automateDecryption } = useFeedntSettings();
   const decrypt = useBackendDecrypt(keys);
   const {
     clear: clearDecrypt,
     mergeDecryptedComments,
     decryptDelivery,
+    decryptDeliveries,
     decryptComments,
     busyMessageId,
     decryptedMessages,
@@ -82,6 +93,34 @@ export function FeedPage() {
     }),
     [feed.allDeliveries, feed.manifestLookup],
   );
+  const { visibleMessages, preparing: preparingFeed } = useVisibleFeedMessages({
+    messages: feed.messages,
+    feedLoading: feed.loading,
+    automateDecryption,
+    decryptDeliveries,
+    feedContext,
+  });
+  const feedBusy = feed.loading || preparingFeed;
+  const visibleMessageIds = useMemo(
+    () => visibleMessages.map((message) => message.id),
+    [visibleMessages],
+  );
+  const { shouldAnimateEntry, onAnimationDone, getStaggerIndex } =
+    useFeedMessageEnterState();
+  const { showRefreshSuccess, markRefreshStarted, feedListPulseSx } =
+    useFeedRefreshFeedback({
+      feedBusy,
+      feedError: feed.error,
+    });
+
+  const wasFeedLoadingRef = useRef(feed.loading);
+  useEffect(() => {
+    const wasLoading = wasFeedLoadingRef.current;
+    wasFeedLoadingRef.current = feed.loading;
+    if (wasLoading && !feed.loading && !automateDecryption) {
+      clearDecrypt();
+    }
+  }, [automateDecryption, clearDecrypt, feed.loading]);
 
   useEffect(() => {
     if (createMessageDialogOpen) {
@@ -114,9 +153,11 @@ export function FeedPage() {
     if (!keys.keyId) {
       return;
     }
-    clearDecrypt();
+    markRefreshStarted();
+    setExpandedMessageIds(new Set());
+    clearLastShare();
     await reloadFeed();
-  }, [clearDecrypt, keys.keyId, reloadFeed]);
+  }, [clearLastShare, keys.keyId, markRefreshStarted, reloadFeed]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
@@ -167,14 +208,14 @@ export function FeedPage() {
         <Button
           variant="outlined"
           size="small"
+          sx={feedActionButtonSx}
           startIcon={
-            feed.loading ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <RefreshOutlinedIcon />
-            )
+            <FeedRefreshButtonIcon
+              busy={feedBusy}
+              success={showRefreshSuccess}
+            />
           }
-          disabled={!keys.keyId || feed.loading}
+          disabled={!keys.keyId || feedBusy}
           onClick={() => void handleReloadFeed()}
         >
           Refresh feed
@@ -182,7 +223,12 @@ export function FeedPage() {
         <Button
           variant="contained"
           size="small"
-          startIcon={<SendOutlinedIcon />}
+          sx={feedActionButtonSx}
+          startIcon={
+            <ButtonIconSlot>
+              <SendOutlinedIcon />
+            </ButtonIconSlot>
+          }
           disabled={!keys.keyId}
           onClick={() => setCreateMessageDialogOpen(true)}
         >
@@ -196,42 +242,49 @@ export function FeedPage() {
         </Typography>
       ) : null}
 
-      <Stack spacing={1.5}>
-        {feed.messages.map((message) => {
+      <Stack spacing={2} sx={{ width: '100%', ...feedListPulseSx }}>
+        {visibleMessages.map((message) => {
           const isExpanded = expandedMessageIds.has(message.id);
           const decryptedComments =
             decryptedCommentsByMessage[message.id] ?? null;
           return (
-            <MessageThreadCard
+            <FeedMessageEnter
               key={message.id}
-              message={message}
-              expanded={isExpanded}
-              highlighted={lastInteractedMessageId === message.id}
-              onMessageInteract={handleMessageInteract}
-              onToggleMessage={handleToggleMessage}
-              onDecryptDelivery={decryptDelivery}
-              onDecryptComments={decryptComments}
-              decryptBusy={busyMessageId === message.id}
-              decryptError={messageErrors[message.id] ?? null}
-              decryptCommentsError={commentsErrors[message.id] ?? null}
-              decryptPlaintext={decryptedMessages[message.id] ?? null}
-              decryptedComments={decryptedComments}
-              shareBusy={shareBusy}
-              shareLastShareId={
-                isExpanded && lastShare?.messageId === message.id
-                  ? lastShare.shareId
-                  : null
-              }
-              onOpenShare={handleOpenShare}
-              onMergeDecryptedComments={mergeDecryptedComments}
-              feedContext={feedContext}
-              usernameByKeyId={usernameByKeyId}
-              viewerKeyId={keys.keyId}
-              onOpenIdentity={identity.openIdentity}
-            />
+              messageId={message.id}
+              animateEntry={shouldAnimateEntry(message.id)}
+              staggerIndex={getStaggerIndex(message.id, visibleMessageIds)}
+              onAnimationDone={onAnimationDone}
+            >
+              <MessageThreadCard
+                message={message}
+                expanded={isExpanded}
+                highlighted={lastInteractedMessageId === message.id}
+                onMessageInteract={handleMessageInteract}
+                onToggleMessage={handleToggleMessage}
+                onDecryptDelivery={decryptDelivery}
+                onDecryptComments={decryptComments}
+                decryptBusy={busyMessageId === message.id}
+                decryptError={messageErrors[message.id] ?? null}
+                decryptCommentsError={commentsErrors[message.id] ?? null}
+                decryptPlaintext={decryptedMessages[message.id] ?? null}
+                decryptedComments={decryptedComments}
+                shareBusy={shareBusy}
+                shareLastShareId={
+                  isExpanded && lastShare?.messageId === message.id
+                    ? lastShare.shareId
+                    : null
+                }
+                onOpenShare={handleOpenShare}
+                onMergeDecryptedComments={mergeDecryptedComments}
+                feedContext={feedContext}
+                usernameByKeyId={usernameByKeyId}
+                viewerKeyId={keys.keyId}
+                onOpenIdentity={identity.openIdentity}
+              />
+            </FeedMessageEnter>
           );
         })}
-        {keys.keyId && !feed.loading && feed.messages.length === 0 ? (
+        {keys.keyId && !feedBusy && visibleMessages.length === 0 ? (
           <Typography color="text.secondary">
             No messages in your inbox yet.
           </Typography>

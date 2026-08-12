@@ -3,10 +3,12 @@ const SETTINGS_STORAGE_KEY = 'encrypt:feednt:settings';
 export type FeedntColorMode = 'light' | 'dark';
 
 export type FeedntSettings = {
+  automateDecryption: boolean;
   colorMode: FeedntColorMode;
 };
 
 const DEFAULT_SETTINGS: FeedntSettings = {
+  automateDecryption: true,
   colorMode: 'light',
 };
 
@@ -30,6 +32,10 @@ export function loadFeedntSettings(): FeedntSettings {
     }
     const parsed = JSON.parse(raw) as Partial<FeedntSettings>;
     return {
+      automateDecryption:
+        typeof parsed.automateDecryption === 'boolean'
+          ? parsed.automateDecryption
+          : DEFAULT_SETTINGS.automateDecryption,
       colorMode:
         parsed.colorMode === 'light' || parsed.colorMode === 'dark'
           ? parsed.colorMode

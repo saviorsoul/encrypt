@@ -3,11 +3,13 @@ const SETTINGS_STORAGE_KEY = 'encrypt:feed-lab:settings';
 export type FeedLabColorMode = 'light' | 'dark';
 
 export type FeedLabSettings = {
+  automateDecryption: boolean;
   requestsApprovalDialog: boolean;
   colorMode: FeedLabColorMode;
 };
 
 const DEFAULT_SETTINGS: FeedLabSettings = {
+  automateDecryption: true,
   requestsApprovalDialog: true,
   colorMode: 'light',
 };
@@ -32,6 +34,10 @@ export function loadFeedLabSettings(): FeedLabSettings {
     }
     const parsed = JSON.parse(raw) as Partial<FeedLabSettings>;
     return {
+      automateDecryption:
+        typeof parsed.automateDecryption === 'boolean'
+          ? parsed.automateDecryption
+          : DEFAULT_SETTINGS.automateDecryption,
       requestsApprovalDialog:
         typeof parsed.requestsApprovalDialog === 'boolean'
           ? parsed.requestsApprovalDialog

@@ -23,3 +23,18 @@ export { formatRelativeTime } from './formatRelativeTime.ts';
 export { nameInitial } from './nameInitial.ts';
 export type { CopyState } from './copyState.ts';
 export { copyTextToClipboard } from './copyToClipboard.ts';
+export {
+  FeedMessageEnter,
+  MESSAGE_ENTER_MS,
+  MESSAGE_STAGGER_MS,
+  type FeedMessageEnterProps,
+} from './FeedMessageEnter.tsx';
+export { useFeedMessageEnterState } from './useFeedMessageEnterState.ts';
+export { useFeedRefreshFeedback } from './useFeedRefreshFeedback.ts';
+export {
+  FeedRefreshButtonIcon,
+  ButtonIconSlot,
+  feedActionButtonSx,
+  type FeedRefreshButtonIconProps,
+} from './FeedRefreshButtonIcon.tsx';
+export { TooltipIconWrap } from './TooltipIconWrap.tsx';

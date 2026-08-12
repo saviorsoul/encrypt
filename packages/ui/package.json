@@ -20,6 +20,11 @@
     "./copyState": "./src/copyState.ts",
     "./feedTheme": "./src/feedTheme.ts",
     "./feedThreadCardStyles": "./src/feedThreadCardStyles.tsx",
+    "./FeedMessageEnter": "./src/FeedMessageEnter.tsx",
+    "./useFeedMessageEnterState": "./src/useFeedMessageEnterState.ts",
+    "./useFeedRefreshFeedback": "./src/useFeedRefreshFeedback.ts",
+    "./FeedRefreshButtonIcon": "./src/FeedRefreshButtonIcon.tsx",
+    "./TooltipIconWrap": "./src/TooltipIconWrap.tsx",
     "./FeedntText": "./src/FeedntText.tsx"
   },
   "peerDependencies": {
