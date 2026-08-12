@@ -10,7 +10,7 @@ export type FeedLabSettings = {
 
 const DEFAULT_SETTINGS: FeedLabSettings = {
   automateDecryption: true,
-  requestsApprovalDialog: true,
+  requestsApprovalDialog: false,
   colorMode: 'light',
 };
 
