@@ -688,7 +688,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
     <Box
       onClick={(event) => event.stopPropagation()}
       sx={{
-        px: 3,
+        px: 2,
         pt: 1.5,
         pb: 2,
         borderTop: 1,

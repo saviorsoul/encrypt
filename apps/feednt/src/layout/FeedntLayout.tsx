@@ -32,7 +32,7 @@ export function FeedntLayout() {
           />
         </AppBar>
 
-        <Container maxWidth="sm" sx={{ py: 3 }}>
+        <Container maxWidth="sm" sx={{ py: 1.5 }}>
           <Stack spacing={3}>
             <Outlet />
           </Stack>

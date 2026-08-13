@@ -32,6 +32,7 @@ export {
 export { useFeedMessageEnterState } from './useFeedMessageEnterState.ts';
 export { useFeedRefreshFeedback } from './useFeedRefreshFeedback.ts';
 export {
+  FeedBusyButtonIcon,
   FeedRefreshButtonIcon,
   ButtonIconSlot,
   feedActionButtonSx,

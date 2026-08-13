@@ -219,12 +219,16 @@ function createStoneTheme(mode: 'light' | 'dark') {
           elevation: 0,
         },
         styleOverrides: {
-          root: {
-            border: `1px solid ${stone.border}`,
-            boxShadow: stone.cardShadow,
-            '&:not(.MuiAppBar-root)': {
-              backgroundImage: 'none',
-            },
+          root: ({ ownerState }) => {
+            const elevation = ownerState.elevation ?? 0;
+
+            return {
+              border: `1px solid ${stone.border}`,
+              ...(elevation === 0 ? { boxShadow: stone.cardShadow } : {}),
+              '&:not(.MuiAppBar-root)': {
+                backgroundImage: 'none',
+              },
+            };
           },
         },
       },

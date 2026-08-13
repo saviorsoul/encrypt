@@ -38,6 +38,19 @@ export function ButtonIconSlot({ children }: { children: ReactNode }) {
   );
 }
 
+export function FeedBusyButtonIcon() {
+  return (
+    <ButtonIconSlot>
+      <CircularProgress
+        size={ICON_SLOT_PX}
+        color="inherit"
+        thickness={4}
+        sx={{ display: 'block' }}
+      />
+    </ButtonIconSlot>
+  );
+}
+
 export type FeedRefreshButtonIconProps = {
   busy: boolean;
   success: boolean;

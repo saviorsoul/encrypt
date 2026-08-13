@@ -10,9 +10,7 @@ type UseVisibleFeedMessagesOptions = {
   messages: StoredMessage[];
   feedLoading: boolean;
   automateDecryption: boolean;
-  decryptDeliveries: ReturnType<
-    typeof useBackendDecrypt
-  >['decryptDeliveries'];
+  decryptDeliveries: ReturnType<typeof useBackendDecrypt>['decryptDeliveries'];
   feedContext: DecryptFeedContext;
 };
 
@@ -25,24 +23,34 @@ export function useVisibleFeedMessages({
 }: UseVisibleFeedMessagesOptions) {
   const [visibleMessages, setVisibleMessages] = useState<StoredMessage[]>([]);
   const [preparing, setPreparing] = useState(false);
-  const visibleMessageIdsRef = useRef<Set<string>>(new Set());
   const feedContextRef = useRef(feedContext);
-
-  feedContextRef.current = feedContext;
+  const lastProcessedMessageIdsKeyRef = useRef<string | null>(null);
 
   const messageIdsKey = useMemo(
     () => messages.map((message) => message.id).join('\0'),
     [messages],
   );
 
+  const visibleMessageIds = useMemo(
+    () => new Set(visibleMessages.map((message) => message.id)),
+    [visibleMessages],
+  );
+
+  const pendingPreparation = useMemo(() => {
+    if (feedLoading || !automateDecryption || messages.length === 0) {
+      return false;
+    }
+
+    return messages.some((message) => !visibleMessageIds.has(message.id));
+  }, [automateDecryption, feedLoading, messages, visibleMessageIds]);
+
   useEffect(() => {
-    visibleMessageIdsRef.current = new Set(
-      visibleMessages.map((message) => message.id),
-    );
-  }, [visibleMessages]);
+    feedContextRef.current = feedContext;
+  }, [feedContext]);
 
   useEffect(() => {
     if (feedLoading) {
+      lastProcessedMessageIdsKeyRef.current = null;
       return;
     }
 
@@ -55,16 +63,21 @@ export function useVisibleFeedMessages({
     if (messages.length === 0) {
       setVisibleMessages([]);
       setPreparing(false);
+      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
       return;
     }
 
-    const currentVisibleIds = visibleMessageIdsRef.current;
-    const isInitialLoad = currentVisibleIds.size === 0;
+    const visibleIds = new Set(visibleMessages.map((message) => message.id));
     const hasNewMessageIds = messages.some(
-      (message) => !currentVisibleIds.has(message.id),
+      (message) => !visibleIds.has(message.id),
     );
 
-    if (!isInitialLoad && !hasNewMessageIds) {
+    if (!hasNewMessageIds) {
+      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+        return;
+      }
+
+      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
       setVisibleMessages(messages);
       setPreparing(false);
       void decryptDeliveries(messages, feedContextRef.current);
@@ -78,6 +91,7 @@ export function useVisibleFeedMessages({
       .then(() => {
         if (!cancelled) {
           setVisibleMessages(messages);
+          lastProcessedMessageIdsKeyRef.current = messageIdsKey;
         }
       })
       .finally(() => {
@@ -89,7 +103,24 @@ export function useVisibleFeedMessages({
     return () => {
       cancelled = true;
     };
-  }, [automateDecryption, decryptDeliveries, feedLoading, messageIdsKey]);
+  }, [
+    automateDecryption,
+    decryptDeliveries,
+    feedLoading,
+    messageIdsKey,
+    messages,
+    visibleMessages,
+  ]);
 
-  return { visibleMessages, preparing };
+  if (!automateDecryption) {
+    return {
+      visibleMessages: feedLoading ? visibleMessages : messages,
+      preparing: false,
+    };
+  }
+
+  return {
+    visibleMessages,
+    preparing: preparing || pendingPreparation,
+  };
 }

@@ -40,15 +40,15 @@ export const messageGlassBackdropSx = (theme: Theme) => {
   return {
     position: 'relative',
     borderRadius: 1.5,
-    overflow: 'hidden',
     isolation: 'isolate',
+    boxShadow: theme.shadows[2],
     backgroundColor: isLight ? theme.feedLab.encBg : '#1c1917',
     backgroundImage: isLight
       ? [
-          `linear-gradient(to right, ${alpha(theme.palette.text.primary, 0.08)} 0%, transparent 26%)`,
+          // `linear-gradient(to right, ${alpha(theme.palette.text.primary, 0.08)} 0%, transparent 26%)`,
           `radial-gradient(ellipse 40px 30px at 12px 14px, ${alpha(brand, 0.22)}, transparent 22px)`,
-          `radial-gradient(ellipse 56px 40px at calc(100% - 12px) calc(100% - 10px), ${alpha('#78716c', 0.07)}, transparent 52px)`,
-          `linear-gradient(138deg, ${alpha('#ffffff', 0.98)} 0%, ${theme.feedLab.encBg} 48%, ${alpha('#e7e5e4', 0.78)} 100%)`,
+          // `radial-gradient(ellipse 56px 40px at calc(100% - 12px) calc(100% - 10px), ${alpha('#78716c', 0.07)}, transparent 52px)`,
+          // `linear-gradient(138deg, ${alpha('#ffffff', 0.98)} 0%, ${theme.feedLab.encBg} 48%, ${alpha('#e7e5e4', 0.78)} 100%)`,
         ].join(', ')
       : [
           `linear-gradient(to right, ${alpha('#000000', 0.14)} 0%, transparent 28%)`,
@@ -68,9 +68,6 @@ export const messageGlassPaperSx = (theme: Theme) => {
     zIndex: 1,
     borderRadius: 1.5,
     border: 'none',
-    boxShadow: isLight
-      ? '0 2px 18px rgba(28,25,23,0.08), inset 0 1px 0 rgba(255,255,255,0.75)'
-      : '0 4px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08)',
     backgroundColor: isLight ? alpha('#ffffff', 0.44) : alpha('#ffffff', 0.08),
     backdropFilter: isLight
       ? 'blur(20px) saturate(1.28)'
@@ -98,10 +95,7 @@ export const commentGlassBackdropSx = (theme: Theme) => {
     isolation: 'isolate',
     backgroundColor: isLight ? theme.feedLab.encBg : '#1c1917',
     backgroundImage: isLight
-      ? [
-          `linear-gradient(to right, ${alpha(theme.palette.text.primary, 0.06)} 0%, transparent 22%)`,
-          `linear-gradient(138deg, ${alpha('#ffffff', 0.98)} 0%, ${theme.feedLab.encBg} 48%, ${alpha('#e7e5e4', 0.78)} 100%)`,
-        ].join(', ')
+      ? null
       : [
           `linear-gradient(to right, ${alpha('#000000', 0.11)} 0%, transparent 24%)`,
           `linear-gradient(138deg, #2c2926 0%, #1c1917 52%, #292524 100%)`,
@@ -117,10 +111,8 @@ export const commentGlassPaperSx = (theme: Theme) => {
     position: 'relative',
     zIndex: 1,
     borderRadius: 1,
-    border: 'none',
-    boxShadow: isLight
-      ? 'inset 0 1px 0 rgba(255,255,255,0.55)'
-      : 'inset 0 1px 0 rgba(255,255,255,0.06)',
+    border: isLight ? `1px solid ${theme.palette.divider}` : null,
+    boxShadow: isLight ? null : 'inset 0 1px 0 rgba(255,255,255,0.06)',
     backgroundColor: isLight ? alpha('#ffffff', 0.48) : alpha('#ffffff', 0.06),
     backdropFilter: isLight
       ? 'blur(12px) saturate(1.1)'
