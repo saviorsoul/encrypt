@@ -13,20 +13,54 @@ const manifestCache = new Map<
   Record<string, KeyManifestRecipientPayload>
 >();
 
-function cacheInboxItems(items: InboxApiItem[]) {
-  manifestCache.clear();
+function cacheInboxItems(items: InboxApiItem[], replace: boolean) {
+  if (replace) {
+    manifestCache.clear();
+  }
   for (const item of items) {
     manifestCache.set(item.id, item.keyManifest);
   }
+}
+
+function mergeInboxItems(
+  existing: InboxApiItem[],
+  incoming: InboxApiItem[],
+): InboxApiItem[] {
+  const seen = new Set(existing.map((item) => item.id));
+  const merged = [...existing];
+  for (const item of incoming) {
+    if (!seen.has(item.id)) {
+      merged.push(item);
+      seen.add(item.id);
+    }
+  }
+  return merged;
 }
 
 export function useBackendFeedData(keyId: string | null) {
   const api = useFeedApi();
   const [rawItems, setRawItems] = useState<InboxApiItem[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [total, setTotal] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadIdRef = useRef(0);
+
+  const applyInboxPage = useCallback(
+    (pageItems: InboxApiItem[], pageTotal: number, replace: boolean) => {
+      setTotal(pageTotal);
+      setRawItems((current) => {
+        const merged = replace ? pageItems : mergeInboxItems(current, pageItems);
+        cacheInboxItems(pageItems, replace);
+        const deliveries = inboxApiItemsToStoredDeliveries(merged);
+        setMessages(filterFeedInboxMessages(deliveries));
+        return merged;
+      });
+    },
+    [],
+  );
 
   const reload = useCallback(async () => {
     if (!keyId) {
@@ -37,14 +71,12 @@ export function useBackendFeedData(keyId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const inbox = await api.getInbox();
+      const page = await api.getInbox();
       if (loadId !== loadIdRef.current) {
         return;
       }
-      cacheInboxItems(inbox);
-      setRawItems(inbox);
-      const deliveries = inboxApiItemsToStoredDeliveries(inbox);
-      setMessages(filterFeedInboxMessages(deliveries));
+      applyInboxPage(page.items, page.total, true);
+      setNextCursor(page.nextCursor);
     } catch (e) {
       if (loadId !== loadIdRef.current) {
         return;
@@ -52,20 +84,52 @@ export function useBackendFeedData(keyId: string | null) {
       setError(e instanceof Error ? e.message : 'Failed to load feed data.');
       setRawItems([]);
       setMessages([]);
+      setTotal(0);
+      setNextCursor(null);
     } finally {
       if (loadId === loadIdRef.current) {
         setLoading(false);
       }
     }
-  }, [api, keyId]);
+  }, [api, applyInboxPage, keyId]);
+
+  const loadMore = useCallback(async () => {
+    if (!keyId || !nextCursor || loadingMore) {
+      return;
+    }
+
+    const loadId = loadIdRef.current;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await api.getInbox({ cursor: nextCursor });
+      if (loadId !== loadIdRef.current) {
+        return;
+      }
+      applyInboxPage(page.items, page.total, false);
+      setNextCursor(page.nextCursor);
+    } catch (e) {
+      if (loadId !== loadIdRef.current) {
+        return;
+      }
+      setError(e instanceof Error ? e.message : 'Failed to load more feed data.');
+    } finally {
+      if (loadId === loadIdRef.current) {
+        setLoadingMore(false);
+      }
+    }
+  }, [api, applyInboxPage, keyId, loadingMore, nextCursor]);
 
   useEffect(() => {
     if (!keyId) {
       loadIdRef.current += 1;
       setRawItems([]);
       setMessages([]);
+      setTotal(0);
+      setNextCursor(null);
       setError(null);
       setLoading(false);
+      setLoadingMore(false);
       return;
     }
 
@@ -87,9 +151,13 @@ export function useBackendFeedData(keyId: string | null) {
     messages,
     rawItems,
     allDeliveries,
+    total,
+    hasMore: nextCursor !== null,
     loading,
+    loadingMore,
     error,
     reload,
+    loadMore,
     manifestLookup,
   };
 }

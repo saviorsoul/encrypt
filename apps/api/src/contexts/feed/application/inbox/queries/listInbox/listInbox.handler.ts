@@ -1,9 +1,8 @@
-import type {
-  InboxApiItem,
-  StoredFeedDelivery,
-} from '@encrypt/core/feed/types';
+import type { InboxApiItem, InboxPageResponse } from '@encrypt/core/feed/types';
 import type { KeyManifestMap } from '@encrypt/core/types/manifest';
 import { logger } from '@/lib/logger.js';
+import type { InboxDeliveryRef } from '@/contexts/feed/domain/ports/InboxRepository.js';
+import { inboxRepository } from '@/contexts/feed/infrastructure/prismaInboxRepository.js';
 import { manifestShardRepository } from '@/contexts/feed/infrastructure/prismaManifestShardRepository.js';
 import { messageRepository } from '@/contexts/feed/infrastructure/prismaMessageRepository.js';
 import { shareRepository } from '@/contexts/feed/infrastructure/prismaShareRepository.js';
@@ -39,113 +38,98 @@ async function buildKeyManifestForDelivery(
   return { [recipientKeyId]: entry };
 }
 
-async function listDeliveriesForRecipientKeyId(
+async function buildInboxItemForDelivery(
+  delivery: InboxDeliveryRef,
   recipientKeyId: string,
-): Promise<StoredFeedDelivery[]> {
-  const deliveryIds =
-    await manifestShardRepository.listDeliveryIdsForRecipientKeyId(
+): Promise<InboxApiItem | null> {
+  if (delivery.kind === 'share') {
+    const share = await shareRepository.getById(delivery.id);
+    if (!share) {
+      logger.error(
+        { deliveryId: delivery.id, recipientKeyId },
+        'inbox share delivery is missing share row',
+      );
+      return null;
+    }
+
+    const keyManifest = await buildKeyManifestForDelivery(
+      delivery.id,
       recipientKeyId,
     );
-  const byId = new Map<string, StoredFeedDelivery>();
-
-  for (const id of deliveryIds) {
-    if (byId.has(id)) {
-      continue;
+    if (Object.keys(keyManifest).length === 0) {
+      return null;
     }
 
-    const message = await messageRepository.getById(id);
-    if (message) {
-      byId.set(id, message);
-      continue;
-    }
-
-    const share = await shareRepository.getById(id);
-    if (!share) {
-      // Manifest shards should always point at a message or share row.
-      logger.error(
-        { deliveryId: id, recipientKeyId },
-        'inbox delivery id has no message or share row',
-      );
-      continue;
-    }
-
-    byId.set(id, share);
-
-    if (!byId.has(share.messageId)) {
-      const parent = await messageRepository.getById(share.messageId);
-      if (parent) {
-        byId.set(parent.id, parent);
-      } else {
-        logger.error(
-          {
-            shareId: share.id,
-            messageId: share.messageId,
-            recipientKeyId,
-          },
-          'inbox share is missing parent message',
-        );
-      }
-    }
+    return {
+      id: share.id,
+      type: 'share',
+      messageId: share.messageId,
+      payload: share.payload,
+      createdAt: new Date(share.createdAt).toISOString(),
+      keyManifest,
+    };
   }
 
-  return [...byId.values()].sort((a, b) => b.createdAt - a.createdAt);
+  const message = await messageRepository.getById(delivery.id);
+  if (!message) {
+    logger.error(
+      { deliveryId: delivery.id, recipientKeyId },
+      'inbox message delivery is missing message row',
+    );
+    return null;
+  }
+
+  const keyManifest = await buildDirectKeyManifestForParent(
+    delivery.id,
+    recipientKeyId,
+  );
+  const includeParentForShareAccess =
+    Object.keys(keyManifest).length === 0 &&
+    (await inboxRepository.recipientHasShareAccessToParent(
+      delivery.id,
+      recipientKeyId,
+    ));
+
+  if (Object.keys(keyManifest).length === 0 && !includeParentForShareAccess) {
+    return null;
+  }
+
+  return {
+    id: message.id,
+    type: 'message',
+    payload: message.payload,
+    createdAt: new Date(message.createdAt).toISOString(),
+    keyManifest: includeParentForShareAccess ? {} : keyManifest,
+  };
 }
 
 export async function handleListInbox(
   query: ListInboxQuery,
-): Promise<InboxApiItem[]> {
-  const { recipientKeyId } = query;
-  const deliveries = await listDeliveriesForRecipientKeyId(recipientKeyId);
-  const items: InboxApiItem[] = [];
+): Promise<InboxPageResponse> {
+  const { recipientKeyId, cursor, limit, sort, order } = query;
 
-  const accessibleShareParentIds = new Set<string>();
-  for (const delivery of deliveries) {
-    if (!('messageId' in delivery)) {
-      continue;
-    }
-    const shareKeyManifest = await buildKeyManifestForDelivery(
-      delivery.id,
+  const [total, page] = await Promise.all([
+    inboxRepository.countDeliveries({ recipientKeyId, sort, order }),
+    inboxRepository.listDeliveries({
       recipientKeyId,
-    );
-    if (Object.keys(shareKeyManifest).length > 0) {
-      accessibleShareParentIds.add(delivery.messageId);
+      limit,
+      cursor,
+      sort,
+      order,
+    }),
+  ]);
+
+  const items: InboxApiItem[] = [];
+  for (const delivery of page.deliveries) {
+    const item = await buildInboxItemForDelivery(delivery, recipientKeyId);
+    if (item) {
+      items.push(item);
     }
   }
 
-  for (const delivery of deliveries) {
-    const isShare = 'messageId' in delivery;
-    const keyManifest = isShare
-      ? await buildKeyManifestForDelivery(delivery.id, recipientKeyId)
-      : await buildDirectKeyManifestForParent(delivery.id, recipientKeyId);
-    const includeParentForShareAccess =
-      !isShare &&
-      Object.keys(keyManifest).length === 0 &&
-      accessibleShareParentIds.has(delivery.id);
-
-    if (Object.keys(keyManifest).length === 0 && !includeParentForShareAccess) {
-      continue;
-    }
-
-    if (isShare) {
-      items.push({
-        id: delivery.id,
-        type: 'share',
-        messageId: delivery.messageId,
-        payload: delivery.payload,
-        createdAt: new Date(delivery.createdAt).toISOString(),
-        keyManifest,
-      });
-      continue;
-    }
-
-    items.push({
-      id: delivery.id,
-      type: 'message',
-      payload: delivery.payload,
-      createdAt: new Date(delivery.createdAt).toISOString(),
-      keyManifest: includeParentForShareAccess ? {} : keyManifest,
-    });
-  }
-
-  return items;
+  return {
+    items,
+    total,
+    nextCursor: page.nextCursor,
+  };
 }

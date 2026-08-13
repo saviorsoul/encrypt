@@ -8,14 +8,18 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/core/package.json ./packages/core/
+COPY packages/schemas/package.json ./packages/schemas/
 
-RUN npm ci -w @encrypt/api -w @encrypt/core --include-workspace-root --ignore-scripts
+RUN npm ci -w @encrypt/api -w @encrypt/core -w @encrypt/schemas --include-workspace-root --ignore-scripts
 
-# Fail the build if workspace deps are missing (catches MODULE_NOT_FOUND before runtime).
+# Fail the build if npm deps are missing (catches MODULE_NOT_FOUND before runtime).
 RUN node --input-type=module -e "import 'dotenv'; import 'koa'"
 
 COPY packages/core ./packages/core
+COPY packages/schemas ./packages/schemas
 COPY apps/api ./apps/api
+
+RUN npx tsx -e "import '@encrypt/schemas'"
 
 WORKDIR /app/apps/api
 RUN npx prisma generate

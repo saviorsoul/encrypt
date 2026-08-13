@@ -288,6 +288,16 @@ export function FeedPage() {
             No data yet for this keyId.
           </Typography>
         ) : null}
+        {feed.hasMore && !feedBusy && !feed.loadingMore ? (
+          <Button
+            variant="outlined"
+            size="small"
+            sx={feedActionButtonSx}
+            onClick={() => void feed.loadMore()}
+          >
+            Load more
+          </Button>
+        ) : null}
       </Stack>
 
       <SendMessageDialog

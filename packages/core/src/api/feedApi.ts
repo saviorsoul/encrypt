@@ -1,5 +1,10 @@
 import type { KeyManifestMap } from '../types/manifest.ts';
-import type { InboxApiItem, StoredComment } from '../feed/types.ts';
+import type {
+  InboxPageResponse,
+  InboxOrder,
+  InboxSort,
+  StoredComment,
+} from '../feed/types.ts';
 import {
   type FeedApiAuthProvider,
   type FeedApiPerRequestAuth,
@@ -121,6 +126,13 @@ async function readApiError(response: Response): Promise<string> {
   return `Request failed (${response.status}).`;
 }
 
+export type GetInboxOptions = {
+  limit?: number;
+  cursor?: string | null;
+  sort?: InboxSort;
+  order?: InboxOrder;
+};
+
 export function createFeedApi(config: FeedApiConfig) {
   const http = config.fetch ?? fetch;
   const baseUrl = config.baseUrl;
@@ -205,15 +217,29 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as { status: string };
     },
 
-    async getInbox(): Promise<InboxApiItem[]> {
+    async getInbox(options?: GetInboxOptions): Promise<InboxPageResponse> {
+      const params = new URLSearchParams();
+      if (options?.limit != null) {
+        params.set('limit', String(options.limit));
+      }
+      if (options?.cursor) {
+        params.set('cursor', options.cursor);
+      }
+      if (options?.sort) {
+        params.set('sort', options.sort);
+      }
+      if (options?.order) {
+        params.set('order', options.order);
+      }
+      const query = params.toString();
       const response = await authorizedFetchUrl(
-        joinUrl(baseUrl, '/api/inbox'),
+        joinUrl(baseUrl, `/api/inbox${query ? `?${query}` : ''}`),
         {},
       );
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
-      return (await response.json()) as InboxApiItem[];
+      return (await response.json()) as InboxPageResponse;
     },
 
     async getUsers(options?: FeedApiRequestOptions): Promise<BackendUser[]> {

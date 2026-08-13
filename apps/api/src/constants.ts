@@ -10,8 +10,11 @@ export const MANIFEST_SHARE_WRAP = 'manifest-share-v1' as const;
 export const COMMENT_VERSION = 1 as const;
 export const COMMENT_WRAP = 'message-bound-aes' as const;
 
-/** Max decoded base64 payload field length (generous wire limit). */
-export const MAX_BASE64_FIELD_LENGTH = 1_048_576;
+export {
+  DEFAULT_INBOX_LIMIT,
+  MAX_BASE64_FIELD_LENGTH,
+  MAX_INBOX_LIMIT,
+} from '@encrypt/schemas';
 
 export {
   AES_GCM_IV_BASE64_LENGTH,

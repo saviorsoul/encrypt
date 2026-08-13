@@ -7,8 +7,11 @@ import {
 import { validateBody } from '@/middleware/validateBody.js';
 import { verifySignature } from '@/middleware/verifySignature.js';
 import { requireAuthenticatedSigner } from '@/middleware/requireAuthenticatedSigner.js';
+import {
+  normalizeQuery,
+  type CommentsRouteContext,
+} from '@/middleware/normalizeQuery.js';
 import { validateQuery } from '@/middleware/validateQuery.js';
-import type { CommentsQuery } from '@/schemas/query.js';
 
 export function createCommentsRouter(): Router {
   const router = new Router({ prefix: '/api' });
@@ -26,10 +29,15 @@ export function createCommentsRouter(): Router {
     },
   );
 
-  router.get('/comments', validateQuery('commentsQuery'), async (ctx) => {
-    const { messageId } = ctx.state.validatedQuery as CommentsQuery;
-    ctx.body = await handleListComments({ messageId });
-  });
+  router.get(
+    '/comments',
+    validateQuery('commentsQuery'),
+    normalizeQuery('commentsQuery'),
+    async (ctx: CommentsRouteContext) => {
+      const { messageId } = ctx.state.validatedQuery;
+      ctx.body = await handleListComments({ messageId });
+    },
+  );
 
   return router;
 }

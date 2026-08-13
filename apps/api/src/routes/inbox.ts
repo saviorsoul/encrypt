@@ -1,18 +1,33 @@
 import Router from '@koa/router';
 import { handleListInbox } from '@/contexts/feed/index.js';
+import {
+  normalizeQuery,
+  type InboxRouteContext,
+} from '@/middleware/normalizeQuery.js';
+import { validateQuery } from '@/middleware/validateQuery.js';
 import { unauthorized } from '@/lib/httpError.js';
 
 export function createInboxRouter(): Router {
   const router = new Router({ prefix: '/api' });
 
-  router.get('/inbox', async (ctx) => {
-    const recipientKeyId = ctx.state.authenticatedKeyId;
-    if (!recipientKeyId) {
-      throw unauthorized('Authentication is required.');
-    }
+  router.get(
+    '/inbox',
+    validateQuery('inboxQuery'),
+    normalizeQuery('inboxQuery'),
+    async (ctx: InboxRouteContext) => {
+      const recipientKeyId = ctx.state.authenticatedKeyId;
+      if (!recipientKeyId) {
+        throw unauthorized('Authentication is required.');
+      }
 
-    ctx.body = await handleListInbox({ recipientKeyId });
-  });
+      const { validatedQuery } = ctx.state;
+
+      ctx.body = await handleListInbox({
+        recipientKeyId,
+        ...validatedQuery,
+      });
+    },
+  );
 
   return router;
 }

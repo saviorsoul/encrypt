@@ -1,33 +1,22 @@
 import type { Middleware } from 'koa';
-import type { SchemaName } from '../schemas/common.js';
-import { formatAjvErrors, getValidator } from '../lib/ajv.js';
+import { formatAjvErrors } from '../lib/ajv.js';
+import { getQueryValidator, type QuerySchemaName } from '../lib/queryAjv.js';
+import { parseWireQuery } from './parseWireQuery.js';
 import { badRequest } from '../lib/httpError.js';
 
-export type QuerySchemaName = Extract<SchemaName, 'commentsQuery'>;
+export type { QuerySchemaName } from '../lib/queryAjv.js';
 
 export function validateQuery(schemaName: QuerySchemaName): Middleware {
-  const validate = getValidator(schemaName);
+  const validate = getQueryValidator(schemaName);
 
   return async (ctx, next) => {
-    const query = ctx.query;
-
-    if (typeof query !== 'object' || query === null || Array.isArray(query)) {
-      throw badRequest('Invalid query parameters.');
-    }
-
-    const valid = validate(query);
+    const wireQuery = parseWireQuery(ctx.query);
+    const valid = validate(wireQuery);
     if (!valid) {
       const formatted = formatAjvErrors(validate.errors);
       throw badRequest(formatted.message, formatted.details);
     }
 
-    ctx.state.validatedQuery = query;
     await next();
   };
-}
-
-declare module 'koa' {
-  interface DefaultState {
-    validatedQuery?: unknown;
-  }
 }

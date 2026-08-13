@@ -289,6 +289,16 @@ export function FeedPage() {
             No messages in your inbox yet.
           </Typography>
         ) : null}
+        {feed.hasMore && !feedBusy && !feed.loadingMore ? (
+          <Button
+            variant="outlined"
+            size="small"
+            sx={feedActionButtonSx}
+            onClick={() => void feed.loadMore()}
+          >
+            Load more
+          </Button>
+        ) : null}
       </Stack>
 
       <SendMessageDialog

@@ -20,6 +20,16 @@ export type StoredComment = {
   createdAt: number;
 };
 
+/** Paginated inbox API response. */
+export type InboxPageResponse = {
+  items: InboxApiItem[];
+  total: number;
+  nextCursor: string | null;
+};
+
+export type InboxSort = 'date';
+export type InboxOrder = 'asc' | 'desc';
+
 /** API inbox row — key manifest shard included for decrypt. */
 export type InboxApiItem = {
   id: string;

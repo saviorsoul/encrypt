@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@encrypt/core": "*",
+    "@encrypt/schemas": "*",
     "@koa/router": "^13.1.0",
     "@prisma/client": "^6.19.0",
     "ajv": "^8.18.0",
