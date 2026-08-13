@@ -26,7 +26,7 @@ import {
 const AUTH_NONCE_WIRE_LENGTH = Math.ceil((AUTH_NONCE_BYTES * 4) / 3);
 
 /** RFC 7638 SHA-256 JWK thumbprint (base64url, no padding). */
-const keyIdProperty = {
+export const keyIdProperty = {
   type: 'string',
   minLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
   maxLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
@@ -144,6 +144,7 @@ export const keyManifestRecipientSchema = {
 
 export const keyManifestSchema = {
   type: 'object',
+  propertyNames: keyIdProperty,
   additionalProperties: keyManifestRecipientSchema,
   minProperties: 1,
 } as const;
