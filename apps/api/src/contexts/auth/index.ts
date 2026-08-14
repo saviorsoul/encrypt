@@ -1,8 +1,10 @@
 export type {
   AuthNonceEntry,
   AuthNonceStore,
+  ConsumeAndRotateOutcome,
 } from './domain/ports/AuthNonceStore.js';
 export {
+  consumeAndRotateAuthNonce,
   consumeAuthNonce,
   createMemoryAuthNonceStore,
   createRedisAuthNonceStore,

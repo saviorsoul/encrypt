@@ -61,4 +61,12 @@ This is **intentional replay protection**: a captured `{ headers, body }` pair c
 ## References
 
 - Code: `apps/api/src/middleware/authenticate.ts`, `apps/api/src/middleware/authenticateApiUnlessPublic.ts`
-- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md)
+- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md), [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md)
+
+## Changes
+
+### 2026-08-14 — [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md)
+
+| Topic | As accepted (2026-07-04) | Current |
+| ----- | ------------------------ | ------- |
+| Steps 3–4 in `authenticate` | Separate `consume` + `mint` | Single `consumeAndRotateAuthNonce` (one atomic Lua `EVAL` per request) |

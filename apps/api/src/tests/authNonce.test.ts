@@ -6,12 +6,26 @@ import {
 } from '@encrypt/core/crypto/authProof';
 import { base64ToBytes } from '@encrypt/core/utils/bytes';
 import {
+  consumeAndRotateAuthNonce,
   consumeAuthNonce,
   createMemoryAuthNonceStore,
   getOrMintAuthNonce,
   mintAuthNonce,
   setAuthNonceStoreForTests,
+  type AuthNonceEntry,
+  type ConsumeAndRotateOutcome,
 } from '@/contexts/auth/index.js';
+
+function expectConsumeAndRotateOutcome(
+  outcome: ConsumeAndRotateOutcome,
+  status: ConsumeAndRotateOutcome['status'],
+): AuthNonceEntry {
+  expect(outcome.status).toBe(status);
+  if (outcome.status !== status) {
+    throw new Error(`Expected ${status} outcome, got ${outcome.status}`);
+  }
+  return outcome.entry;
+}
 
 describe('authNonce', () => {
   afterEach(() => {
@@ -110,5 +124,96 @@ describe('authNonce', () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const { nonce } = await mintAuthNonce('test-key-id');
     expect(base64ToBytes(nonce).length).toBe(AUTH_NONCE_BYTES);
+  });
+
+  describe('consumeAndRotate', () => {
+    it('consumes the pending nonce and returns a fresh next nonce', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+      const minted = await mintAuthNonce(keyId);
+
+      const outcome = await consumeAndRotateAuthNonce(keyId, minted.nonce);
+      const entry = expectConsumeAndRotateOutcome(outcome, 'rotated');
+      expect(entry.nonce).not.toBe(minted.nonce);
+      expect(entry.expiresAtMs).toBeGreaterThan(Date.now());
+      expect(await consumeAuthNonce(keyId, minted.nonce)).toBe(false);
+      expect(await consumeAuthNonce(keyId, entry.nonce)).toBe(true);
+    });
+
+    it('returns mismatch with the pending redis nonce when presented nonce differs', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+      const minted = await mintAuthNonce(keyId);
+
+      const outcome = await consumeAndRotateAuthNonce(keyId, 'invalid-nonce');
+      const pending = expectConsumeAndRotateOutcome(outcome, 'mismatch');
+      expect(pending.nonce).toBe(minted.nonce);
+      expect(await consumeAuthNonce(keyId, pending.nonce)).toBe(true);
+    });
+
+    it('mints a fresh nonce when none is pending', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+
+      const outcome = await consumeAndRotateAuthNonce(keyId, 'any-nonce');
+      const entry = expectConsumeAndRotateOutcome(outcome, 'minted');
+      expect(entry.nonce).toBeTruthy();
+      expect(entry.expiresAtMs).toBeGreaterThan(Date.now());
+      expect(await consumeAuthNonce(keyId, entry.nonce)).toBe(true);
+    });
+
+    it('mints when the pending nonce expired', async () => {
+      vi.useFakeTimers();
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+      const minted = await mintAuthNonce(keyId);
+
+      vi.advanceTimersByTime(AUTH_NONCE_TTL_SECONDS * 1000 + 1);
+
+      const outcome = await consumeAndRotateAuthNonce(keyId, minted.nonce);
+      const entry = expectConsumeAndRotateOutcome(outcome, 'minted');
+      expect(entry.nonce).not.toBe(minted.nonce);
+      expect(await consumeAuthNonce(keyId, entry.nonce)).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it('returns mismatch on replay after a successful consumeAndRotate', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+      const minted = await mintAuthNonce(keyId);
+
+      const first = await consumeAndRotateAuthNonce(keyId, minted.nonce);
+      const firstEntry = expectConsumeAndRotateOutcome(first, 'rotated');
+
+      const replay = await consumeAndRotateAuthNonce(keyId, minted.nonce);
+      const mismatchEntry = expectConsumeAndRotateOutcome(replay, 'mismatch');
+      expect(mismatchEntry.nonce).toBe(firstEntry.nonce);
+      expect(mismatchEntry.nonce).not.toBe(minted.nonce);
+    });
+
+    it('isolates consumeAndRotate by keyId', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const minted = await mintAuthNonce('key-a');
+
+      const keyBOutcome = await consumeAndRotateAuthNonce(
+        'key-b',
+        minted.nonce,
+      );
+      expect(keyBOutcome.status).toBe('minted');
+      const next = await consumeAndRotateAuthNonce('key-a', minted.nonce);
+      expect(next.status).toBe('rotated');
+    });
+
+    it('chains consumeAndRotate across sequential requests', async () => {
+      setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+      const keyId = 'test-key-id';
+      const first = await mintAuthNonce(keyId);
+      const second = await consumeAndRotateAuthNonce(keyId, first.nonce);
+      const secondEntry = expectConsumeAndRotateOutcome(second, 'rotated');
+
+      const third = await consumeAndRotateAuthNonce(keyId, secondEntry.nonce);
+      const thirdEntry = expectConsumeAndRotateOutcome(third, 'rotated');
+      expect(thirdEntry.nonce).not.toBe(secondEntry.nonce);
+    });
   });
 });

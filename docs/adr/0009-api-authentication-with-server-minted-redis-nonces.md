@@ -111,6 +111,13 @@ Payload `senderSignature` and the encryption model are unchanged from ADR 0007.
 | Rotation response       | `X-Next-Nonce` only      | `X-Next-Nonce` + `X-Next-Nonce-Expires-At` (Unix ms)           |
 | CORS `Expose-Headers`   | `X-Next-Nonce`           | `X-Next-Nonce`, `X-Next-Nonce-Expires-At`                      |
 
+### 2026-08-14 — [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md)
+
+| Topic | As accepted (2026-07-03) | Current |
+| ----- | ------------------------ | ------- |
+| Post-auth rotation | `consume` then `mint` (3 Redis RTTs) | `consumeAndRotate` — one atomic Lua `EVAL` per request |
+| `expiresAtMs` on rotation | `PTTL` after `SET` | Derived from known `EX` at rotation time (no `PTTL`) |
+
 ## References
 
 - Related ADRs: [0007](./0007-api-authentication-with-time-slot-ecdsa-proofs.md), [0008](./0008-citus-sharding-by-key-id.md), [0002](./0002-in-memory-non-extractable-private-key-cache.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md)

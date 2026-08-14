@@ -64,4 +64,4 @@ The candidate nonce is generated in Node and passed as `ARGV`; the script uses i
 
 - Code: `apps/api/src/services/authNonce.ts`
 - Tests: `apps/api/src/tests/authNonce.test.ts` (`returns the same nonce from concurrent getOrMint calls`)
-- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md)
+- Related ADRs: [0009](./0009-api-authentication-with-server-minted-redis-nonces.md), [0010](./0010-challenge-reuses-pending-auth-nonce.md), [0011](./0011-auth-nonce-expires-at-on-rotation.md), [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md)

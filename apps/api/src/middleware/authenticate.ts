@@ -17,7 +17,7 @@ import {
 } from '@encrypt/core/crypto/authProof';
 import { slimEcPublicJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
-import { consumeAuthNonce, mintAuthNonce } from '@/contexts/auth/index.js';
+import { consumeAndRotateAuthNonce } from '@/contexts/auth/index.js';
 import { unauthorized } from '@/lib/httpError.js';
 
 function readHeader(
@@ -77,14 +77,22 @@ export function authenticate(): Middleware {
 
     // Consume before route validation (ADR 0012): valid proofs are single-use
     // even when later middleware or the handler returns 4xx/5xx.
-    const consumed = await consumeAuthNonce(keyId, nonce);
-    if (!consumed) {
+    const nonceOutcome = await consumeAndRotateAuthNonce(keyId, nonce);
+
+    ctx.set(AUTH_HEADER_NEXT_NONCE, nonceOutcome.entry.nonce);
+    ctx.set(
+      AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
+      String(nonceOutcome.entry.expiresAtMs),
+    );
+
+    if (nonceOutcome.status === 'minted') {
+      throw unauthorized('Authentication nonce is expired or missing.');
+    }
+
+    if (nonceOutcome.status === 'mismatch') {
       throw unauthorized('Authentication nonce is invalid or already used.');
     }
 
-    const nextNonce = await mintAuthNonce(keyId);
-    ctx.set(AUTH_HEADER_NEXT_NONCE, nextNonce.nonce);
-    ctx.set(AUTH_HEADER_NEXT_NONCE_EXPIRES_AT, String(nextNonce.expiresAtMs));
     ctx.state.authenticatedKeyId = keyId;
     ctx.state.authenticatedPublicKey = publicKeyCoords;
     await next();

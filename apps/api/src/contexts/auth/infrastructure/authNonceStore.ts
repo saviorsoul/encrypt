@@ -7,60 +7,21 @@ import { getRedisClient } from '@/lib/redis.js';
 import type {
   AuthNonceEntry,
   AuthNonceStore,
+  ConsumeAndRotateOutcome,
 } from '@/contexts/auth/domain/ports/AuthNonceStore.js';
-
-function nonceRedisKey(keyId: string): string {
-  return `auth:nonce:${keyId}`;
-}
-
-function nonceExpiresAtMsFromNow(): number {
-  return Date.now() + AUTH_NONCE_TTL_SECONDS * 1000;
-}
+import {
+  CONSUME_AND_ROTATE_NONCE_SCRIPT,
+  CONSUME_NONCE_SCRIPT,
+  consumeAndRotateOutcomeFromEvalResult,
+  entryFromGetOrMintEvalResult,
+  expiresAtMsFromPttl,
+  GET_OR_MINT_NONCE_SCRIPT,
+  nonceExpiresAtMsFromNow,
+  nonceRedisKey,
+} from './authNonceScripts.js';
 
 function hasMinRemainingTtl(expiresAtMs: number): boolean {
   return expiresAtMs - Date.now() >= AUTH_NONCE_MIN_REMAINING_SECONDS * 1000;
-}
-
-function expiresAtMsFromPttl(pttlMs: number): number | null {
-  if (pttlMs <= 0) {
-    return null;
-  }
-  return Date.now() + pttlMs;
-}
-
-const CONSUME_NONCE_SCRIPT = `
-if redis.call('get', KEYS[1]) == ARGV[1] then
-  return redis.call('del', KEYS[1])
-end
-return 0
-`;
-
-const GET_OR_MINT_NONCE_SCRIPT = `
-local current = redis.call('GET', KEYS[1])
-if current then
-  local pttl = redis.call('PTTL', KEYS[1])
-  if pttl >= tonumber(ARGV[1]) then
-    return {current, pttl}
-  end
-end
-redis.call('SET', KEYS[1], ARGV[3], 'EX', tonumber(ARGV[2]))
-local pttl = redis.call('PTTL', KEYS[1])
-return {ARGV[3], pttl}
-`;
-
-function entryFromEvalResult(result: unknown): AuthNonceEntry {
-  if (!Array.isArray(result) || result.length !== 2) {
-    throw new Error('Unexpected Redis getOrMint script result.');
-  }
-  const [nonce, pttlMs] = result;
-  if (typeof nonce !== 'string' || typeof pttlMs !== 'number') {
-    throw new Error('Unexpected Redis getOrMint script result shape.');
-  }
-  const expiresAtMs = expiresAtMsFromPttl(pttlMs);
-  if (expiresAtMs === null) {
-    throw new Error('Redis getOrMint returned an entry without TTL.');
-  }
-  return { nonce, expiresAtMs };
 }
 
 export function createRedisAuthNonceStore(): AuthNonceStore {
@@ -105,6 +66,19 @@ export function createRedisAuthNonceStore(): AuthNonceStore {
       return deleted === 1;
     },
 
+    async consumeAndRotate(
+      keyId: string,
+      nonce: string,
+    ): Promise<ConsumeAndRotateOutcome> {
+      const redis = await getRedisClient();
+      const nextNonce = generateAuthNonce();
+      const result = await redis.eval(CONSUME_AND_ROTATE_NONCE_SCRIPT, {
+        keys: [nonceRedisKey(keyId)],
+        arguments: [nonce, nextNonce, String(AUTH_NONCE_TTL_SECONDS)],
+      });
+      return consumeAndRotateOutcomeFromEvalResult(result);
+    },
+
     async getOrMint(keyId: string): Promise<AuthNonceEntry> {
       const redis = await getRedisClient();
       const result = await redis.eval(GET_OR_MINT_NONCE_SCRIPT, {
@@ -115,7 +89,7 @@ export function createRedisAuthNonceStore(): AuthNonceStore {
           generateAuthNonce(),
         ],
       });
-      return entryFromEvalResult(result);
+      return entryFromGetOrMintEvalResult(result);
     },
   };
 }
@@ -152,6 +126,26 @@ export function createMemoryAuthNonceStore(): AuthNonceStore {
       }
       entries.delete(keyId);
       return true;
+    },
+
+    async consumeAndRotate(
+      keyId: string,
+      nonce: string,
+    ): Promise<ConsumeAndRotateOutcome> {
+      const current = entries.get(keyId);
+      const validCurrent =
+        current && Date.now() < current.expiresAtMs ? current : null;
+      if (validCurrent && validCurrent.nonce !== nonce) {
+        return { status: 'mismatch', entry: validCurrent };
+      }
+      const entry = {
+        nonce: generateAuthNonce(),
+        expiresAtMs: nonceExpiresAtMsFromNow(),
+      };
+      entries.set(keyId, entry);
+      return validCurrent
+        ? { status: 'rotated', entry }
+        : { status: 'minted', entry };
     },
 
     async getOrMint(keyId: string): Promise<AuthNonceEntry> {
@@ -202,4 +196,11 @@ export async function consumeAuthNonce(
   nonce: string,
 ): Promise<boolean> {
   return getAuthNonceStore().consume(keyId, nonce);
+}
+
+export async function consumeAndRotateAuthNonce(
+  keyId: string,
+  nonce: string,
+): Promise<ConsumeAndRotateOutcome> {
+  return getAuthNonceStore().consumeAndRotate(keyId, nonce);
 }

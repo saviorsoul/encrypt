@@ -216,6 +216,13 @@ describe('auth challenge and nonce rotation', () => {
       headers,
     });
     expect(replay.status).toBe(401);
+    const replayNextNonce =
+      replay.headers[AUTH_HEADER_NEXT_NONCE.toLowerCase()];
+    expect(replayNextNonce).toBeTruthy();
+    expect(replayNextNonce).not.toBe(minted.nonce);
+    expect(replayNextNonce).toBe(
+      first.headers[AUTH_HEADER_NEXT_NONCE.toLowerCase()],
+    );
   });
 
   it('exposes challenge on the full app router', async () => {
@@ -386,5 +393,52 @@ describe('auth challenge and nonce rotation', () => {
     });
 
     expect(response.status).toBe(401);
+  });
+
+  it('returns 401 with X-Next-Nonce when no pending nonce exists', async () => {
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const app = createAuthProbeApp();
+    const material = await createTestMaterial();
+    const request = {
+      method: 'GET',
+      path: '/api/probe',
+      query: null,
+    };
+    const timeSlot = computeAuthTimeSlot();
+    const nonce = bytesToBase64(new Uint8Array(12).fill(0x44));
+    const signature = await signAuthProof(
+      material.ecdsaSignPrivateKey,
+      material.keyId,
+      { timeSlot, nonce },
+      request,
+    );
+    const proof = authHeadersToRecord({
+      keyId: material.keyId,
+      publicKey: material.publicKey,
+      timeSlot,
+      nonce,
+      signature,
+    });
+
+    const response = await requestApp(app, {
+      method: 'GET',
+      path: '/api/probe',
+      headers: {
+        [AUTH_HEADER_KEY_ID]: proof[AUTH_HEADER_KEY_ID]!,
+        [AUTH_HEADER_PUBLIC_KEY]: proof[AUTH_HEADER_PUBLIC_KEY]!,
+        [AUTH_HEADER_TIME_SLOT]: proof[AUTH_HEADER_TIME_SLOT]!,
+        [AUTH_HEADER_NONCE]: proof[AUTH_HEADER_NONCE]!,
+        [AUTH_HEADER_SIGNATURE]: proof[AUTH_HEADER_SIGNATURE]!,
+      },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toContain('expired or missing');
+    const nextNonce = response.headers[AUTH_HEADER_NEXT_NONCE.toLowerCase()];
+    expect(nextNonce).toBeTruthy();
+    expect(nextNonce).not.toBe(nonce);
+    expect(
+      Number(response.headers[AUTH_HEADER_NEXT_NONCE_EXPIRES_AT.toLowerCase()]),
+    ).toBeGreaterThan(Date.now());
   });
 });
