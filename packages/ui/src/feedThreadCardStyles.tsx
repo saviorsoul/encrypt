@@ -35,7 +35,6 @@ export function ThreadCardSurface({
 /** Layered gradient field behind the glass panel — blur reads against this, not flat card paper. */
 export const messageGlassBackdropSx = (theme: Theme) => {
   const isLight = theme.palette.mode === 'light';
-  const brand = theme.feedLab.brand;
 
   return {
     position: 'relative',
@@ -44,15 +43,9 @@ export const messageGlassBackdropSx = (theme: Theme) => {
     boxShadow: theme.shadows[2],
     backgroundColor: isLight ? theme.feedLab.encBg : '#1c1917',
     backgroundImage: isLight
-      ? [
-          // `linear-gradient(to right, ${alpha(theme.palette.text.primary, 0.08)} 0%, transparent 26%)`,
-          `radial-gradient(ellipse 40px 30px at 12px 14px, ${alpha(brand, 0.22)}, transparent 22px)`,
-          // `radial-gradient(ellipse 56px 40px at calc(100% - 12px) calc(100% - 10px), ${alpha('#78716c', 0.07)}, transparent 52px)`,
-          // `linear-gradient(138deg, ${alpha('#ffffff', 0.98)} 0%, ${theme.feedLab.encBg} 48%, ${alpha('#e7e5e4', 0.78)} 100%)`,
-        ].join(', ')
+      ? 'none'
       : [
           `linear-gradient(to right, ${alpha('#000000', 0.14)} 0%, transparent 28%)`,
-          `radial-gradient(ellipse 40px 30px at 12px 14px, ${alpha(brand, 0.16)}, transparent 22px)`,
           `radial-gradient(ellipse 56px 40px at calc(100% - 12px) calc(100% - 10px), ${alpha('#a8a29e', 0.06)}, transparent 52px)`,
           `linear-gradient(138deg, #2c2926 0%, #1c1917 52%, #292524 100%)`,
         ].join(', '),
