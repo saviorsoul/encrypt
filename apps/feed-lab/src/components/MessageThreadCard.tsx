@@ -345,7 +345,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
                   : `View identity for ${senderLabel ?? 'sender'}`
               }
             >
-              <ThreadGlassAvatar size={32} isOwn={isOwnMessage}>
+              <ThreadGlassAvatar size={32}>
                 {isOwnMessage ? 'U' : nameInitial(senderLabel ?? '?')}
               </ThreadGlassAvatar>
             </Box>
@@ -901,7 +901,7 @@ const CommentRow = memo(function CommentRow({
               : `View identity for ${authorLabel ?? 'author'}`
           }
         >
-          <ThreadGlassAvatar size={28} isOwn={isOwnComment}>
+          <ThreadGlassAvatar size={28}>
             {isOwnComment ? 'U' : nameInitial(authorLabel ?? '?')}
           </ThreadGlassAvatar>
           <Typography

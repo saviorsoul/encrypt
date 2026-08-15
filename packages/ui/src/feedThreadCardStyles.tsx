@@ -62,12 +62,6 @@ export const messageGlassPaperSx = (theme: Theme) => {
     borderRadius: 1.5,
     border: 'none',
     backgroundColor: isLight ? alpha('#ffffff', 0.44) : alpha('#ffffff', 0.08),
-    backdropFilter: isLight
-      ? 'blur(20px) saturate(1.28)'
-      : 'blur(16px) saturate(1.15)',
-    WebkitBackdropFilter: isLight
-      ? 'blur(20px) saturate(1.28)'
-      : 'blur(16px) saturate(1.15)',
     backgroundImage: 'none',
     px: 1.625,
     py: 1.375,
@@ -107,12 +101,6 @@ export const commentGlassPaperSx = (theme: Theme) => {
     border: isLight ? `1px solid ${theme.palette.divider}` : null,
     boxShadow: isLight ? null : 'inset 0 1px 0 rgba(255,255,255,0.06)',
     backgroundColor: isLight ? alpha('#ffffff', 0.48) : alpha('#ffffff', 0.06),
-    backdropFilter: isLight
-      ? 'blur(12px) saturate(1.1)'
-      : 'blur(12px) saturate(1.1)',
-    WebkitBackdropFilter: isLight
-      ? 'blur(12px) saturate(1.1)'
-      : 'blur(12px) saturate(1.1)',
     backgroundImage: 'none',
     px: 1.25,
     py: 1,
@@ -122,80 +110,29 @@ export const commentGlassPaperSx = (theme: Theme) => {
   };
 };
 
-/** Circular gradient field behind thread avatars. */
-export const threadAvatarGlassBackdropSx = (size: number) => (theme: Theme) => {
-  const isLight = theme.palette.mode === 'light';
-
-  return {
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    flexShrink: 0,
-    overflow: 'hidden',
-    isolation: 'isolate',
-    boxShadow: isLight
-      ? 'inset 0 2px 5px rgba(28,25,23,0.14), inset 0 1px 2px rgba(28,25,23,0.1)'
-      : 'inset 0 2px 6px rgba(0,0,0,0.42), inset 0 1px 2px rgba(0,0,0,0.3)',
-    backgroundColor: isLight ? theme.feedLab.accentBg : '#292524',
-    backgroundImage: isLight
-      ? [
-          `radial-gradient(circle 14px at 24% 22%, ${alpha('#ffffff', 0.95)}, transparent 16px)`,
-          `radial-gradient(circle 14px at 76% 78%, ${alpha('#78716c', 0.14)}, transparent 16px)`,
-          `linear-gradient(138deg, ${alpha('#ffffff', 0.98)} 0%, ${theme.feedLab.accentBg} 42%, ${alpha('#d6d3d1', 0.72)} 100%)`,
-        ].join(', ')
-      : [
-          `radial-gradient(circle 14px at 24% 22%, ${alpha('#ffffff', 0.12)}, transparent 16px)`,
-          `radial-gradient(circle 14px at 76% 78%, ${alpha('#000000', 0.2)}, transparent 16px)`,
-          `linear-gradient(138deg, #3a3836 0%, #292524 48%, #1c1917 100%)`,
-        ].join(', '),
-  };
-};
-
-/** Frosted glass styling for thread avatars (letter / "You"). */
-export const threadAvatarGlassSx =
-  (size: number, isOwn: boolean) => (theme: Theme) => {
-    const isLight = theme.palette.mode === 'light';
-
-    return {
-      width: size,
-      height: size,
-      fontSize: size >= 32 ? '0.75rem' : '0.6875rem',
-      fontWeight: 700,
-      borderRadius: '50%',
-      color: 'text.primary',
-      filter: isOwn ? 'none' : 'grayscale(20%)',
-      border: 'none',
-      boxShadow: isLight
-        ? `inset 0 2px 4px ${alpha(theme.palette.text.primary, 0.12)}, inset 0 -1px 1px ${alpha('#ffffff', 0.65)}`
-        : 'inset 0 2px 4px rgba(0,0,0,0.32), inset 0 -1px 1px rgba(255,255,255,0.1)',
-      backgroundColor: isLight
-        ? alpha('#ffffff', 0.34)
-        : alpha('#ffffff', 0.06),
-      backdropFilter: 'blur(12px) saturate(1.22)',
-      WebkitBackdropFilter: 'blur(12px) saturate(1.22)',
-      backgroundImage: isLight
-        ? `linear-gradient(145deg, ${alpha('#ffffff', 0.42)} 0%, ${alpha('#ffffff', 0.18)} 100%)`
-        : `linear-gradient(145deg, ${alpha('#ffffff', 0.1)} 0%, ${alpha('#ffffff', 0.03)} 100%)`,
-    };
-  };
+/** Thread avatar styling (sender / comment author initials). */
+export const threadAvatarGlassSx = (size: number) => (theme: Theme) => ({
+  width: size,
+  height: size,
+  flexShrink: 0,
+  fontSize: size >= 32 ? '0.75rem' : '0.6875rem',
+  fontWeight: 700,
+  borderRadius: '50%',
+  color: 'text.primary',
+  border: 'none',
+  backgroundColor: alpha(theme.feedLab.accentBg, 0.5),
+  boxShadow: `inset 1px 1px 3px 0 ${theme.feedLab.insetShadow}`,
+  backgroundImage: 'none',
+});
 
 export type ThreadGlassAvatarProps = {
   size: number;
-  isOwn: boolean;
   children: ReactNode;
 };
 
-/** Glass avatar for thread sender / comment author initials. */
-export function ThreadGlassAvatar({
-  size,
-  isOwn,
-  children,
-}: ThreadGlassAvatarProps) {
-  return (
-    <Box sx={threadAvatarGlassBackdropSx(size)}>
-      <Avatar sx={threadAvatarGlassSx(size, isOwn)}>{children}</Avatar>
-    </Box>
-  );
+/** Avatar for thread sender / comment author initials. */
+export function ThreadGlassAvatar({ size, children }: ThreadGlassAvatarProps) {
+  return <Avatar sx={threadAvatarGlassSx(size)}>{children}</Avatar>;
 }
 
 export type CommentGlassSurfaceProps = {

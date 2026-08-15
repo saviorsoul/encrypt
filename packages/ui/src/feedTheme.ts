@@ -23,6 +23,8 @@ declare module '@mui/material/styles' {
       encBg: string;
       accentBg: string;
       cardShadow: string;
+      shadowColor: string;
+      insetShadow: string;
     };
   }
   interface ThemeOptions {
@@ -32,6 +34,8 @@ declare module '@mui/material/styles' {
       encBg?: string;
       accentBg?: string;
       cardShadow?: string;
+      shadowColor?: string;
+      insetShadow?: string;
     };
   }
 }
@@ -53,6 +57,7 @@ const stoneLight = {
   border: '#e7e5e4',
   encBg: '#f0ede9',
   cardShadow: '0 1px 2px rgba(28,25,23,0.05), 0 3px 12px rgba(28,25,23,0.04)',
+  insetShadow: alpha('#000000', 0.1),
 };
 
 const stoneDark = {
@@ -65,6 +70,7 @@ const stoneDark = {
   border: '#44403c',
   encBg: '#1c1917',
   cardShadow: '0 1px 2px rgba(0,0,0,0.2), 0 3px 12px rgba(0,0,0,0.15)',
+  insetShadow: '#000000',
 };
 
 type StonePalette = typeof stoneLight;
@@ -187,6 +193,7 @@ function createStoneTheme(mode: 'light' | 'dark') {
       encBg: stone.encBg,
       accentBg: stone.accentBg,
       cardShadow: stone.cardShadow,
+      insetShadow: stone.insetShadow,
     },
     typography: {
       fontFamily: feedLabFontFamily,
