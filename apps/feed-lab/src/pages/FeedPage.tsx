@@ -18,7 +18,6 @@ import { IdentityDialog } from '@lab/components/IdentityDialog.tsx';
 import { MessageThreadCard } from '@lab/components/MessageThreadCard.tsx';
 import {
   FeedMessageEnter,
-  FeedBusyButtonIcon,
   FeedRefreshButtonIcon,
   ButtonIconSlot,
   feedActionButtonSx,
@@ -307,13 +306,11 @@ export function FeedPage() {
         {showLoadMore ? (
           <Button
             variant="outlined"
-            size="small"
-            sx={{ ...feedActionButtonSx, mt: -0.5 }}
+            sx={{ ...feedActionButtonSx }}
             disabled={loadMoreBusy}
-            startIcon={loadMoreBusy ? <FeedBusyButtonIcon /> : undefined}
             onClick={() => void feed.loadMore()}
           >
-            Load more
+            {loadMoreBusy ? 'Loading...' : 'Load more'}
           </Button>
         ) : null}
       </Stack>
