@@ -72,7 +72,7 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** ar
 | -------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
 | **Sender client**    | Plaintext, own private key, all shards at compose time      | Other recipients' private keys                               |
 | **Recipient client** | Plaintext after decrypt, own private key, own shard         | Other recipients' private keys                               |
-| **Server** (if used) | Core payload, per-recipient shards (ACL-filtered), metadata | Plaintext, any private key, full `keyManifest` for all users |
+| **Server** (if used) | Core payload, full `keyManifest` (all shards at rest; ACL-filtered on delivery), metadata | Plaintext, any private key |
 
 The shipped desktop app is **local-first**: messages live in IndexedDB with no network dependency. The feed API is an optional backend that mirrors the same wire formats for development and future server-backed feeds.
 
