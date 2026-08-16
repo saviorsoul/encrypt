@@ -18,11 +18,11 @@ import {
   feedActionButtonSx,
   MessageSentSnackbar,
   MessageSharedSnackbar,
+  ShareMessageDialog,
   SendMessageDialog,
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
 } from '@encrypt/ui';
-import { ShareMessageDialog } from '@feednt/components/ShareMessageDialog.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
 
@@ -102,6 +102,10 @@ export function FeedPage() {
     feedContext,
   });
   const feedBusy = feed.loading || preparingFeed;
+  const loadMorePreparing = preparingFeed && visibleMessages.length > 0;
+  const showLoadMore =
+    feed.hasMore && (feed.loadingMore || loadMorePreparing || !feedBusy);
+  const loadMoreBusy = feed.loadingMore || loadMorePreparing;
   const visibleMessageIds = useMemo(
     () => visibleMessages.map((message) => message.id),
     [visibleMessages],
@@ -256,11 +260,14 @@ export function FeedPage() {
           const isExpanded = expandedMessageIds.has(message.id);
           const decryptedComments =
             decryptedCommentsByMessage[message.id] ?? null;
+          const animateEntry =
+            shouldAnimateEntry(message.id) &&
+            !feed.loadedMoreMessageIds.has(message.id);
           return (
             <FeedMessageEnter
               key={message.id}
               messageId={message.id}
-              animateEntry={shouldAnimateEntry(message.id)}
+              animateEntry={animateEntry}
               staggerIndex={getStaggerIndex(message.id, visibleMessageIds)}
               onAnimationDone={onAnimationDone}
             >
@@ -298,13 +305,13 @@ export function FeedPage() {
             No messages in your inbox yet.
           </Typography>
         ) : null}
-        {feed.hasMore && (feed.loadingMore || !feedBusy) ? (
+        {showLoadMore ? (
           <Button
             variant="outlined"
             size="small"
-            sx={feedActionButtonSx}
-            disabled={feed.loadingMore}
-            startIcon={feed.loadingMore ? <FeedBusyButtonIcon /> : undefined}
+            sx={{ ...feedActionButtonSx, mt: -0.5 }}
+            disabled={loadMoreBusy}
+            startIcon={loadMoreBusy ? <FeedBusyButtonIcon /> : undefined}
             onClick={() => void feed.loadMore()}
           >
             Load more

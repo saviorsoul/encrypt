@@ -72,6 +72,10 @@ export {
   type SendMessageDialogProps,
 } from './components/SendMessageDialog.tsx';
 export {
+  ShareMessageDialog,
+  type ShareMessageDialogProps,
+} from './components/ShareMessageDialog.tsx';
+export {
   SendMessageDialogActions,
   SendMessagePanel,
   useSendMessageForm,

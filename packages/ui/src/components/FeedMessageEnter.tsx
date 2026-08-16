@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 const MESSAGE_ENTER = 'feedMessageEnter';
 const MESSAGE_ENTER_MS = 360;
 const MESSAGE_STAGGER_MS = 90;
+const MAX_STAGGER_INDEX = 4;
 
 export { MESSAGE_ENTER_MS, MESSAGE_STAGGER_MS };
 
@@ -30,19 +31,54 @@ export function FeedMessageEnter({
   onAnimationDone,
   children,
 }: FeedMessageEnterProps) {
+  const ref = useRef<HTMLDivElement>(null);
   const [shouldAnimate] = useState(animateEntry);
-  const [staggerDelay] = useState(staggerIndex * MESSAGE_STAGGER_MS);
+  const [willAnimate, setWillAnimate] = useState(animateEntry);
+  const [staggerDelay] = useState(
+    Math.min(staggerIndex, MAX_STAGGER_INDEX) * MESSAGE_STAGGER_MS,
+  );
+  const [isVisible, setIsVisible] = useState(!animateEntry);
   const doneRef = useRef(false);
 
   useEffect(() => {
-    if (!shouldAnimate || doneRef.current) {
+    if (!shouldAnimate) {
+      return;
+    }
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setIsVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        } else {
+          setWillAnimate(false);
+          setIsVisible(true);
+          doneRef.current = true;
+          onAnimationDone(messageId);
+        }
+        observer.disconnect();
+      },
+      { threshold: 0.01 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [messageId, onAnimationDone, shouldAnimate]);
+
+  useEffect(() => {
+    if (!willAnimate || !isVisible || doneRef.current) {
       return;
     }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       doneRef.current = true;
       onAnimationDone(messageId);
     }
-  }, [messageId, onAnimationDone, shouldAnimate]);
+  }, [isVisible, messageId, onAnimationDone, willAnimate]);
 
   const handleAnimationEnd = useCallback(
     (event: AnimationEvent<HTMLDivElement>) => {
@@ -55,8 +91,11 @@ export function FeedMessageEnter({
     [messageId, onAnimationDone],
   );
 
+  const isAnimating = willAnimate && isVisible;
+
   return (
     <Box
+      ref={ref}
       onAnimationEnd={handleAnimationEnd}
       sx={{
         width: '100%',
@@ -68,11 +107,13 @@ export function FeedMessageEnter({
             opacity: 1,
           },
         },
-        animation: shouldAnimate
+        opacity: willAnimate && !isVisible ? 0 : undefined,
+        animation: isAnimating
           ? `${MESSAGE_ENTER} ${MESSAGE_ENTER_MS}ms ease-out ${staggerDelay}ms both`
           : 'none',
         '@media (prefers-reduced-motion: reduce)': {
           animation: 'none',
+          opacity: 1,
         },
       }}
     >

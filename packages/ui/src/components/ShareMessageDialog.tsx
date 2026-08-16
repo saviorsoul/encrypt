@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   Alert,
   Box,
@@ -9,10 +9,11 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { AppDialog, MessagePolicyOptions } from '@encrypt/ui';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
+import { AppDialog } from './AppDialog.tsx';
+import { MessagePolicyOptions } from './MessagePolicyOptions.tsx';
 
-type ShareMessageDialogProps = {
+export type ShareMessageDialogProps = {
   open: boolean;
   messageId: string | null;
   busy: boolean;
@@ -72,9 +73,9 @@ export function ShareMessageDialog({
       maxWidth="sm"
     >
       <DialogContent>
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Share this message with your network.
+            Share this message with your friends network.
           </Typography>
 
           {loadingRecipients ? (
@@ -86,8 +87,7 @@ export function ShareMessageDialog({
             </Box>
           ) : !hasFriends ? (
             <Typography variant="body2" color="text.secondary">
-              No friends yet. You need to have at least one friend to be able to
-              share.
+              No friends yet. Add or accept a friend request before sharing.
             </Typography>
           ) : (
             <MessagePolicyOptions mode="share" />

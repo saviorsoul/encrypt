@@ -31,6 +31,7 @@
     "./TooltipIconWrap": "./src/components/TooltipIconWrap.tsx",
     "./FeedntText": "./src/components/FeedntText.tsx",
     "./SendMessageDialog": "./src/components/SendMessageDialog.tsx",
+    "./ShareMessageDialog": "./src/components/ShareMessageDialog.tsx",
     "./SendMessagePanel": "./src/components/SendMessagePanel.tsx",
     "./SendMessageDependenciesContext": "./src/components/SendMessageDependenciesContext.tsx",
     "./useBackendSendMessage": "./src/hooks/useBackendSendMessage.ts",

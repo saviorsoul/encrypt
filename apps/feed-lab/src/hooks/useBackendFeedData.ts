@@ -46,13 +46,18 @@ export function useBackendFeedData(keyId: string | null) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedMoreMessageIds, setLoadedMoreMessageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const loadIdRef = useRef(0);
 
   const applyInboxPage = useCallback(
     (pageItems: InboxApiItem[], pageTotal: number, replace: boolean) => {
       setTotal(pageTotal);
       setRawItems((current) => {
-        const merged = replace ? pageItems : mergeInboxItems(current, pageItems);
+        const merged = replace
+          ? pageItems
+          : mergeInboxItems(current, pageItems);
         cacheInboxItems(pageItems, replace);
         const deliveries = inboxApiItemsToStoredDeliveries(merged);
         setMessages(filterFeedInboxMessages(deliveries));
@@ -76,6 +81,7 @@ export function useBackendFeedData(keyId: string | null) {
         return;
       }
       applyInboxPage(page.items, page.total, true);
+      setLoadedMoreMessageIds(new Set());
       setNextCursor(page.nextCursor);
     } catch (e) {
       if (loadId !== loadIdRef.current) {
@@ -107,12 +113,21 @@ export function useBackendFeedData(keyId: string | null) {
         return;
       }
       applyInboxPage(page.items, page.total, false);
+      setLoadedMoreMessageIds((current) => {
+        const next = new Set(current);
+        for (const item of page.items) {
+          next.add(item.id);
+        }
+        return next;
+      });
       setNextCursor(page.nextCursor);
     } catch (e) {
       if (loadId !== loadIdRef.current) {
         return;
       }
-      setError(e instanceof Error ? e.message : 'Failed to load more feed data.');
+      setError(
+        e instanceof Error ? e.message : 'Failed to load more feed data.',
+      );
     } finally {
       if (loadId === loadIdRef.current) {
         setLoadingMore(false);
@@ -130,6 +145,7 @@ export function useBackendFeedData(keyId: string | null) {
       setError(null);
       setLoading(false);
       setLoadingMore(false);
+      setLoadedMoreMessageIds(new Set());
       return;
     }
 
@@ -155,6 +171,7 @@ export function useBackendFeedData(keyId: string | null) {
     hasMore: nextCursor !== null,
     loading,
     loadingMore,
+    loadedMoreMessageIds,
     error,
     reload,
     loadMore,
