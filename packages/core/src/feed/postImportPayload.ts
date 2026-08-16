@@ -3,6 +3,7 @@ import { parseManifestPayload } from '../crypto/manifestDecrypt.ts';
 import { parseManifestCorePayload } from '../crypto/manifestStorage.ts';
 import { verifyManifestSignature } from '../crypto/manifestSign.ts';
 import type { CreateMessageRequest, FeedApi } from '../api/feedApi.ts';
+import { isCreateShareAlreadyComplete } from './shareAccess.ts';
 import type { ParsedImportPayload } from './parseImportPayloadText.ts';
 
 export type PostImportResult = {
@@ -46,6 +47,9 @@ export async function postParsedImportToBackend(
       >,
       messageId: payload.parentMessageId,
     });
+    if (isCreateShareAlreadyComplete(result)) {
+      return { kind: 'share', id: payload.parentMessageId };
+    }
     return { kind: 'share', id: result.id };
   }
 

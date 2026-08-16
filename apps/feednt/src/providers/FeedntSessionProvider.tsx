@@ -11,20 +11,14 @@ import {
   createFeedApiAuthProvider,
   type FeedApiAuthProvider,
 } from '@encrypt/core/api/feedApiAuth';
-import {
-  getCachedPrivateKeyMaterial,
-} from '@encrypt/platform/sessionPrivateKeyStorage';
+import { getCachedPrivateKeyMaterial } from '@encrypt/platform/sessionPrivateKeyStorage';
 import {
   importPrivateKeyToSafeStorage,
   isPrivateKeyImportSelectionCancelled,
   unlockPrivateKeyMaterialFromSafeStorage,
 } from '@encrypt/platform/feednt';
-import {
-  setActivePrivateKeyId,
-} from '@encrypt/platform/activePrivateKeyId';
-import {
-  setPrivateKeySafeStorageAuthState,
-} from '@encrypt/platform/privateKeySafeStorageSession';
+import { setActivePrivateKeyId } from '@encrypt/platform/activePrivateKeyId';
+import { setPrivateKeySafeStorageAuthState } from '@encrypt/platform/privateKeySafeStorageSession';
 import { getChallengeUrl } from '@feednt/lib/apiBaseUrl.ts';
 import { useFeedntPrivateKey } from '@feednt/hooks/useFeedntPrivateKey.ts';
 import { useFeedntUsers } from '@feednt/hooks/useFeedntUsers.ts';
@@ -172,7 +166,9 @@ export function FeedntSessionProvider({ children }: { children: ReactNode }) {
 export function useFeedntSession(): FeedntSessionContextValue {
   const context = useContext(FeedntSessionContext);
   if (!context) {
-    throw new Error('useFeedntSession must be used within FeedntSessionProvider');
+    throw new Error(
+      'useFeedntSession must be used within FeedntSessionProvider',
+    );
   }
   return context;
 }

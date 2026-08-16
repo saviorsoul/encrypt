@@ -4,6 +4,7 @@ import { badRequest, notFound } from '@/lib/httpError.js';
 import { verifyManifestSignature } from '@/crypto/signatures.js';
 import type {
   CreateShareWriteInput,
+  CreateShareWriteResult,
   ShareRepository,
 } from '@/contexts/feed/domain/ports/ShareRepository.js';
 import {
@@ -45,7 +46,9 @@ export const shareRepository: ShareRepository = {
     };
   },
 
-  async createShareWithAccess(input: CreateShareWriteInput): Promise<void> {
+  async createShareWithAccess(
+    input: CreateShareWriteInput,
+  ): Promise<CreateShareWriteResult> {
     const {
       shareId,
       threadRootId,
@@ -55,7 +58,7 @@ export const shareRepository: ShareRepository = {
       messageId,
     } = input;
 
-    await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       if (!(await tx.message.findUnique({ where: { id: threadRootId } }))) {
         if (!parentMessage) {
           throw notFound(`Parent message not found: ${threadRootId}`);
@@ -81,9 +84,7 @@ export const shareRepository: ShareRepository = {
         tx,
       );
       if (newRecipientKeyIds.length === 0) {
-        throw badRequest(
-          'All selected recipients already have access to this message.',
-        );
+        return { created: false, reason: 'recipients_already_had_access' };
       }
 
       const filteredKeyManifest = Object.fromEntries(
@@ -94,6 +95,7 @@ export const shareRepository: ShareRepository = {
       await insertManifestShards(tx, threadRootId, filteredKeyManifest, {
         shareId,
       });
+      return { created: true };
     });
   },
 };

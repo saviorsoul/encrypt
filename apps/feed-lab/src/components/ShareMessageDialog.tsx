@@ -6,12 +6,10 @@ import {
   CircularProgress,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Stack,
   Typography,
 } from '@mui/material';
-import { AppDialog } from '@encrypt/ui/AppDialog';
-import { KeyIdMultiSelect } from '@encrypt/ui/KeyIdMultiSelect';
+import { AppDialog, MessagePolicyOptions } from '@encrypt/ui';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 
 type ShareMessageDialogProps = {
@@ -19,13 +17,10 @@ type ShareMessageDialogProps = {
   messageId: string | null;
   busy: boolean;
   error: string | null;
-  recipientOptions: string[];
-  selectedRecipients: string[];
-  onSelectedRecipientsChange: (value: string[]) => void;
-  getOptionLabel?: (option: string) => string;
   recipients: ManifestRecipientKeys[];
   loadingRecipients: boolean;
   recipientsError: string | null;
+  hasFriends: boolean;
   onClose: () => void;
   onShare: (recipients: ManifestRecipientKeys[]) => Promise<string | null>;
   onClearError: () => void;
@@ -36,13 +31,10 @@ export function ShareMessageDialog({
   messageId,
   busy,
   error,
-  recipientOptions,
-  selectedRecipients,
-  onSelectedRecipientsChange,
-  getOptionLabel,
   recipients,
   loadingRecipients,
   recipientsError,
+  hasFriends,
   onClose,
   onShare,
   onClearError,
@@ -70,20 +62,20 @@ export function ShareMessageDialog({
   }, [messageId, onClearError, onClose, onShare, recipients]);
 
   return (
-    <AppDialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-      <DialogTitle>Share message</DialogTitle>
+    <AppDialog
+      open={open}
+      onClose={handleClose}
+      title="Share"
+      closeDisabled={busy}
+      dismissOnBackdrop
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            Select recipients to receive a fresh key wrap for this message. You
-            will be prompted for your private key when sharing.
+            Share this message with your network.
           </Typography>
-
-          {messageId ? (
-            <Typography variant="caption" color="text.secondary">
-              Thread: {messageId}
-            </Typography>
-          ) : null}
 
           {loadingRecipients ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -92,18 +84,13 @@ export function ShareMessageDialog({
                 Loading recipients…
               </Typography>
             </Box>
-          ) : recipientOptions.length === 0 ? (
+          ) : !hasFriends ? (
             <Typography variant="body2" color="text.secondary">
-              No friends yet. Add or accept a friend request before sharing.
+              No friends yet. You need to have at least one friend to be able to
+              share.
             </Typography>
           ) : (
-            <KeyIdMultiSelect
-              options={recipientOptions}
-              value={selectedRecipients}
-              onChange={onSelectedRecipientsChange}
-              getOptionLabel={getOptionLabel}
-              disabled={busy}
-            />
+            <MessagePolicyOptions mode="share" />
           )}
 
           {recipientsError ? (
@@ -114,7 +101,7 @@ export function ShareMessageDialog({
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions>
         <Button onClick={handleClose} disabled={busy} sx={{ mr: 'auto' }}>
           Cancel
         </Button>

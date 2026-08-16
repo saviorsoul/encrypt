@@ -5,6 +5,7 @@ import type {
   InboxSort,
   StoredComment,
 } from '../feed/types.ts';
+import type { CreateShareResponse } from '../feed/shareAccess.ts';
 import {
   type FeedApiAuthProvider,
   type FeedApiPerRequestAuth,
@@ -49,6 +50,8 @@ export type BackendUser = {
   keyId: string;
   publicKey: { x: string; y: string };
 };
+
+export type { CreateShareResponse } from '../feed/shareAccess.ts';
 
 export type CreateShareRequest = {
   share: Record<string, unknown>;
@@ -266,7 +269,7 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as { id: string };
     },
 
-    async postShare(body: CreateShareRequest): Promise<{ id: string }> {
+    async postShare(body: CreateShareRequest): Promise<CreateShareResponse> {
       const response = await authorizedFetch('/api/shares', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -275,7 +278,7 @@ export function createFeedApi(config: FeedApiConfig) {
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
-      return (await response.json()) as { id: string };
+      return (await response.json()) as CreateShareResponse;
     },
 
     /** POST raw JSON text without client-side parsing (feed-lab / API testing). */

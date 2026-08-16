@@ -5,6 +5,10 @@ import {
   recipientHasAccessToParentFromFeed,
   resolveParentMessageAccessFromFeed,
 } from '@encrypt/core/feed/access';
+import {
+  isCreateShareAlreadyComplete,
+  isShareRecipientsAlreadyHaveAccessMessage,
+} from '@encrypt/core/feed/shareAccess';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { jwkWithoutKeyOps } from '@encrypt/core/crypto/ecdhKeys';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
@@ -82,9 +86,7 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
           }
 
           if (filteredRecipients.length === 0) {
-            throw new Error(
-              'Selected recipients already have access to this message.',
-            );
+            return messageId;
           }
 
           const recipientKeyIds = [
@@ -116,6 +118,9 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
               typeof api.postShare
             >[0]['keyManifest'],
           });
+          if (isCreateShareAlreadyComplete(result)) {
+            return messageId;
+          }
           setLastShare({ messageId, shareId: result.id });
           return result.id;
         }
@@ -155,9 +160,7 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
           }
 
           if (filteredRecipients.length === 0) {
-            throw new Error(
-              'Selected recipients already have access to this message.',
-            );
+            return messageId;
           }
 
           const { shareCoreJson, keyManifest } =
@@ -175,16 +178,26 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
             share: JSON.parse(shareCoreJson) as Record<string, unknown>,
             keyManifest,
           });
+          if (isCreateShareAlreadyComplete(result)) {
+            return messageId;
+          }
           return result.id;
         });
         if (!shareId) {
           setError('Sharing cancelled or private key was not provided.');
           return null;
         }
-        setLastShare({ messageId, shareId });
+        if (shareId !== messageId) {
+          setLastShare({ messageId, shareId });
+        }
         return shareId;
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to share message.');
+        const message =
+          e instanceof Error ? e.message : 'Failed to share message.';
+        if (isShareRecipientsAlreadyHaveAccessMessage(message)) {
+          return messageId;
+        }
+        setError(message);
         return null;
       } finally {
         setBusy(false);

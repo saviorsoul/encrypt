@@ -244,7 +244,7 @@ export function AddFriendDialog({
         </Stack>
       </DialogContent>
       <Divider />
-      <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ justifyContent: 'space-between' }}>
         <Button
           onClick={() => {
             if (busy) {

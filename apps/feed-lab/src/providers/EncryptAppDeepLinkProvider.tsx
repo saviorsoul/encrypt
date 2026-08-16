@@ -152,7 +152,7 @@ export function EncryptAppDeepLinkProvider({
             </Typography>
           ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions>
           <Button
             type="button"
             onPointerDown={(event) => {

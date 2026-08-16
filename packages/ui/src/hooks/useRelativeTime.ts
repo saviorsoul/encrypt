@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatRelativeTime } from './formatRelativeTime.ts';
+import { formatRelativeTime } from '../utils/formatRelativeTime.ts';
 
 export function useRelativeTime(timestamp: number): string {
   const [now, setNow] = useState(() => Date.now());

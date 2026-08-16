@@ -338,7 +338,7 @@ export function IdentityDialog({
             )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions>
           <Button onClick={handleClose}>Close</Button>
           {!isSelf && isFriend ? (
             <Button

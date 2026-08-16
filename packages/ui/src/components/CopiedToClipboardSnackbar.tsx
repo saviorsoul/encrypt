@@ -1,6 +1,7 @@
 import Alert from '@mui/material/Alert';
 import type { AlertProps } from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import { feedSnackbarSx } from '../utils/feedSnackbar.ts';
 
 export const COPIED_TO_CLIPBOARD_SNACKBAR_MS = 5000;
 export const COPIED_TO_CLIPBOARD_MESSAGE = 'Copied to clipboard';
@@ -30,6 +31,7 @@ export function CopiedToClipboardSnackbar({
       autoHideDuration={COPIED_TO_CLIPBOARD_SNACKBAR_MS}
       onClose={onClose}
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      sx={feedSnackbarSx}
     >
       <Alert
         severity={severity}

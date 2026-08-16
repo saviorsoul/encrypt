@@ -22,7 +22,9 @@ export function FeedApiProvider({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return <FeedApiContext.Provider value={api}>{children}</FeedApiContext.Provider>;
+  return (
+    <FeedApiContext.Provider value={api}>{children}</FeedApiContext.Provider>
+  );
 }
 
 export function useFeedApi(): FeedApi {

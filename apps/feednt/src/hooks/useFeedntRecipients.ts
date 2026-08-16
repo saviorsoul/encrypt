@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { importPublicKeyExtractable } from '@encrypt/core/crypto/ecdhKeys';
+import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import type { FeedntFriend } from '@feednt/hooks/useFeedntFriendships.ts';
 
@@ -9,15 +10,6 @@ type FeedntRecipientsInput = {
   loadingFriends: boolean;
   friendsError: string | null;
 };
-
-function toPublicJwk(publicKey: { x: string; y: string }): JsonWebKey {
-  return {
-    kty: 'EC',
-    crv: 'P-256',
-    x: publicKey.x,
-    y: publicKey.y,
-  };
-}
 
 export function useFeedntRecipients({
   viewerKeyId,
@@ -68,8 +60,13 @@ export function useFeedntRecipients({
   useEffect(() => {
     if (friendsError) {
       setSelectedKeyIds([]);
+      return;
     }
-  }, [friendsError]);
+    if (loadingFriends) {
+      return;
+    }
+    setSelectedKeyIds(friends.map((friend) => friend.keyId));
+  }, [friends, friendsError, loadingFriends]);
 
   useEffect(() => {
     if (selectedKeyIds.length === 0) {
@@ -98,7 +95,7 @@ export function useFeedntRecipients({
               return null;
             }
             const publicKey = await importPublicKeyExtractable(
-              toPublicJwk(friend.publicKey),
+              ecPublicJwkFromCoords(friend.publicKey),
             );
             return { keyId, publicKey };
           }),

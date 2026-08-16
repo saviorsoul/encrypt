@@ -4,7 +4,6 @@ import {
   type Theme,
   type ThemeOptions,
 } from '@mui/material/styles';
-import type { AlertProps } from '@mui/material/Alert';
 
 export const brandColor = '#02baa5';
 
@@ -39,13 +38,6 @@ declare module '@mui/material/styles' {
     };
   }
 }
-
-const standardAlertSeverities = [
-  'success',
-  'info',
-  'warning',
-  'error',
-] as const satisfies readonly AlertProps['severity'][];
 
 const stoneLight = {
   bg: '#f7f6f4',
@@ -137,36 +129,6 @@ export const feedLabFontFamily = [
   '"Segoe Color Emoji"',
 ].join(',');
 
-function alertOverrides() {
-  return {
-    MuiAlert: {
-      styleOverrides: {
-        root: ({
-          theme,
-          ownerState,
-        }: {
-          theme: Theme;
-          ownerState: AlertProps;
-        }) => {
-          const severity = ownerState.severity ?? 'success';
-          if (
-            ownerState.variant !== 'standard' ||
-            !standardAlertSeverities.includes(severity)
-          ) {
-            return {};
-          }
-
-          const paletteColor = theme.palette[severity];
-          return {
-            backgroundColor: alpha(paletteColor.main, 0.16),
-            border: `1px solid ${alpha(paletteColor.main, 0.4)}`,
-          };
-        },
-      },
-    },
-  };
-}
-
 function createStoneTheme(mode: 'light' | 'dark') {
   const stone = mode === 'light' ? stoneLight : stoneDark;
 
@@ -185,6 +147,9 @@ function createStoneTheme(mode: 'light' | 'dark') {
         primary: stone.text,
         secondary: stone.sub,
       },
+      success: {
+        main: '#02ba49',
+      },
       divider: stone.border,
     },
     feedLab: {
@@ -202,14 +167,33 @@ function createStoneTheme(mode: 'light' | 'dark') {
       borderRadius: 8,
     },
     components: {
-      ...alertOverrides(),
       MuiCssBaseline: {
         styleOverrides: {
+          html: {
+            scrollbarGutter: 'stable',
+          },
           body: {
             fontFamily: feedLabFontFamily,
             minHeight: '100vh',
             ...feedAppBackgroundStyles(mode, stone),
           },
+        },
+      },
+      MuiModal: {
+        defaultProps: {
+          // scrollbar-gutter: stable already reserves scrollbar space; MUI's
+          // padding-right compensation would shift the feed left under dialogs.
+          disableScrollLock: true,
+        },
+      },
+      MuiPopover: {
+        defaultProps: {
+          disableScrollLock: true,
+        },
+      },
+      MuiMenu: {
+        defaultProps: {
+          disableScrollLock: true,
         },
       },
       MuiAppBar: {
@@ -253,6 +237,56 @@ function createStoneTheme(mode: 'light' | 'dark') {
           root: {
             borderRadius: 6,
           },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          scrollPaper: ({ theme }) => ({
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: theme.spacing(2),
+          }),
+          paper: {
+            margin: 0,
+            maxHeight: '100%',
+            width: '100%',
+          },
+          paperWidthSm: {
+            maxWidth: 550,
+          },
+          paperFullWidth: {
+            width: '100%',
+          },
+        },
+      },
+      MuiDialogTitle: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            padding: theme.spacing(1.5, 2),
+          }),
+        },
+      },
+      MuiDialogContent: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            padding: theme.spacing(2),
+          }),
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            padding: theme.spacing(2),
+          }),
+        },
+      },
+      MuiAlert: {
+        styleOverrides: {
+          outlined: ({ theme }) => ({
+            backgroundColor: theme.palette.background.paper,
+            border: 'none',
+            boxShadow: theme.shadows[2],
+          }),
         },
       },
       MuiTabs: {

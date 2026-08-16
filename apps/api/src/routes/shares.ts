@@ -21,7 +21,11 @@ export function createSharesRouter(): Router {
     async (ctx) => {
       const command = ctx.request.body as CreateShareCommand;
       const result = await handleCreateShare(command);
-      ctx.status = 201;
+      if ('recipientsAlreadyHadAccess' in result) {
+        ctx.status = 200;
+      } else {
+        ctx.status = 201;
+      }
       ctx.body = result;
     },
   );

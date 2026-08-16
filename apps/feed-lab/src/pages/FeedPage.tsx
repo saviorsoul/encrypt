@@ -22,11 +22,12 @@ import {
   FeedRefreshButtonIcon,
   ButtonIconSlot,
   feedActionButtonSx,
+  MessageSentSnackbar,
+  MessageSharedSnackbar,
+  SendMessageDialog,
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
 } from '@encrypt/ui';
-import { MessageSentSnackbar } from '@lab/components/MessageSentSnackbar.tsx';
-import { SendMessageDialog } from '@lab/components/SendMessageDialog.tsx';
 import { ShareMessageDialog } from '@lab/components/ShareMessageDialog.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
@@ -48,9 +49,8 @@ export function FeedPage() {
   const [shareTargetMessageId, setShareTargetMessageId] = useState<
     string | null
   >(null);
-  const [sentMessageNotice, setSentMessageNotice] = useState<{
-    messageId: string;
-  } | null>(null);
+  const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
+  const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
 
   const friendships = useFeedLabFriendships();
   const { ensureFriendshipsLoaded } = friendships;
@@ -175,12 +175,20 @@ export function FeedPage() {
     }
   }, [keys.keyId, reloadFeed]);
 
-  const handleMessageSent = useCallback((detail: { messageId: string }) => {
-    setSentMessageNotice(detail);
+  const handleMessageSent = useCallback(() => {
+    setMessageSentNoticeKey((current) => current + 1);
   }, []);
 
-  const handleCloseSentMessageNotice = useCallback(() => {
-    setSentMessageNotice(null);
+  const handleCloseMessageSentNotice = useCallback(() => {
+    setMessageSentNoticeKey(0);
+  }, []);
+
+  const handleMessageShared = useCallback(() => {
+    setMessageSharedNoticeKey((current) => current + 1);
+  }, []);
+
+  const handleCloseMessageSharedNotice = useCallback(() => {
+    setMessageSharedNoticeKey(0);
   }, []);
 
   const handleOpenShare = useCallback(
@@ -313,8 +321,13 @@ export function FeedPage() {
       />
 
       <MessageSentSnackbar
-        messageId={sentMessageNotice?.messageId ?? null}
-        onClose={handleCloseSentMessageNotice}
+        noticeKey={messageSentNoticeKey}
+        onClose={handleCloseMessageSentNotice}
+      />
+
+      <MessageSharedSnackbar
+        noticeKey={messageSharedNoticeKey}
+        onClose={handleCloseMessageSharedNotice}
       />
 
       <ShareMessageDialog
@@ -322,15 +335,12 @@ export function FeedPage() {
         messageId={shareTargetMessageId}
         busy={share.busy}
         error={share.error}
-        recipientOptions={recipients.recipientOptions}
-        selectedRecipients={recipients.selectedKeyIds}
-        onSelectedRecipientsChange={recipients.setSelectedKeyIds}
-        getOptionLabel={recipients.getOptionLabel}
         recipients={recipients.recipients}
         loadingRecipients={
           recipients.loadingFriends || recipients.loadingRecipientKeys
         }
         recipientsError={recipients.error}
+        hasFriends={recipients.recipientOptions.length > 0}
         onClose={handleCloseShareDialog}
         onClearError={clearShareError}
         onShare={(shareRecipients) =>
@@ -341,9 +351,9 @@ export function FeedPage() {
               allDeliveries: feed.allDeliveries,
               manifestLookup: feed.manifestLookup,
             })
-            .then(async (shareId) => {
-              if (shareId && keys.keyId) {
-                await reloadFeed();
+            .then((shareId) => {
+              if (shareId) {
+                handleMessageShared();
               }
               return shareId;
             })

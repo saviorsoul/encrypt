@@ -10,7 +10,13 @@ export type CreateShareWriteInput = {
   messageId?: string;
 };
 
+export type CreateShareWriteResult =
+  | { created: true }
+  | { created: false; reason: 'recipients_already_had_access' };
+
 export interface ShareRepository {
   getById(id: string): Promise<StoredShare | null>;
-  createShareWithAccess(input: CreateShareWriteInput): Promise<void>;
+  createShareWithAccess(
+    input: CreateShareWriteInput,
+  ): Promise<CreateShareWriteResult>;
 }

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import type { CopiedToClipboardSnackbarProps } from './CopiedToClipboardSnackbar.tsx';
-import { copyTextToClipboard } from './copyToClipboard.ts';
+import type { CopiedToClipboardSnackbarProps } from '../components/CopiedToClipboardSnackbar.tsx';
+import { copyTextToClipboard } from '../utils/copyToClipboard.ts';
 
 type CopiedToClipboardSnackbarState = {
   open: boolean;

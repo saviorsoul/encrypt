@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
-import { jsonSyntaxError } from '@lab/lib/validateJsonSyntax.ts';
 import {
-  postImportJsonToBackend,
   importApiPathForKind,
-} from '@lab/lib/postImportJsonToBackend.ts';
-import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
+  postImportJsonToBackend,
+} from '@encrypt/core/feed/postImportJsonToBackend';
+import { useSendMessageDependencies } from '../components/SendMessageDependenciesContext.tsx';
+import { jsonSyntaxError } from '../utils/validateJsonSyntaxText.ts';
 
 export function useSendImportToBackend() {
+  const { useFeedApi } = useSendMessageDependencies();
   const api = useFeedApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +44,11 @@ export function useSendImportToBackend() {
     setError(null);
   }, []);
 
+  const clearNotices = useCallback(() => {
+    setError(null);
+    setLastResult(null);
+  }, []);
+
   return {
     busy,
     error,
@@ -50,5 +56,6 @@ export function useSendImportToBackend() {
     sendImport,
     validatePayloadText,
     clearError,
+    clearNotices,
   };
 }

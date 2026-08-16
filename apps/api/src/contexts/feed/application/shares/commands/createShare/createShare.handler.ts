@@ -4,6 +4,7 @@ import { assertRecipientsRegistered } from '@/contexts/users/index.js';
 import { badRequest } from '@/lib/httpError.js';
 import { shareRepository } from '@/contexts/feed/infrastructure/prismaShareRepository.js';
 import type { CreateShareCommand } from './createShare.command.js';
+import type { CreateShareResponse } from '@encrypt/core/feed/shareAccess';
 
 type ManifestShareWire = {
   parentMessageId: string;
@@ -16,7 +17,7 @@ type ManifestShareWire = {
 
 export async function handleCreateShare(
   command: CreateShareCommand,
-): Promise<{ id: string }> {
+): Promise<CreateShareResponse> {
   const share = command.share as ManifestShareWire;
   const threadRootId = share.parentMessageId;
 
@@ -30,7 +31,7 @@ export async function handleCreateShare(
   const shareCoreJson = JSON.stringify(command.share);
   const shareId = randomUUID();
 
-  await shareRepository.createShareWithAccess({
+  const result = await shareRepository.createShareWithAccess({
     shareId,
     threadRootId,
     shareCoreJson,
@@ -38,6 +39,10 @@ export async function handleCreateShare(
     parentMessage: command.parentMessage,
     messageId: command.messageId,
   });
+
+  if (!result.created) {
+    return { recipientsAlreadyHadAccess: true };
+  }
 
   return { id: shareId };
 }

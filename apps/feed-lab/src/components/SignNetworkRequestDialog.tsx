@@ -216,7 +216,7 @@ export function SignNetworkRequestDialog({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
+      <DialogActions sx={{ pt: 0 }}>
         <Button onClick={onCancel} sx={{ mr: 'auto' }}>
           Cancel
         </Button>

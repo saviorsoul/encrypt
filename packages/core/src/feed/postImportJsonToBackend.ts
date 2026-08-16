@@ -1,12 +1,12 @@
-import { COMMENT_WRAP } from '@encrypt/core/crypto/commentConstants';
-import type { FeedApi } from '@encrypt/core/api/feedApi';
+import { COMMENT_WRAP } from '../crypto/commentConstants.ts';
+import type { FeedApi } from '../api/feedApi.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 type ImportPath = '/api/messages' | '/api/shares' | '/api/comments';
-type ImportKind = 'message' | 'share' | 'comment';
+export type ImportKind = 'message' | 'share' | 'comment';
 
 function inferImportPath(text: string): ImportPath {
   try {

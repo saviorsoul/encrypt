@@ -1,7 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import {
+  SendMessageDependenciesProvider,
+  type SendMessageDependencies,
+} from '@encrypt/ui';
 import { FeedLabRouter } from '@lab/lib/feedLabRouter.ts';
 import { ProtectedRoute } from '@lab/components/routes/ProtectedRoute.tsx';
-import { FeedApiProvider } from '@lab/providers/FeedApiProvider.tsx';
+import { isBridgeCancellationError } from '@lab/crypto/systemAppSigner.ts';
+import {
+  FeedApiProvider,
+  useFeedApi,
+} from '@lab/providers/FeedApiProvider.tsx';
 import { FeedLabSessionProvider } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { FeedLabSettingsProvider } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import { FeedLabThemeProvider } from '@lab/providers/FeedLabThemeProvider.tsx';
@@ -16,6 +24,11 @@ import {
   BridgePairCallbackPage,
 } from '@lab/pages/BridgeCallbackPage.tsx';
 import { useSystemAppBridgeListener } from '@lab/hooks/useSystemAppBridgeListener.ts';
+
+const feedLabSendMessageDependencies: SendMessageDependencies = {
+  useFeedApi,
+  isSendCancellationError: isBridgeCancellationError,
+};
 
 function FeedLabRoutes() {
   useSystemAppBridgeListener();
@@ -45,9 +58,13 @@ export default function App() {
           <SignNetworkRequestProvider>
             <EncryptAppDeepLinkProvider>
               <FeedApiProvider>
-                <FeedLabRouter>
-                  <FeedLabRoutes />
-                </FeedLabRouter>
+                <SendMessageDependenciesProvider
+                  value={feedLabSendMessageDependencies}
+                >
+                  <FeedLabRouter>
+                    <FeedLabRoutes />
+                  </FeedLabRouter>
+                </SendMessageDependenciesProvider>
               </FeedApiProvider>
             </EncryptAppDeepLinkProvider>
           </SignNetworkRequestProvider>

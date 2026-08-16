@@ -1,19 +1,47 @@
 import { useCallback, useState } from 'react';
+import type { UploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { encryptWithManifest } from '@encrypt/core/crypto/manifestEncrypt';
 import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { validateContentPlaintext } from '@encrypt/core/constants/contentLimits';
+import { assembleMessageCopyPayloadFromWire } from '@encrypt/core/feed/messageCopyPayload';
 import { isPrivateKeyFileSelectionCancelled } from '@encrypt/platform/privateKeyFile';
-import { assembleMessageCopyPayloadFromWire } from '@feednt/lib/assembleMessageCopyPayload.ts';
-import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
-import type { useFeedntPrivateKey } from '@feednt/hooks/useFeedntPrivateKey.ts';
+import { useSendMessageDependencies } from '../components/SendMessageDependenciesContext.tsx';
 
-type KeysSession = ReturnType<typeof useFeedntPrivateKey>;
+export type SendMessageKeysSession = {
+  keyId: string | null;
+  withPrivateKey: <T>(
+    fn: (material: UploadedPrivateKeyMaterial) => Promise<T>,
+  ) => Promise<T | null>;
+} & (
+  | {
+      isSystemAppSession: true;
+      systemEncryptMessage: (
+        plaintext: string,
+        recipients: ManifestRecipientKeys[],
+      ) => Promise<{ body: Record<string, unknown> } | null>;
+    }
+  | {
+      isSystemAppSession?: false;
+    }
+);
+
+function isSendCancellationError(
+  error: unknown,
+  isAdditionalCancellationError?: (error: unknown) => boolean,
+): boolean {
+  return (
+    isPrivateKeyFileSelectionCancelled(error) ||
+    Boolean(isAdditionalCancellationError?.(error))
+  );
+}
 
 export function useBackendSendMessage(
-  keys: KeysSession,
+  keys: SendMessageKeysSession,
   expectedKeyId: string | null,
 ) {
+  const { useFeedApi, isSendCancellationError: isAdditionalCancellationError } =
+    useSendMessageDependencies();
   const api = useFeedApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +72,29 @@ export function useBackendSendMessage(
 
       setBusy(true);
       try {
+        if (keys.isSystemAppSession) {
+          const encrypted = await keys.systemEncryptMessage(
+            plaintext,
+            recipients,
+          );
+          if (!encrypted) {
+            return null;
+          }
+          const result = await api.postMessage(
+            encrypted.body as Parameters<typeof api.postMessage>[0],
+          );
+          const sent = {
+            id: result.id,
+            copyPayload: assembleMessageCopyPayloadFromWire(
+              result.id,
+              encrypted.body,
+            ),
+          };
+          setLastMessageId(sent.id);
+          setLastMessageCopyPayload(sent.copyPayload);
+          return sent;
+        }
+
         const sent = await keys.withPrivateKey(async (material) => {
           if (expectedKeyId) {
             assertUploadedPrivateKeyMatchesKeyId(
@@ -77,7 +128,7 @@ export function useBackendSendMessage(
         setLastMessageCopyPayload(sent.copyPayload);
         return sent;
       } catch (e) {
-        if (isPrivateKeyFileSelectionCancelled(e)) {
+        if (isSendCancellationError(e, isAdditionalCancellationError)) {
           return null;
         }
         setError(e instanceof Error ? e.message : 'Failed to send message.');
@@ -86,7 +137,7 @@ export function useBackendSendMessage(
         setBusy(false);
       }
     },
-    [api, expectedKeyId, keys],
+    [api, expectedKeyId, isAdditionalCancellationError, keys],
   );
 
   const clearError = useCallback(() => {

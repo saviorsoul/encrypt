@@ -1,6 +1,7 @@
 import { isShareDelivery } from '@encrypt/core/crypto/manifestShare';
 import { assembleShareCopyPayloadJson } from '@encrypt/core/feed/exportWire';
 import { assembleManifestWithKeyManifest } from '@encrypt/core/crypto/manifestStorage';
+import { assembleMessageCopyPayloadFromWire } from '@encrypt/core/feed/messageCopyPayload';
 import type {
   StoredComment,
   StoredFeedDelivery,
@@ -9,12 +10,7 @@ import type {
 import type { KeyManifestMap } from '@encrypt/core/types/manifest';
 import { getCachedKeyManifest } from '@lab/hooks/useBackendFeedData.ts';
 
-export function assembleMessageCopyPayloadFromWire(
-  messageId: string,
-  wireBody: Record<string, unknown>,
-): string {
-  return JSON.stringify({ messageId, ...wireBody });
-}
+export { assembleMessageCopyPayloadFromWire };
 
 function assembleCommentCopyEntries(comments: StoredComment[]) {
   return comments.map((comment) => ({
