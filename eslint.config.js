@@ -204,6 +204,20 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/feednt/local/electron/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
+    files: ['apps/feednt/local/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
     files: ['apps/web/scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
@@ -212,6 +226,16 @@ export default tseslint.config(
   },
   {
     files: ['apps/web/electron/**/*.cjs'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'commonjs',
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['apps/feednt/local/electron/**/*.cjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'commonjs',
