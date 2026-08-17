@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { API_PATH } from '@/config.js';
 import {
   handleCreateMessage,
   type CreateMessageCommand,
@@ -8,7 +9,7 @@ import { verifySignature } from '@/middleware/verifySignature.js';
 import { requireAuthenticatedSigner } from '@/middleware/requireAuthenticatedSigner.js';
 
 export function createMessagesRouter(): Router {
-  const router = new Router({ prefix: '/api' });
+  const router = new Router({ prefix: API_PATH });
 
   router.post(
     '/messages',

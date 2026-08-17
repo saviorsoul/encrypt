@@ -2,6 +2,11 @@ import Router from '@koa/router';
 import { validateBody } from '@/middleware/validateBody.js';
 import { unauthorized } from '@/lib/httpError.js';
 import {
+  API_PATH,
+  FRIEND_INVITATION_ACCEPT_SUFFIX,
+  FRIEND_INVITATIONS_PATH,
+} from '@/config.js';
+import {
   handleAcceptFriendInvitation,
   handleCreateFriendInvitation,
   handleGetFriendInvitation,
@@ -29,10 +34,10 @@ function readAuthenticatedPublicKey(ctx: {
 }
 
 export function createFriendInvitationsRouter(): Router {
-  const router = new Router({ prefix: '/api' });
+  const router = new Router({ prefix: API_PATH });
 
   router.post(
-    '/friend-invitations',
+    FRIEND_INVITATIONS_PATH,
     validateBody('createFriendInvitationBody'),
     async (ctx) => {
       const inviterKeyId = readAuthenticatedKeyId(ctx);
@@ -46,18 +51,18 @@ export function createFriendInvitationsRouter(): Router {
     },
   );
 
-  router.get('/friend-invitations', async (ctx) => {
+  router.get(FRIEND_INVITATIONS_PATH, async (ctx) => {
     const inviterKeyId = readAuthenticatedKeyId(ctx);
     ctx.body = await handleListFriendInvitations({ inviterKeyId });
   });
 
-  router.get('/friend-invitations/:token', async (ctx) => {
+  router.get(`${FRIEND_INVITATIONS_PATH}/:token`, async (ctx) => {
     const token = ctx.params.token;
     ctx.body = await handleGetFriendInvitation({ token });
   });
 
   router.post(
-    '/friend-invitations/:token/accept',
+    `${FRIEND_INVITATIONS_PATH}/:token/${FRIEND_INVITATION_ACCEPT_SUFFIX}`,
     validateBody('acceptFriendInvitationBody'),
     async (ctx) => {
       const inviteeKeyId = readAuthenticatedKeyId(ctx);

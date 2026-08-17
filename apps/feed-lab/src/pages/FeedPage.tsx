@@ -27,6 +27,7 @@ import {
   SendMessageDialog,
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
+  FeedNoFriendsGuide,
 } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
@@ -35,8 +36,6 @@ import { cancelPendingSystemOps } from '@lab/crypto/systemAppSigner.ts';
 export function FeedPage() {
   const { keys, feedLabUsers } = useFeedLabSession();
   const { usernameByKeyId, usernames, addLocalUser } = feedLabUsers;
-  const feed = useBackendFeedData(keys.keyId);
-  const { reload: reloadFeed } = feed;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -53,6 +52,16 @@ export function FeedPage() {
 
   const friendships = useFeedLabFriendships();
   const { ensureFriendshipsLoaded } = friendships;
+  const ensureFriendshipsLoadedRef = useRef(ensureFriendshipsLoaded);
+
+  useEffect(() => {
+    ensureFriendshipsLoadedRef.current = ensureFriendshipsLoaded;
+  });
+
+  const feed = useBackendFeedData(keys.keyId, {
+    onEmptyInbox: () => void ensureFriendshipsLoadedRef.current(),
+  });
+  const { reload: reloadFeed } = feed;
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
@@ -109,6 +118,14 @@ export function FeedPage() {
     feedContext,
   });
   const feedBusy = feed.loading || preparingFeed;
+  const inboxIsEmpty =
+    keys.keyId != null &&
+    !feed.loading &&
+    !feed.error &&
+    !feed.notRegistered &&
+    feed.messages.length === 0;
+  const showOnboardingGuide =
+    feed.notRegistered || (inboxIsEmpty && friendships.friends.length === 0);
   const loadMorePreparing = preparingFeed && visibleMessages.length > 0;
   const showLoadMore =
     feed.hasMore && (feed.loadingMore || loadMorePreparing || !feedBusy);
@@ -126,6 +143,7 @@ export function FeedPage() {
     });
 
   const wasFeedLoadingRef = useRef(feed.loading);
+
   useEffect(() => {
     const wasLoading = wasFeedLoadingRef.current;
     wasFeedLoadingRef.current = feed.loading;
@@ -196,13 +214,16 @@ export function FeedPage() {
 
   const handleOpenShare = useCallback(
     (messageId: string) => {
+      if (feed.notRegistered) {
+        return;
+      }
       setLastInteractedMessageId(messageId);
       clearShareError();
       void ensureFriendshipsLoaded();
       setShareTargetMessageId(messageId);
       setShareDialogOpen(true);
     },
-    [clearShareError, ensureFriendshipsLoaded],
+    [clearShareError, ensureFriendshipsLoaded, feed.notRegistered],
   );
 
   const handleCloseShareDialog = useCallback(() => {
@@ -238,6 +259,7 @@ export function FeedPage() {
           Refresh feed
         </Button>
         <Button
+          data-testid="feed-create-message"
           variant="contained"
           size="small"
           sx={feedActionButtonSx}
@@ -246,12 +268,19 @@ export function FeedPage() {
               <SendOutlinedIcon />
             </ButtonIconSlot>
           }
-          disabled={!keys.keyId}
+          disabled={!keys.keyId || feed.notRegistered}
           onClick={() => setCreateMessageDialogOpen(true)}
         >
           Create message
         </Button>
       </Stack>
+
+      {showOnboardingGuide ? (
+        <FeedNoFriendsGuide
+          loading={friendships.friendshipsLoading && !feed.notRegistered}
+          error={feed.notRegistered ? null : friendships.friendshipsError}
+        />
+      ) : null}
 
       <Stack spacing={2} sx={{ width: '100%', ...feedListPulseSx }}>
         {visibleMessages.map((message) => {
@@ -298,11 +327,16 @@ export function FeedPage() {
             </FeedMessageEnter>
           );
         })}
-        {keys.keyId && !feedBusy && visibleMessages.length === 0 ? (
+
+        {keys.keyId &&
+        !feedBusy &&
+        visibleMessages.length === 0 &&
+        friendships.friends.length > 0 ? (
           <Typography color="text.secondary">
             No data yet for this keyId.
           </Typography>
         ) : null}
+
         {showLoadMore ? (
           <Button
             variant="outlined"

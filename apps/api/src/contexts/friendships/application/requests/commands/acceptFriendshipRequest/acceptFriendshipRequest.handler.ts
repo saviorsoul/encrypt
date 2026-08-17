@@ -1,10 +1,10 @@
-import { assertRecipientsRegistered } from '@/contexts/users/index.js';
 import { badRequest, notFound } from '@/lib/httpError.js';
 import { FRIENDSHIP_REQUEST_PENDING } from '@/contexts/friendships/domain/constants.js';
 import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
+import { userRepository } from '@/contexts/users/index.js';
+import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
-import { registerTargetForFriendshipRequestAccept } from '@/contexts/friendships/application/invitationRegistration.js';
 
 export type AcceptFriendshipRequestCommand = {
   requesterKeyId: string;
@@ -33,12 +33,13 @@ export async function handleAcceptFriendshipRequest(
     );
   }
 
-  await registerTargetForFriendshipRequestAccept(
-    targetKeyId,
-    targetPublicKey,
-    invitationToken,
-  );
-  await assertRecipientsRegistered([requesterKeyId, targetKeyId]);
+  const requesterPublicKeys = await userRepository.findPublicKeysByKeyIds([
+    requesterKeyId,
+  ]);
+  const requesterPublicKey = requesterPublicKeys.get(requesterKeyId);
+  if (!requesterPublicKey) {
+    throw badRequest('Friendship requester is not registered.');
+  }
 
   if (await friendshipRepository.areFriends(requesterKeyId, targetKeyId)) {
     await friendshipWritePort.clearPendingAndConsumeInvitation(
@@ -55,5 +56,13 @@ export async function handleAcceptFriendshipRequest(
     targetKeyId,
     invitationToken,
   );
+
+  await ensureRegisteredAfterFriendshipPair(
+    requesterKeyId,
+    requesterPublicKey,
+    targetKeyId,
+    targetPublicKey,
+  );
+
   return { status: 'accepted' as const };
 }

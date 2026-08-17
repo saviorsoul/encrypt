@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import '../src/loadEnv.js';
-import { insertFriendshipPair } from '../src/db/friendships.js';
+import { insertFriendshipPair } from '../src/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 import { prisma } from '../src/lib/prisma.js';
 
 export async function seedFriendship(
@@ -43,11 +44,17 @@ async function main(): Promise<void> {
   await seedFriendship(keyIdA, keyIdB);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+const isMainModule =
+  typeof process.argv[1] === 'string' &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+  main()
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

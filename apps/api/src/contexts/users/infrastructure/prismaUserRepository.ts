@@ -53,13 +53,6 @@ export const userRepository: UserRepository = {
     await userRepository.register(input);
   },
 
-  async listUsers() {
-    return prisma.user.findMany({
-      select: { keyId: true, publicKey: true },
-      orderBy: { createdAt: 'desc' },
-    });
-  },
-
   async findRegisteredKeyIds(keyIds: string[]): Promise<Set<string>> {
     if (keyIds.length === 0) {
       return new Set();

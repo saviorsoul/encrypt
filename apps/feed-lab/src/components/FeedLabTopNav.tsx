@@ -30,6 +30,7 @@ export function FeedLabTopNav({
           <Tooltip title="Users">
             <TooltipIconWrap>
               <IconButton
+                data-testid="nav-open-users"
                 size="small"
                 color={usersActive ? 'primary' : 'inherit'}
                 aria-label="Users"

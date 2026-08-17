@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { API_PATH } from '@/config.js';
 import type {
   DeleteFriendshipBody,
   FriendshipRequesterBody,
@@ -36,7 +37,7 @@ function readAuthenticatedPublicKey(ctx: {
 }
 
 export function createFriendshipsRouter(): Router {
-  const router = new Router({ prefix: '/api' });
+  const router = new Router({ prefix: API_PATH });
 
   router.post(
     '/friendships/request',
@@ -59,8 +60,7 @@ export function createFriendshipsRouter(): Router {
 
   router.get('/friendships/requests', async (ctx) => {
     const keyId = readAuthenticatedKeyId(ctx);
-    const publicKey = readAuthenticatedPublicKey(ctx);
-    ctx.body = await handleListFriendshipRequests({ keyId, publicKey });
+    ctx.body = await handleListFriendshipRequests({ keyId });
   });
 
   router.post(
@@ -95,7 +95,12 @@ export function createFriendshipsRouter(): Router {
 
   router.get('/friendships', async (ctx) => {
     const ownerKeyId = readAuthenticatedKeyId(ctx);
-    ctx.body = await handleListFriendships({ ownerKeyId });
+    const friendships = await handleListFriendships({ ownerKeyId });
+    if (friendships.length === 0) {
+      ctx.status = 204;
+      return;
+    }
+    ctx.body = friendships;
   });
 
   router.delete(

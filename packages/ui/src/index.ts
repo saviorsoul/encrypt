@@ -76,6 +76,10 @@ export {
   type ShareMessageDialogProps,
 } from './components/ShareMessageDialog.tsx';
 export {
+  FeedNoFriendsGuide,
+  type FeedNoFriendsGuideProps,
+} from './components/FeedNoFriendsGuide.tsx';
+export {
   SendMessageDialogActions,
   SendMessagePanel,
   useSendMessageForm,

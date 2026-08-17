@@ -149,7 +149,12 @@ export function AddFriendDialog({
             variant="fullWidth"
           >
             <Tab label="Invitation link" value="link" disabled={!canInvite} />
-            <Tab label="Public key" value="publicKey" disabled={!canInvite} />
+            <Tab
+              data-testid="add-friend-public-key-tab"
+              label="Public key"
+              value="publicKey"
+              disabled={!canInvite}
+            />
           </Tabs>
 
           {tab === 'link' ? (
@@ -162,6 +167,7 @@ export function AddFriendDialog({
               {invitationHref ? (
                 <>
                   <TextField
+                    data-testid="add-friend-invitation-link"
                     label="Invitation link"
                     value={invitationHref}
                     fullWidth
@@ -181,6 +187,7 @@ export function AddFriendDialog({
                 </>
               ) : (
                 <TextField
+                  data-testid="add-friend-invitation-name"
                   label="Username"
                   value={invitationName}
                   onChange={(e) => {
@@ -267,6 +274,7 @@ export function AddFriendDialog({
               </Button>
             ) : (
               <Button
+                data-testid="add-friend-create-link"
                 variant="contained"
                 onClick={handleCreateLink}
                 disabled={busy || !canInvite}
@@ -276,6 +284,7 @@ export function AddFriendDialog({
             )
           ) : (
             <Button
+              data-testid="add-friend-send-request"
               variant="contained"
               disabled={
                 busy ||

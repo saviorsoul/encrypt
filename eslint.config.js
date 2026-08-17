@@ -113,6 +113,22 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/feed-lab/e2e/**/*.{js,ts}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      'no-empty-pattern': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     files: ['apps/feed-lab/src/hooks/**/*.{ts,tsx}'],
     rules: {
       'react-hooks/set-state-in-effect': 'off',

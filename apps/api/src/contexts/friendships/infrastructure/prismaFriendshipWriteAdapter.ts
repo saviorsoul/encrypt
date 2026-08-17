@@ -3,7 +3,7 @@ import { FRIEND_INVITATION_CONSUMED } from '@/contexts/friendships/domain/consta
 import type { FriendshipWritePort } from '@/contexts/friendships/domain/ports/FriendshipWritePort.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 
-async function insertFriendshipPair(
+export async function insertFriendshipPair(
   tx: PrismaTx,
   keyIdA: string,
   keyIdB: string,

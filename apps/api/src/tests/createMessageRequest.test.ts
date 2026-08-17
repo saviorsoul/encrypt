@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ES256_SIGNATURE_BASE64_BODY_LENGTH } from '@encrypt/core/crypto/es256Constants';
 import {
   MANIFEST_WRAP,
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
@@ -23,7 +24,7 @@ function minimalCreateMessageRequest(
     senderPublicJwk: ecPublicJwk,
     ephemeralPublicKey: ecPublicJwk,
     encryptedContent: { iv: 'iv', ciphertext: 'ciphertext' },
-    senderSignature: 'signature',
+    senderSignature: 'A'.repeat(ES256_SIGNATURE_BASE64_BODY_LENGTH) + '==',
     keyManifest: {
       [SAMPLE_KEY_ID]: {
         keyId: SAMPLE_KEY_ID,
@@ -63,6 +64,40 @@ describe('createMessageRequest schema', () => {
     const body = minimalCreateMessageRequest({ messageId: 'not-a-uuid' });
 
     expect(validate(body)).toBe(false);
+  });
+
+  it('accepts a real ES256 signature with standard base64 padding', () => {
+    const validate = getValidator('createMessageRequest');
+    const body = minimalCreateMessageRequest({
+      senderSignature:
+        'oLkvht46O7pdgA/bLBfp2rq8dapNYPoJtKPc2Xf/0Oq8mMkEoMRPgdWf0HqlBmH6Wj5yAMjYZn/JIbTEaq1DTw==',
+    });
+
+    expect(validate(body)).toBe(true);
+  });
+
+  it('rejects senderSignature shorter than ES256 wire length', () => {
+    const validate = getValidator('createMessageRequest');
+    const body = minimalCreateMessageRequest({
+      senderSignature: 'short',
+    });
+
+    expect(validate(body)).toBe(false);
+    expect(
+      validate.errors?.some((e) => e.instancePath === '/senderSignature'),
+    ).toBe(true);
+  });
+
+  it('rejects senderSignature with invalid base64 alphabet', () => {
+    const validate = getValidator('createMessageRequest');
+    const body = minimalCreateMessageRequest({
+      senderSignature: '_'.repeat(ES256_SIGNATURE_BASE64_BODY_LENGTH) + '==',
+    });
+
+    expect(validate(body)).toBe(false);
+    expect(
+      validate.errors?.some((e) => e.instancePath === '/senderSignature'),
+    ).toBe(true);
   });
 
   it('accepts ciphertext at the content limit', () => {

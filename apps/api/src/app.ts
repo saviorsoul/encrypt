@@ -4,6 +4,8 @@ import { MAX_BODY_BYTES } from './constants.js';
 import { badRequest } from './lib/httpError.js';
 import { authenticate } from './middleware/authenticate.js';
 import { authenticateApiUnlessPublic } from './middleware/authenticateApiUnlessPublic.js';
+import { registeredApiUnlessPublic } from './middleware/registeredApiUnlessPublic.js';
+import { requireRegisteredUser } from './middleware/requireRegisteredUser.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { createFriendshipsRouter } from './routes/friendships.js';
@@ -14,7 +16,6 @@ import { createInboxRouter } from './routes/inbox.js';
 import { createMessagesRouter } from './routes/messages.js';
 import { createSharesRouter } from './routes/shares.js';
 import { createAuthRouter } from './routes/auth.js';
-import { createUsersRouter } from './routes/users.js';
 import { readConfig } from './config.js';
 
 export function createApp(): Koa {
@@ -61,15 +62,13 @@ export function createApp(): Koa {
     }),
   );
   app.use(authenticateApiUnlessPublic(authenticate()));
+  app.use(registeredApiUnlessPublic(requireRegisteredUser()));
 
   const healthRouter = createHealthRouter();
   app.use(healthRouter.routes()).use(healthRouter.allowedMethods());
 
   const authRouter = createAuthRouter();
   app.use(authRouter.routes()).use(authRouter.allowedMethods());
-
-  const usersRouter = createUsersRouter();
-  app.use(usersRouter.routes()).use(usersRouter.allowedMethods());
 
   const messagesRouter = createMessagesRouter();
   app.use(messagesRouter.routes()).use(messagesRouter.allowedMethods());

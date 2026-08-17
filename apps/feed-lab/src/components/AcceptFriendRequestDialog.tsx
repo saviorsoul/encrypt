@@ -132,6 +132,7 @@ export function AcceptFriendRequestDialog({
           Cancel
         </Button>
         <Button
+          data-testid="accept-friend-request-submit"
           variant="contained"
           disabled={!canAccept}
           onClick={() => void onAccept(trimmedUsername)}

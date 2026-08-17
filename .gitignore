@@ -22,6 +22,7 @@ apps/feednt/local/release
 # misc
 .DS_Store
 apps/api/keys/
+apps/feed-lab/e2e/keys/
 .env
 .env.local
 .env.development.local

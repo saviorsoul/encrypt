@@ -1,7 +1,7 @@
 import { userRepository } from '@/contexts/users/index.js';
 import { badRequest, gone, notFound } from '@/lib/httpError.js';
 import { FRIEND_INVITATION_CONSUMED } from '@/contexts/friendships/domain/constants.js';
-import { registerInviteeForFriendInvitationAccept } from '@/contexts/friendships/application/invitationRegistration.js';
+import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendInvitationRepository } from '@/contexts/friendships/infrastructure/prismaFriendInvitationRepository.js';
 import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 
@@ -29,12 +29,6 @@ export async function handleAcceptFriendInvitation(
     throw badRequest('Cannot accept your own invitation.');
   }
 
-  await registerInviteeForFriendInvitationAccept(
-    inviteeKeyId,
-    inviteePublicKey,
-    token,
-  );
-
   if (!(await userRepository.exists(row.inviterKeyId))) {
     throw badRequest(
       'Invitation inviter is not registered. Ask them to create a new invitation link.',
@@ -45,6 +39,23 @@ export async function handleAcceptFriendInvitation(
     row.inviterKeyId,
     inviteeKeyId,
     token,
+  );
+
+  const inviterPublicKeys = await userRepository.findPublicKeysByKeyIds([
+    row.inviterKeyId,
+  ]);
+  const inviterPublicKey = inviterPublicKeys.get(row.inviterKeyId);
+  if (!inviterPublicKey) {
+    throw badRequest(
+      'Invitation inviter is not registered. Ask them to create a new invitation link.',
+    );
+  }
+
+  await ensureRegisteredAfterFriendshipPair(
+    inviteeKeyId,
+    inviteePublicKey,
+    row.inviterKeyId,
+    inviterPublicKey,
   );
 
   return { status: 'accepted' as const };

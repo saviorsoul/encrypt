@@ -1,8 +1,10 @@
 import type { Middleware } from 'koa';
+import { API_PATH } from '@/config.js';
+import { isPublicGetFriendInvitation } from '@/routes/friendInvitationRouteAccess.js';
 
 const PUBLIC_API_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'GET', path: '/health' },
-  { method: 'POST', path: '/api/auth/challenge' },
+  { method: 'POST', path: `${API_PATH}/auth/challenge` },
 ];
 
 function isPublicApiRoute(method: string, path: string): boolean {
@@ -14,7 +16,7 @@ function isPublicApiRoute(method: string, path: string): boolean {
     return true;
   }
 
-  return method === 'GET' && /^\/api\/friend-invitations\/[^/]+$/.test(path);
+  return isPublicGetFriendInvitation(method, path);
 }
 
 /** Apply authentication to all /api routes except health. */
@@ -24,7 +26,7 @@ export function authenticateApiUnlessPublic(auth: Middleware): Middleware {
       await next();
       return;
     }
-    if (!ctx.path.startsWith('/api')) {
+    if (!ctx.path.startsWith(API_PATH)) {
       await next();
       return;
     }

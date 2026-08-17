@@ -120,15 +120,7 @@ npm run dev:stack:build
 docker compose --env-file .env.docker up -d --build api
 ```
 
-Register recipients before posting shares or messages with `keyManifest`:
-
-```bash
-curl -X POST http://localhost:3000/api/users \
-  -H 'Content-Type: application/json' \
-  -d '{"publicKey":{"x":"...","y":"..."}}'
-```
-
-Manifest shards are stored only for `keyId` values that exist in `users`.
+Recipients in a `keyManifest` must be registered (`users` row). Keys become registered after accepting a friend invitation or establishing a friendship. Run `npm run db:seed` to seed registered dev users and a dev friendship for local testing.
 
 ## Running API on the host (optional)
 

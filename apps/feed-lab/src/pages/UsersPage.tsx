@@ -242,6 +242,7 @@ export function UsersPage() {
                       </Box>
                       <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
                         <Button
+                          data-testid="users-accept-friend-request"
                           size="small"
                           variant="contained"
                           disabled={friendshipRequests.busy}
@@ -367,6 +368,7 @@ export function UsersPage() {
                   Your friends ({friendships.friends.length})
                 </Typography>
                 <Button
+                  data-testid="users-add-friend"
                   variant="outlined"
                   size="small"
                   disabled={

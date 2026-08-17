@@ -102,6 +102,7 @@ export function LoginPage() {
             file to sign in with a browser-loaded key.
           </Typography>
           <Button
+            data-testid="login-choose-private-key-file"
             variant="outlined"
             size="large"
             fullWidth

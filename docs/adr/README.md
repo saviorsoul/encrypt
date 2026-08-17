@@ -29,6 +29,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0019](./0019-feed-lab-bridge-selective-confirmation.md) | Feed-lab bridge: selective confirmation after pairing | Accepted |
 | [0020](./0020-feednt-standalone-native-app.md) | Feednt standalone native app | Accepted |
 | [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md) | Auth nonce consume-and-rotate | Accepted |
+| [0022](./0022-registration-via-friendship.md) | Registration via friendship (`users` row after first friendship) | Accepted |
 
 ## When to write an ADR
 

@@ -46,11 +46,6 @@ export type FeedApiRequestOptions = {
   auth?: FeedApiPerRequestAuth;
 };
 
-export type BackendUser = {
-  keyId: string;
-  publicKey: { x: string; y: string };
-};
-
 export type { CreateShareResponse } from '../feed/shareAccess.ts';
 
 export type CreateShareRequest = {
@@ -245,18 +240,6 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as InboxPageResponse;
     },
 
-    async getUsers(options?: FeedApiRequestOptions): Promise<BackendUser[]> {
-      const response = await authorizedFetchUrl(
-        joinUrl(baseUrl, '/api/users'),
-        {},
-        options,
-      );
-      if (!response.ok) {
-        throw new Error(await readApiError(response));
-      }
-      return (await response.json()) as BackendUser[];
-    },
-
     async postMessage(body: CreateMessageRequest): Promise<{ id: string }> {
       const response = await authorizedFetch('/api/messages', {
         method: 'POST',
@@ -399,6 +382,9 @@ export function createFeedApi(config: FeedApiConfig) {
       );
       if (!response.ok) {
         throw new Error(await readApiError(response));
+      }
+      if (response.status === 204) {
+        return [];
       }
       return (await response.json()) as Friendship[];
     },

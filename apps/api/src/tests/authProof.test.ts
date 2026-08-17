@@ -22,24 +22,35 @@ import {
   AUTH_NONCE_BYTES,
   generateAuthNonce,
 } from '@encrypt/core/crypto/authProof';
+import {
+  API_PATH,
+  FRIEND_INVITATION_ACCEPT_SUFFIX,
+  FRIEND_INVITATIONS_PATH,
+} from '@/config.js';
 
+const INBOX_PATH = `${API_PATH}/inbox`;
+const FRIENDSHIPS_REQUEST_PATH = `${API_PATH}/friendships/request`;
 const TEST_NONCE = bytesToBase64(new Uint8Array(12).fill(0x11));
 const OTHER_NONCE = bytesToBase64(new Uint8Array(12).fill(0x22));
 
 describe('authProof', () => {
   it('parseAuthRequestUrl accepts same-origin relative paths', () => {
-    const parsed = parseAuthRequestUrl('/api/friend-invitations/token');
-    expect(parsed.pathname).toBe('/api/friend-invitations/token');
+    const parsed = parseAuthRequestUrl(
+      `${API_PATH}${FRIEND_INVITATIONS_PATH}/token`,
+    );
+    expect(parsed.pathname).toBe(`${API_PATH}${FRIEND_INVITATIONS_PATH}/token`);
   });
 
   it('buildAuthRequestDescriptorFromParts accepts relative request URLs', () => {
     const descriptor = buildAuthRequestDescriptorFromParts(
       'post',
-      '/api/friend-invitations/abc/accept',
+      `${API_PATH}${FRIEND_INVITATIONS_PATH}/abc/${FRIEND_INVITATION_ACCEPT_SUFFIX}`,
       JSON.stringify({}),
     );
     expect(descriptor.method).toBe('POST');
-    expect(descriptor.path).toBe('/api/friend-invitations/abc/accept');
+    expect(descriptor.path).toBe(
+      `${API_PATH}${FRIEND_INVITATIONS_PATH}/abc/${FRIEND_INVITATION_ACCEPT_SUFFIX}`,
+    );
     expect(descriptor.body).toEqual({});
   });
 
@@ -62,7 +73,7 @@ describe('authProof', () => {
     const timeSlot = computeAuthTimeSlot();
     const request = {
       method: 'GET',
-      path: '/api/inbox',
+      path: INBOX_PATH,
       query: null,
       body: undefined,
     };
@@ -97,12 +108,12 @@ describe('authProof', () => {
     const timeSlot = computeAuthTimeSlot();
     const signedRequest = {
       method: 'GET',
-      path: '/api/inbox',
+      path: INBOX_PATH,
       query: null,
     };
     const otherRequest = {
       method: 'POST',
-      path: '/api/friendships/request',
+      path: FRIENDSHIPS_REQUEST_PATH,
       body: { targetKeyId: 'other' },
     };
 
@@ -138,7 +149,7 @@ describe('authProof', () => {
     const timeSlot = computeAuthTimeSlot();
     const request = {
       method: 'GET',
-      path: '/api/inbox',
+      path: INBOX_PATH,
       query: null,
     };
 
@@ -228,7 +239,7 @@ describe('authProof', () => {
       const signedSlot = 100;
       const request = {
         method: 'GET',
-        path: '/api/inbox',
+        path: INBOX_PATH,
         query: null,
       };
 
@@ -257,7 +268,7 @@ describe('authProof', () => {
         { timeSlot: 99, nonce: TEST_NONCE },
         {
           method: 'GET',
-          path: '/api/inbox',
+          path: INBOX_PATH,
           query: null,
         },
       );
@@ -293,7 +304,7 @@ describe('authProof', () => {
       { timeSlot: 42, nonce: TEST_NONCE },
       {
         method: 'GET',
-        path: '/api/users',
+        path: INBOX_PATH,
         query: null,
       },
     );
@@ -301,7 +312,7 @@ describe('authProof', () => {
       v: AUTH_SIGNABLE_VERSION,
       keyId: 'kid-1',
       method: 'GET',
-      path: '/api/users',
+      path: INBOX_PATH,
       query: null,
       timeSlot: 42,
       nonce: TEST_NONCE,
@@ -316,7 +327,7 @@ describe('authProof', () => {
       { timeSlot: 42, nonce: TEST_NONCE },
       {
         method: 'POST',
-        path: '/api/users',
+        path: INBOX_PATH,
         query: null,
         body: { publicKey: { x: '1', y: '2' } },
       },

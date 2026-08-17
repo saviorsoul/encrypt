@@ -63,6 +63,7 @@ export function SendMessageDialog<
 
   return (
     <AppDialog
+      data-testid="send-message-dialog"
       open={open}
       onClose={handleClose}
       title="Create message"

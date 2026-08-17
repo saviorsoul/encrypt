@@ -108,7 +108,12 @@ export function InviteSuccessView({
             >
               Copy public key
             </Button>
-            <Button variant="outlined" fullWidth onClick={onOpenFeed}>
+            <Button
+              data-testid="invite-open-feed"
+              variant="outlined"
+              fullWidth
+              onClick={onOpenFeed}
+            >
               Open feed
             </Button>
             <Button variant="outlined" fullWidth onClick={onOpenUsers}>

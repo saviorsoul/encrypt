@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { API_PATH } from '@/config.js';
 import type {
   AuthChallengeRequest,
   AuthChallengeResponse,
@@ -7,7 +8,7 @@ import { validateBody } from '@/middleware/validateBody.js';
 import { handleGetOrMintAuthNonce } from '@/contexts/auth/index.js';
 
 export function createAuthRouter(): Router {
-  const router = new Router({ prefix: '/api/auth' });
+  const router = new Router({ prefix: `${API_PATH}/auth` });
 
   router.post(
     '/challenge',

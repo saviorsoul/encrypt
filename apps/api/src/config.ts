@@ -1,3 +1,13 @@
+export const API_PATH_PREFIX = 'api';
+export const FRIEND_INVITATIONS_ROUTE = 'friend-invitations';
+export const FRIEND_INVITATION_ACCEPT_SUFFIX = 'accept';
+
+export const API_PATH = `/${API_PATH_PREFIX}`;
+export const FRIEND_INVITATIONS_PATH = `/${FRIEND_INVITATIONS_ROUTE}`;
+export const FRIEND_INVITATIONS_PATH_PREFIX = `${API_PATH}${FRIEND_INVITATIONS_PATH}/`;
+
+const DEFAULT_CORS_PREFLIGHT_MAX_AGE_SECONDS = 86_400;
+
 function parseCorsAllowedOrigins(raw: string | undefined): ReadonlySet<string> {
   if (!raw?.trim()) {
     return new Set();
@@ -10,8 +20,6 @@ function parseCorsAllowedOrigins(raw: string | undefined): ReadonlySet<string> {
       .filter(Boolean),
   );
 }
-
-const DEFAULT_CORS_PREFLIGHT_MAX_AGE_SECONDS = 86_400;
 
 function parseCorsPreflightMaxAgeSeconds(raw: string | undefined): number {
   const value = Number(raw ?? DEFAULT_CORS_PREFLIGHT_MAX_AGE_SECONDS);

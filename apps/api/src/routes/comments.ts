@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { API_PATH } from '@/config.js';
 import {
   handleCreateComment,
   handleListComments,
@@ -14,7 +15,7 @@ import {
 import { validateQuery } from '@/middleware/validateQuery.js';
 
 export function createCommentsRouter(): Router {
-  const router = new Router({ prefix: '/api' });
+  const router = new Router({ prefix: API_PATH });
 
   router.post(
     '/comments',

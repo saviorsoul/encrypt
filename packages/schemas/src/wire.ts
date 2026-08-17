@@ -17,6 +17,10 @@ import {
 } from '@encrypt/core/constants/manifestShare';
 import { JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH } from '@encrypt/core/crypto/jwkThumbprint';
 import {
+  ES256_SIGNATURE_BASE64_LENGTH,
+  ES256_SIGNATURE_BASE64_PATTERN,
+} from '@encrypt/core/crypto/es256Constants';
+import {
   DEFAULT_INBOX_LIMIT,
   MAX_BASE64_FIELD_LENGTH,
   MAX_INBOX_LIMIT,
@@ -31,6 +35,14 @@ export const keyIdProperty = {
   minLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
   maxLength: JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH,
   pattern: '^[A-Za-z0-9_-]+$',
+} as const;
+
+/** ES256 (ECDSA P-256 / SHA-256) signature as standard base64 IEEE P1363 (r || s). */
+export const es256SignatureProperty = {
+  type: 'string',
+  minLength: ES256_SIGNATURE_BASE64_LENGTH,
+  maxLength: ES256_SIGNATURE_BASE64_LENGTH,
+  pattern: ES256_SIGNATURE_BASE64_PATTERN,
 } as const;
 
 export const ecPublicJwkSchema = {
@@ -80,11 +92,7 @@ export const manifestCoreSchema = {
     senderPublicJwk: ecPublicJwkSchema,
     ephemeralPublicKey: ecPublicJwkSchema,
     encryptedContent: encryptedContentSchema,
-    senderSignature: {
-      type: 'string',
-      minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
-    },
+    senderSignature: es256SignatureProperty,
   },
 } as const;
 
@@ -109,11 +117,7 @@ export const manifestShareWireSchema = {
     },
     sharerPublicJwk: ecPublicJwkSchema,
     ephemeralPublicKey: ecPublicJwkSchema,
-    sharerSignature: {
-      type: 'string',
-      minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
-    },
+    sharerSignature: es256SignatureProperty,
   },
 } as const;
 
@@ -172,11 +176,7 @@ export const commentPayloadSchema = {
       maxLength: MAX_BASE64_FIELD_LENGTH,
     },
     encryptedContent: encryptedContentSchema,
-    senderSignature: {
-      type: 'string',
-      minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
-    },
+    senderSignature: es256SignatureProperty,
   },
 } as const;
 
@@ -258,11 +258,7 @@ export const createMessageRequestSchema = {
     senderPublicJwk: ecPublicJwkSchema,
     ephemeralPublicKey: ecPublicJwkSchema,
     encryptedContent: encryptedContentSchema,
-    senderSignature: {
-      type: 'string',
-      minLength: 1,
-      maxLength: MAX_BASE64_FIELD_LENGTH,
-    },
+    senderSignature: es256SignatureProperty,
     keyManifest: keyManifestSchema,
     /** Feed copy exports include the source row id; stripped before create. */
     messageId: { type: 'string', format: 'uuid' },

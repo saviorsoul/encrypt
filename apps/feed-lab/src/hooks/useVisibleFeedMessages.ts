@@ -55,15 +55,30 @@ export function useVisibleFeedMessages({
     }
 
     if (!automateDecryption) {
-      setVisibleMessages(messages);
+      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+        return;
+      }
+      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+      setVisibleMessages((current) => {
+        if (
+          current.length === messages.length &&
+          current.every((message, index) => message.id === messages[index]?.id)
+        ) {
+          return current;
+        }
+        return messages;
+      });
       setPreparing(false);
       return;
     }
 
     if (messages.length === 0) {
-      setVisibleMessages([]);
-      setPreparing(false);
+      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+        return;
+      }
       lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+      setVisibleMessages((current) => (current.length === 0 ? current : []));
+      setPreparing(false);
       return;
     }
 

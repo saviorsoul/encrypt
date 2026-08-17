@@ -1,3 +1,4 @@
+import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
 import { filterFeedInboxMessages } from '@encrypt/core/utils/feedInboxVisibility';
@@ -37,8 +38,24 @@ function mergeInboxItems(
   return merged;
 }
 
-export function useBackendFeedData(keyId: string | null) {
+function inboxMessagesFromItems(items: InboxApiItem[]): StoredMessage[] {
+  return filterFeedInboxMessages(inboxApiItemsToStoredDeliveries(items));
+}
+
+export type UseBackendFeedDataOptions = {
+  onEmptyInbox?: () => void;
+};
+
+export function useBackendFeedData(
+  keyId: string | null,
+  options?: UseBackendFeedDataOptions,
+) {
   const api = useFeedApi();
+  const onEmptyInboxRef = useRef(options?.onEmptyInbox);
+
+  useEffect(() => {
+    onEmptyInboxRef.current = options?.onEmptyInbox;
+  });
   const [rawItems, setRawItems] = useState<InboxApiItem[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,6 +63,7 @@ export function useBackendFeedData(keyId: string | null) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notRegistered, setNotRegistered] = useState(false);
   const [loadedMoreMessageIds, setLoadedMoreMessageIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -75,6 +93,7 @@ export function useBackendFeedData(keyId: string | null) {
     const loadId = ++loadIdRef.current;
     setLoading(true);
     setError(null);
+    setNotRegistered(false);
     try {
       const page = await api.getInbox();
       if (loadId !== loadIdRef.current) {
@@ -83,11 +102,20 @@ export function useBackendFeedData(keyId: string | null) {
       applyInboxPage(page.items, page.total, true);
       setLoadedMoreMessageIds(new Set());
       setNextCursor(page.nextCursor);
+      setNotRegistered(false);
+      if (inboxMessagesFromItems(page.items).length === 0) {
+        onEmptyInboxRef.current?.();
+      }
     } catch (e) {
       if (loadId !== loadIdRef.current) {
         return;
       }
-      setError(e instanceof Error ? e.message : 'Failed to load feed data.');
+      const message =
+        e instanceof Error ? e.message : 'Failed to load feed data.';
+      setError(message);
+      setNotRegistered(
+        keyId != null && isUnknownUserKeyIdError(message, keyId),
+      );
       setRawItems([]);
       setMessages([]);
       setTotal(0);
@@ -145,6 +173,7 @@ export function useBackendFeedData(keyId: string | null) {
       setError(null);
       setLoading(false);
       setLoadingMore(false);
+      setNotRegistered(false);
       setLoadedMoreMessageIds(new Set());
       return;
     }
@@ -173,6 +202,7 @@ export function useBackendFeedData(keyId: string | null) {
     loadingMore,
     loadedMoreMessageIds,
     error,
+    notRegistered,
     reload,
     loadMore,
     manifestLookup,

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { parseKeyManifest } from '@/schemas/parseKeyManifest.js';
-import { assertRecipientsRegistered } from '@/contexts/users/index.js';
+import { assertUsersRegistered } from '@/contexts/users/index.js';
 import { badRequest } from '@/lib/httpError.js';
 import { shareRepository } from '@/contexts/feed/infrastructure/prismaShareRepository.js';
 import type { CreateShareCommand } from './createShare.command.js';
@@ -26,7 +26,7 @@ export async function handleCreateShare(
   }
 
   const keyManifest = parseKeyManifest(command.keyManifest);
-  await assertRecipientsRegistered(Object.keys(keyManifest));
+  await assertUsersRegistered(Object.keys(keyManifest));
 
   const shareCoreJson = JSON.stringify(command.share);
   const shareId = randomUUID();

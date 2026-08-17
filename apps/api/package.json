@@ -16,6 +16,7 @@
     "db:citus:distribute": "tsx scripts/citus-distribute.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed:friendship": "tsx scripts/seed-friendship.ts",
+    "db:seed:e2e": "tsx scripts/seed-e2e.ts",
     "db:setup": "npm run migrate && npm run db:citus:distribute",
     "db:setup:postgres": "npm run migrate",
     "lint": "eslint .",

@@ -2,7 +2,7 @@ import {
   ecPublicJwkThumbprintSha256,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/jwkThumbprint';
-import type { FeedApi, FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
+import type { FeedApi } from '@encrypt/core/api/feedApi';
 import { parsePublicKeyText } from '@encrypt/core/utils/parsePublicKeyText';
 
 export type EnsureBackendUserResult =
@@ -16,7 +16,6 @@ export type EnsureBackendUserResult =
 export async function ensureBackendUserFromPublicKey(
   api: FeedApi,
   publicKeyText: string,
-  options?: FeedApiRequestOptions,
 ): Promise<EnsureBackendUserResult> {
   const trimmed = publicKeyText.trim();
   if (!trimmed) {
@@ -37,15 +36,6 @@ export async function ensureBackendUserFromPublicKey(
 
   const keyId = await ecPublicJwkThumbprintSha256(slimJwk);
   const publicKey = { x, y };
-
-  const users = await api.getUsers(options);
-  if (!users.some((user) => user.keyId === keyId)) {
-    return {
-      ok: false,
-      error:
-        'This person must join via an invitation link before you can send a request.',
-    };
-  }
 
   return { ok: true, keyId, publicKey };
 }

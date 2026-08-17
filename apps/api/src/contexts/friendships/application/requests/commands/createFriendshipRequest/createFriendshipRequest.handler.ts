@@ -1,12 +1,15 @@
-import { assertRecipientsRegistered } from '@/contexts/users/index.js';
+import {
+  assertUsersRegistered,
+  userRepository,
+} from '@/contexts/users/index.js';
 import { badRequest } from '@/lib/httpError.js';
 import { FRIENDSHIP_REQUEST_PENDING } from '@/contexts/friendships/domain/constants.js';
 import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
 import {
   assertNotAlreadyFriends,
   assertPendingInvitationForRequester,
-} from '@/contexts/friendships/application/friendshipAssertions.js';
-import { registerRequesterForFriendshipRequest } from '@/contexts/friendships/application/invitationRegistration.js';
+} from '@/contexts/friendships/application/services/friendshipAssertions.js';
+import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 
@@ -22,16 +25,13 @@ export async function handleCreateFriendshipRequest(
 ) {
   const { requesterKeyId, requesterPublicKey, targetKeyId, invitationToken } =
     command;
+
   assertDistinctKeyIds(requesterKeyId, targetKeyId);
+
   if (!(await friendshipRepository.hasFriends(requesterKeyId))) {
     throw badRequest('Add or accept a friend before sending invitations.');
   }
-  await registerRequesterForFriendshipRequest(
-    requesterKeyId,
-    requesterPublicKey,
-    invitationToken,
-  );
-  await assertRecipientsRegistered([requesterKeyId]);
+  await assertUsersRegistered([targetKeyId]);
   await assertPendingInvitationForRequester(requesterKeyId, invitationToken);
   await assertNotAlreadyFriends(requesterKeyId, targetKeyId);
 
@@ -71,6 +71,22 @@ export async function handleCreateFriendshipRequest(
       requesterKeyId,
       reversePending.invitationToken,
     );
+
+    const targetPublicKeys = await userRepository.findPublicKeysByKeyIds([
+      targetKeyId,
+    ]);
+    const targetPublicKey = targetPublicKeys.get(targetKeyId);
+    if (!targetPublicKey) {
+      throw badRequest('Target user is not registered.');
+    }
+
+    await ensureRegisteredAfterFriendshipPair(
+      requesterKeyId,
+      requesterPublicKey,
+      targetKeyId,
+      targetPublicKey,
+    );
+
     return { status: 'accepted' as const };
   }
 

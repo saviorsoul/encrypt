@@ -1,14 +1,9 @@
-import {
-  assertRecipientsRegistered,
-  userRepository,
-} from '@/contexts/users/index.js';
-import { registerUserForIncomingFriendshipRequests } from '@/contexts/friendships/application/invitationRegistration.js';
+import { userRepository } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 import type { SerializedFriendshipRequest } from '@/contexts/friendships/domain/ports/FriendshipRepository.js';
 
 export type ListFriendshipRequestsQuery = {
   keyId: string;
-  publicKey: { x: string; y: string };
 };
 
 function withCounterpartyPublicKeys(
@@ -28,9 +23,7 @@ function withCounterpartyPublicKeys(
 export async function handleListFriendshipRequests(
   query: ListFriendshipRequestsQuery,
 ) {
-  const { keyId, publicKey } = query;
-  await registerUserForIncomingFriendshipRequests(keyId, publicKey);
-  await assertRecipientsRegistered([keyId]);
+  const { keyId } = query;
 
   const { incoming: incomingRows, outgoing: outgoingRows } =
     await friendshipRepository.listPendingRequestsForUser(keyId);

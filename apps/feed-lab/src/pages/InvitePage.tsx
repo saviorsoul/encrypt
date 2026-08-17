@@ -620,6 +620,7 @@ export function InvitePage() {
           >
             <Box component="span" sx={{ display: 'block', width: '100%' }}>
               <Button
+                data-testid="invite-use-private-key-to-accept"
                 variant="contained"
                 fullWidth
                 startIcon={<UploadFileOutlinedIcon />}
