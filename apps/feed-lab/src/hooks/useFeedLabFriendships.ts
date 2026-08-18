@@ -6,7 +6,6 @@ import type {
 } from '@encrypt/core/api/feedApi';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { friendshipRequestErrorMessage } from '@lab/lib/friendshipRequestErrors.ts';
-import { buildFeedLabInvitationHref } from '@lab/lib/invitationHref.ts';
 import { buildSentInvitationLabelByToken } from '@lab/services/db/sentInvitations.ts';
 import { saveFeedLabUser } from '@lab/services/db/storedUsers.ts';
 import {
@@ -18,7 +17,7 @@ import {
   cacheHasUsersData,
   getFriendshipsCache,
   setFriendshipsCache,
-  type PendingInvitationLink,
+  type PendingInvitation,
 } from '@lab/services/friendshipsCache.ts';
 
 export type FeedLabFriend = {
@@ -38,7 +37,7 @@ export type FeedLabFriendshipsValue = {
   invitationLabelByToken: Record<string, string>;
   incomingRequests: FriendshipRequest[];
   outgoingRequests: FriendshipRequest[];
-  pendingInvitations: PendingInvitationLink[];
+  pendingInvitations: PendingInvitation[];
   friendshipsLoading: boolean;
   friendshipsError: string | null;
   usersLoading: boolean;
@@ -91,15 +90,14 @@ function mapFriendshipsToFriends(
   }));
 }
 
-function buildPendingInvitationLinks(
+function buildPendingInvitations(
   pending: FriendInvitation[],
   labelByToken: Record<string, string>,
-): PendingInvitationLink[] {
+): PendingInvitation[] {
   return pending
     .filter((invitation) => invitation.status === 'pending')
     .map((invitation) => ({
       token: invitation.token,
-      href: buildFeedLabInvitationHref(invitation.token),
       label: labelByToken[invitation.token]?.trim() || null,
       createdAt: invitation.createdAt,
     }));
@@ -118,7 +116,7 @@ function applyUsersCache(
   cached: NonNullable<ReturnType<typeof getFriendshipsCache>>,
   setIncomingRequests: (requests: FriendshipRequest[]) => void,
   setOutgoingRequests: (requests: FriendshipRequest[]) => void,
-  setPendingInvitations: (invitations: PendingInvitationLink[]) => void,
+  setPendingInvitations: (invitations: PendingInvitation[]) => void,
 ): void {
   setIncomingRequests(cached.incomingRequests);
   setOutgoingRequests(cached.outgoingRequests);
@@ -131,7 +129,7 @@ function applyFullCache(
   setInvitationLabelByToken: (labels: Record<string, string>) => void,
   setIncomingRequests: (requests: FriendshipRequest[]) => void,
   setOutgoingRequests: (requests: FriendshipRequest[]) => void,
-  setPendingInvitations: (invitations: PendingInvitationLink[]) => void,
+  setPendingInvitations: (invitations: PendingInvitation[]) => void,
 ): void {
   applyFriendshipsCache(cached, setRawFriendships, setInvitationLabelByToken);
   applyUsersCache(
@@ -159,7 +157,7 @@ export function useFeedLabFriendshipsState(
     [],
   );
   const [pendingInvitations, setPendingInvitations] = useState<
-    PendingInvitationLink[]
+    PendingInvitation[]
   >([]);
   const [friendshipsLoading, setFriendshipsLoading] = useState(false);
   const [friendshipsError, setFriendshipsError] = useState<string | null>(null);
@@ -284,7 +282,7 @@ export function useFeedLabFriendshipsState(
             : cached!.friendships;
           const requests = await api.getFriendshipRequests();
           const pendingRaw = await api.getFriendInvitations();
-          const pendingInvitationLinks = buildPendingInvitationLinks(
+          const pendingInvitations = buildPendingInvitations(
             pendingRaw,
             labels,
           );
@@ -293,7 +291,7 @@ export function useFeedLabFriendshipsState(
             invitationLabelByToken: labels,
             incomingRequests: requests.incoming,
             outgoingRequests: requests.outgoing,
-            pendingInvitations: pendingInvitationLinks,
+            pendingInvitations: pendingInvitations,
             hasFriendships: true,
             hasUsersData: true,
           });
@@ -301,7 +299,7 @@ export function useFeedLabFriendshipsState(
           setInvitationLabelByToken(labels);
           setIncomingRequests(requests.incoming);
           setOutgoingRequests(requests.outgoing);
-          setPendingInvitations(pendingInvitationLinks);
+          setPendingInvitations(pendingInvitations);
           setFriendshipsError(null);
         } catch (e) {
           const message = friendshipRequestErrorMessage(e);

@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import {
   Alert,
   Box,
@@ -21,6 +23,8 @@ import {
 import { AddFriendDialog } from '@lab/components/AddFriendDialog.tsx';
 import { PublicKeyDialog } from '@lab/components/PublicKeyDialog.tsx';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
+import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
@@ -36,6 +40,7 @@ import {
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 
 export function UsersPage() {
+  const navigate = useNavigate();
   const api = useFeedApi();
   const { keys, feedLabUsers } = useFeedLabSession();
   const { addLocalUser, usernameByKeyId, usernames } = feedLabUsers;
@@ -51,6 +56,8 @@ export function UsersPage() {
     x: string;
     y: string;
   } | null>(null);
+  const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
+  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const friendships = useFeedLabFriendships();
@@ -139,7 +146,7 @@ export function UsersPage() {
 
   const openAddFriendDialog = useCallback(() => {
     friendInvitations.clearError();
-    friendInvitations.clearLastInvitationHref();
+    friendInvitations.clearLastInvitationId();
     friendshipRequests.clearError();
     friendshipRequests.clearInfo();
     setAddFriendDialogOpen(true);
@@ -161,6 +168,14 @@ export function UsersPage() {
     [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
   );
 
+  const handleInvitationIdSubmit = useCallback(
+    (token: string) => {
+      setAcceptInvitationOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
   const outgoingInvitationTokens = new Set(
     friendships.outgoingRequests.map((request) => request.invitationToken),
   );
@@ -175,9 +190,42 @@ export function UsersPage() {
   return (
     <>
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Friends
-        </Typography>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 2,
+          }}
+        >
+          <Typography variant="h6">Friends</Typography>
+          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+            <Button
+              data-testid="users-accept-invitation"
+              variant="outlined"
+              size="small"
+              disabled={!keys.keyId || friendships.usersLoading}
+              onClick={() => setAcceptInvitationOpen(true)}
+            >
+              Accept invite
+            </Button>
+            <Button
+              data-testid="users-add-friend"
+              variant="contained"
+              size="small"
+              disabled={
+                !keys.keyId ||
+                friendships.usersLoading ||
+                friendInvitations.busy ||
+                friendships.friends.length === 0
+              }
+              onClick={openAddFriendDialog}
+            >
+              Invite friend
+            </Button>
+          </Stack>
+        </Stack>
 
         {!keys.keyId ? (
           <Typography variant="body2" color="text.secondary">
@@ -308,8 +356,7 @@ export function UsersPage() {
             {shareablePendingInvitations.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">
-                  Pending invitation links ({shareablePendingInvitations.length}
-                  )
+                  Pending invitations ({shareablePendingInvitations.length})
                 </Typography>
                 {shareablePendingInvitations.map((invitation) => (
                   <Stack
@@ -347,8 +394,16 @@ export function UsersPage() {
                     </Box>
                     <IconButton
                       size="small"
-                      aria-label="Copy invitation link"
-                      onClick={() => void copyAndNotify(invitation.href)}
+                      aria-label="Show invitation QR code"
+                      onClick={() => setQrCodeToken(invitation.token)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      <QrCode2OutlinedIcon fontSize="inherit" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      aria-label="Copy invitation ID"
+                      onClick={() => void copyAndNotify(invitation.token)}
                       sx={{ flexShrink: 0 }}
                     >
                       <ContentCopyOutlinedIcon fontSize="inherit" />
@@ -359,33 +414,14 @@ export function UsersPage() {
             ) : null}
 
             <Stack spacing={1}>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <Typography variant="subtitle2">
-                  Your friends ({friendships.friends.length})
-                </Typography>
-                <Button
-                  data-testid="users-add-friend"
-                  variant="outlined"
-                  size="small"
-                  disabled={
-                    !keys.keyId ||
-                    friendInvitations.busy ||
-                    friendships.friends.length === 0
-                  }
-                  onClick={openAddFriendDialog}
-                >
-                  Add friend
-                </Button>
-              </Stack>
+              <Typography variant="subtitle2">
+                Your friends ({friendships.friends.length})
+              </Typography>
               {friendships.friends.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No friends yet. Accept an invitation link from someone else to
-                  get started — you need at least one friend before you can
-                  invite others.
+                  No friends yet. Accept an invitation from someone else to get
+                  started — you need at least one friend before you can invite
+                  others.
                 </Typography>
               ) : (
                 friendships.friends.map((friend) => {
@@ -459,7 +495,7 @@ export function UsersPage() {
         hasFriends={friendships.friends.length > 0}
         invitationBusy={friendInvitations.busy}
         invitationError={friendInvitations.error}
-        invitationHref={friendInvitations.lastInvitationHref}
+        invitationId={friendInvitations.lastInvitationId}
         requestBusy={friendshipRequests.busy}
         requestError={friendshipRequests.error}
         requestInfo={friendshipRequests.info}
@@ -513,6 +549,21 @@ export function UsersPage() {
         title="Public key"
         onClose={() => setViewPublicKey(null)}
       />
+
+      <AcceptInvitationDialog
+        open={acceptInvitationOpen}
+        onClose={() => setAcceptInvitationOpen(false)}
+        onSubmit={handleInvitationIdSubmit}
+        qrScanAvailable={false}
+      />
+
+      {qrCodeToken ? (
+        <InvitationQrCodeDialog
+          open={qrCodeToken != null}
+          token={qrCodeToken}
+          onClose={() => setQrCodeToken(null)}
+        />
+      ) : null}
     </>
   );
 }

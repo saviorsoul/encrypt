@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
-import { buildFeedLabInvitationHref } from '@lab/lib/invitationHref.ts';
 import { saveSentInvitation } from '@lab/services/db/sentInvitations.ts';
 
 export function useBackendFriendInvitations(
@@ -11,9 +10,7 @@ export function useBackendFriendInvitations(
   const { keys } = useFeedLabSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastInvitationHref, setLastInvitationHref] = useState<string | null>(
-    null,
-  );
+  const [lastInvitationId, setLastInvitationId] = useState<string | null>(null);
 
   const createInvitation = useCallback(
     async (name: string): Promise<string | null> => {
@@ -30,16 +27,15 @@ export function useBackendFriendInvitations(
 
       setBusy(true);
       setError(null);
-      setLastInvitationHref(null);
+      setLastInvitationId(null);
 
       try {
         const invitation = await api.postFriendInvitation();
 
         await saveSentInvitation(invitation.token, trimmedName, keys.keyId);
-        const href = buildFeedLabInvitationHref(invitation.token);
-        setLastInvitationHref(href);
+        setLastInvitationId(invitation.token);
         await onChanged?.();
-        return href;
+        return invitation.token;
       } catch (e) {
         setError(
           e instanceof Error ? e.message : 'Could not create invitation.',
@@ -78,17 +74,17 @@ export function useBackendFriendInvitations(
     setError(null);
   }, []);
 
-  const clearLastInvitationHref = useCallback(() => {
-    setLastInvitationHref(null);
+  const clearLastInvitationId = useCallback(() => {
+    setLastInvitationId(null);
   }, []);
 
   return {
     busy,
     error,
-    lastInvitationHref,
+    lastInvitationId,
     createInvitation,
     acceptInvitation,
     clearError,
-    clearLastInvitationHref,
+    clearLastInvitationId,
   };
 }

@@ -36,7 +36,14 @@
     "./SendMessageDependenciesContext": "./src/components/SendMessageDependenciesContext.tsx",
     "./useBackendSendMessage": "./src/hooks/useBackendSendMessage.ts",
     "./useSendImportToBackend": "./src/hooks/useSendImportToBackend.ts",
-    "./validateJsonSyntaxText": "./src/utils/validateJsonSyntaxText.ts"
+    "./validateJsonSyntaxText": "./src/utils/validateJsonSyntaxText.ts",
+    "./InvitationQrCodeDialog": "./src/components/InvitationQrCodeDialog.tsx",
+    "./InvitationQrScanDialog": "./src/components/InvitationQrScanDialog.tsx",
+    "./AcceptInvitationDialog": "./src/components/AcceptInvitationDialog.tsx"
+  },
+  "dependencies": {
+    "html5-qrcode": "^2.3.8",
+    "qrcode.react": "^4.2.0"
   },
   "peerDependencies": {
     "@emotion/react": "^11.14.0",

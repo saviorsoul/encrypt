@@ -49,12 +49,8 @@ export function FeedNoFriendsGuide({
         <Typography variant="subtitle2">No friends yet</Typography>
         <Typography variant="body2" color="text.secondary">
           You need at least one friend before you can create messages or share
-          with your network.
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Ask someone already on the network to send you an invitation link, or
-          share your public key with someone you know in real life so they can
-          add you from Users.
+          with your network. Ask someone already on the network to send you an
+          invitation ID.
         </Typography>
       </Stack>
     </Paper>

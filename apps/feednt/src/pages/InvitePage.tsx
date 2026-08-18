@@ -5,18 +5,15 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import {
   isInvitationTokenUuid,
@@ -27,28 +24,22 @@ import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/ecPublicKey';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
-import { resolveDefaultInviteUsername } from '@lab/lib/defaultInviteUsername.ts';
-import {
-  registerFeedLabRecipient,
-  isUserAlreadyExistsError,
-} from '@lab/lib/registerFeedLabRecipient.ts';
-import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
-import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
-import { useBackendGenerateUser } from '@lab/hooks/useBackendGenerateUser.ts';
-import {
-  loadFeedLabUserByKeyId,
-  loadFeedLabUserByUsername,
-  saveFeedLabUser,
-} from '@lab/services/db/storedUsers.ts';
-import { InviteSuccessView } from '@lab/components/InviteSuccessView.tsx';
-import { loadFeedLabBridgePairing } from '@lab/crypto/systemAppPairingStorage.ts';
-import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
 import { prettifyJsonText } from '@encrypt/core/utils/prettifyJsonText';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
+import { resolveDefaultInviteUsername } from '@feednt/lib/defaultInviteUsername.ts';
+import {
+  registerFeedntRecipient,
+  isUserAlreadyExistsError,
+} from '@feednt/lib/registerFeedntRecipient.ts';
+import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
+import { InviteSuccessView } from '@feednt/components/InviteSuccessView.tsx';
+import {
+  loadFeedntUserByKeyId,
+  loadFeedntUserByUsername,
+  saveFeedntUser,
+} from '@feednt/services/db/storedUsers.ts';
 import type { FriendInvitationPublic } from '@encrypt/core/api/feedApi';
-
-const protocolBridgeEnabled = isFeedLabProtocolBridgeEnabled();
 
 type InviteStep =
   | 'loading'
@@ -78,7 +69,7 @@ async function validateInviterUsername(
     return null;
   }
 
-  const existing = await loadFeedLabUserByUsername(ownerKeyId, trimmed);
+  const existing = await loadFeedntUserByUsername(ownerKeyId, trimmed);
   if (existing && existing.keyId !== inviterKeyId) {
     return `"${trimmed}" is already used. Choose another name.`;
   }
@@ -122,8 +113,10 @@ export function InvitePage() {
   const { token: routeToken } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const api = useFeedApi();
-  const { keys, feedLabUsers } = useFeedLabSession();
-  const { addLocalUser, refresh: refreshFeedLabUsers } = feedLabUsers;
+  const { session, sessionError, keys, feedntUsers } = useFeedntSession();
+  const { addLocalUser, refresh: refreshFeedntUsers } = feedntUsers;
+  const keyId = session?.keyId ?? keys.keyId;
+  const publicKey = session?.publicKey;
 
   const [step, setStep] = useState<InviteStep>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -140,17 +133,6 @@ export function InvitePage() {
   const [successVariant, setSuccessVariant] =
     useState<InviteSuccessVariant>('accepted');
   const inviteFlowFinishedRef = useRef(false);
-
-  const friendshipsRefresh = useCallback(async () => {
-    /* invite page only needs local user list updates */
-  }, []);
-
-  const friendInvitations = useBackendFriendInvitations(friendshipsRefresh);
-  const generateUser = useBackendGenerateUser((user) => {
-    addLocalUser({ keyId: user.keyId, username: user.username });
-  });
-  const [keyPairGenerated, setKeyPairGenerated] = useState(false);
-  const [pairBusy, setPairBusy] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
   const invitationId = routeToken?.trim() ?? '';
@@ -167,8 +149,9 @@ export function InvitePage() {
     let cancelled = false;
 
     async function loadInvitation() {
-      const route = parseInvitationRoute(`/invite/${routeToken ?? ''}`);
-      if (!route || !routeToken || !isInvitationTokenUuid(route.token)) {
+      const token = routeToken?.trim() ?? '';
+      const route = parseInvitationRoute(`/invite/${token}`);
+      if (!route || !isInvitationTokenUuid(route.token)) {
         setLoadError('This invitation ID is invalid.');
         setStep('invalid');
         return;
@@ -204,11 +187,11 @@ export function InvitePage() {
   }, [api, routeToken]);
 
   const publicKeyText = useMemo(() => {
-    if (!keys.publicKey) {
+    if (!publicKey) {
       return '';
     }
-    return formatPublicKeyText(keys.publicKey, publicKeyFormat);
-  }, [keys.publicKey, publicKeyFormat]);
+    return formatPublicKeyText(publicKey, publicKeyFormat);
+  }, [publicKey, publicKeyFormat]);
 
   const inviterPublicKeyText = useMemo(() => {
     if (!invitation) {
@@ -225,15 +208,14 @@ export function InvitePage() {
       return;
     }
 
-    const ownerKeyId =
-      keys.keyId ?? (await keys.getPrivateKeyMaterial())?.keyId ?? null;
+    const ownerKeyId = keyId;
     if (!ownerKeyId) {
       return;
     }
     const inviterUsername =
       inviterName.trim() || `inviter-${invitation.inviterKeyId.slice(0, 8)}`;
     try {
-      await saveFeedLabUser(
+      await saveFeedntUser(
         ownerKeyId,
         inviterUsername,
         {
@@ -248,11 +230,11 @@ export function InvitePage() {
         keyId: invitation.inviterKeyId,
         username: inviterUsername,
       });
-      await refreshFeedLabUsers(ownerKeyId);
+      await refreshFeedntUsers(ownerKeyId);
     } catch {
       /* local save is best-effort */
     }
-  }, [addLocalUser, invitation, inviterName, keys, refreshFeedLabUsers]);
+  }, [addLocalUser, invitation, inviterName, keyId, refreshFeedntUsers]);
 
   const finishInviteSuccess = useCallback(
     async (variant: InviteSuccessVariant) => {
@@ -264,160 +246,14 @@ export function InvitePage() {
     [saveInviterLocally],
   );
 
-  const acceptInvitationAsUser = useCallback(
-    async (
-      keyId: string,
-      publicKey: { x: string; y: string },
-    ): Promise<void> => {
-      if (!invitation) {
-        return;
-      }
-
-      const inviterUsernameError = await validateInviterUsername(
-        keyId,
-        inviterName,
-        invitation.inviterKeyId,
-      );
-      if (inviterUsernameError) {
-        setInviterNameError(inviterUsernameError);
-        return;
-      }
-
-      const existingLocal = await loadFeedLabUserByKeyId(keyId, keyId);
-      setStep('accepting');
-
-      try {
-        const username =
-          existingLocal?.username ??
-          (await resolveDefaultInviteUsername(keyId));
-        const publicJwk = slimEcPublicJwk({
-          kty: 'EC',
-          crv: 'P-256',
-          x: publicKey.x,
-          y: publicKey.y,
-        });
-
-        const registration = await registerFeedLabRecipient(
-          keyId,
-          username,
-          publicJwk,
-          {
-            acceptedInvitationToken: invitation.token,
-          },
-        );
-        if (registration.status === 'error') {
-          throw new Error(registration.message);
-        }
-
-        if (registration.status === 'registered') {
-          addLocalUser({
-            keyId: registration.user.keyId,
-            username: registration.user.username,
-          });
-        } else if (registration.status === 'already_saved') {
-          addLocalUser({
-            keyId: registration.keyId,
-            username: registration.username,
-          });
-        }
-        await refreshFeedLabUsers(keyId);
-
-        await api.acceptFriendInvitation(invitation.token);
-        await finishInviteSuccess('accepted');
-      } catch (e) {
-        const message =
-          e instanceof Error ? e.message : 'Could not accept invitation.';
-
-        if (
-          isAlreadyFriendsError(message) ||
-          isUserAlreadyExistsError(message) ||
-          isInvitationAlreadyUsedError(message)
-        ) {
-          await finishInviteSuccess('alreadyFriends');
-          return;
-        }
-
-        setAcceptError(message);
-        setStep('join');
-      }
-    },
-    [
-      addLocalUser,
-      api,
-      finishInviteSuccess,
-      invitation,
-      inviterName,
-      refreshFeedLabUsers,
-    ],
-  );
-
-  const handleAcceptWithEncryptApp = useCallback(async () => {
-    if (!invitation) {
-      return;
-    }
-
-    keys.clearSessionError();
-    setAcceptError(null);
-    setInviterNameError(null);
-    friendInvitations.clearError();
-    setPairBusy(true);
-
-    try {
-      let keyId = keys.keyId;
-      let publicKey = keys.publicKey;
-
-      if (!keyId || !publicKey || !keys.isSystemAppSession) {
-        const pairedKeyId = await keys.pairWithEncryptApp();
-        if (!pairedKeyId) {
-          return;
-        }
-        keyId = pairedKeyId;
-        publicKey =
-          loadFeedLabBridgePairing()?.publicKey ?? keys.publicKey ?? null;
-      }
-
-      if (!publicKey) {
-        setAcceptError('Could not read your public key from the Encrypt app.');
-        return;
-      }
-
-      await acceptInvitationAsUser(keyId, publicKey);
-    } finally {
-      setPairBusy(false);
-    }
-  }, [acceptInvitationAsUser, friendInvitations, invitation, keys]);
-
-  const handleImportPrivateKey = useCallback(async () => {
-    if (!invitation) {
-      return;
-    }
-
-    keys.clearSessionError();
-    setAcceptError(null);
-    setInviterNameError(null);
-    friendInvitations.clearError();
-
-    const keyId = await keys.changeKeyId();
-    if (!keyId) {
-      return;
-    }
-
-    const material = await keys.getPrivateKeyMaterial();
-    if (!material) {
-      return;
-    }
-
-    await acceptInvitationAsUser(material.keyId, material.publicKey);
-  }, [acceptInvitationAsUser, friendInvitations, invitation, keys]);
-
-  const handleGenerateKeyPair = useCallback(async () => {
-    setInviterNameError(null);
-    if (!invitation) {
+  const handleAcceptInvitation = useCallback(async () => {
+    if (!invitation || !keyId || !publicKey) {
+      setAcceptError('Unlock your private key to accept this invitation.');
       return;
     }
 
     const inviterUsernameError = await validateInviterUsername(
-      keys.keyId,
+      keyId,
       inviterName,
       invitation.inviterKeyId,
     );
@@ -426,12 +262,74 @@ export function InvitePage() {
       return;
     }
 
-    const username = await resolveDefaultInviteUsername(keys.keyId);
-    const keyId = await generateUser.generateUser(username);
-    if (keyId) {
-      setKeyPairGenerated(true);
+    setAcceptError(null);
+    setInviterNameError(null);
+    setStep('accepting');
+
+    try {
+      const existingLocal = await loadFeedntUserByKeyId(keyId, keyId);
+      const username =
+        existingLocal?.username ?? (await resolveDefaultInviteUsername(keyId));
+      const publicJwk = slimEcPublicJwk({
+        kty: 'EC',
+        crv: 'P-256',
+        x: publicKey.x,
+        y: publicKey.y,
+      });
+
+      const registration = await registerFeedntRecipient(
+        keyId,
+        username,
+        publicJwk,
+        {
+          acceptedInvitationToken: invitation.token,
+        },
+      );
+      if (registration.status === 'error') {
+        throw new Error(registration.message);
+      }
+
+      if (registration.status === 'registered') {
+        addLocalUser({
+          keyId: registration.user.keyId,
+          username: registration.user.username,
+        });
+      } else if (registration.status === 'already_saved') {
+        addLocalUser({
+          keyId: registration.keyId,
+          username: registration.username,
+        });
+      }
+      await refreshFeedntUsers(keyId);
+
+      await api.acceptFriendInvitation(invitation.token);
+      await finishInviteSuccess('accepted');
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : 'Could not accept invitation.';
+
+      if (
+        isAlreadyFriendsError(message) ||
+        isUserAlreadyExistsError(message) ||
+        isInvitationAlreadyUsedError(message)
+      ) {
+        await finishInviteSuccess('alreadyFriends');
+        return;
+      }
+
+      setAcceptError(message);
+      setStep('join');
     }
-  }, [generateUser, invitation, inviterName, keys.keyId]);
+  }, [
+    addLocalUser,
+    api,
+    finishInviteSuccess,
+    invitation,
+    inviterName,
+    keyId,
+    publicKey,
+    refreshFeedntUsers,
+  ]);
 
   if (step === 'loading') {
     return (
@@ -503,8 +401,6 @@ export function InvitePage() {
     );
   }
 
-  const busy = generateUser.busy || pairBusy;
-
   return (
     <InvitePageShell>
       <Paper sx={{ p: 3 }}>
@@ -513,8 +409,7 @@ export function InvitePage() {
             Accept invite
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center">
-            Verify the public key below, then accept with the Feedn't app,
-            generate a new key pair, or use an existing private key file.
+            Verify the public key below, then accept with your key in this app.
           </Typography>
 
           {invitationId ? (
@@ -587,86 +482,23 @@ export function InvitePage() {
             }
             helperText={
               inviterNameError ??
-              'Optional. Stored only in your browser to identify them in Feed Lab.'
+              'Optional. Stored only on this device to identify them.'
             }
             error={inviterNameError != null}
-            disabled={busy}
           />
 
-          {keyPairGenerated ? (
-            <Alert severity="info">
-              Private key downloaded. Use your private key file below to accept
-              the invitation.
-            </Alert>
-          ) : null}
-          {friendInvitations.error ? (
-            <Alert severity="error">{friendInvitations.error}</Alert>
-          ) : null}
           {acceptError ? <Alert severity="error">{acceptError}</Alert> : null}
-          {generateUser.error ? (
-            <Alert severity="error">{generateUser.error}</Alert>
-          ) : null}
-          {keys.sessionError ? (
-            <Alert severity="error">{keys.sessionError}</Alert>
-          ) : null}
-
-          {protocolBridgeEnabled ? (
-            <>
-              <Button
-                variant="contained"
-                fullWidth
-                disabled={busy}
-                onClick={() => void handleAcceptWithEncryptApp()}
-                startIcon={
-                  pairBusy ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : null
-                }
-              >
-                {pairBusy
-                  ? 'Waiting for Encrypt app…'
-                  : keys.isSystemAppSession
-                    ? 'Accept with Encrypt app'
-                    : 'Connect Encrypt app and accept'}
-              </Button>
-
-              <Divider>or</Divider>
-            </>
-          ) : null}
+          {sessionError ? <Alert severity="error">{sessionError}</Alert> : null}
 
           <Button
-            variant="outlined"
-            disabled={busy}
-            onClick={() => {
-              generateUser.clearError();
-              friendInvitations.clearError();
-              setAcceptError(null);
-              void handleGenerateKeyPair();
-            }}
+            data-testid="invite-accept"
+            variant="contained"
+            fullWidth
+            disabled={!keyId}
+            onClick={() => void handleAcceptInvitation()}
           >
-            {generateUser.busy ? 'Generating…' : 'Generate new key pair'}
+            Accept invite
           </Button>
-
-          <Tooltip
-            title="Your private key file is read only in this browser to sign the accept request. The key is not uploaded — the server only verifies a signature."
-            arrow
-          >
-            <Box component="span" sx={{ display: 'block', width: '100%' }}>
-              <Button
-                data-testid="invite-use-private-key-to-accept"
-                variant="contained"
-                fullWidth
-                startIcon={<UploadFileOutlinedIcon />}
-                disabled={busy}
-                onClick={() => {
-                  setAcceptError(null);
-                  void handleImportPrivateKey();
-                }}
-              >
-                Use private key to accept
-              </Button>
-            </Box>
-          </Tooltip>
 
           <Button
             data-testid="invite-cancel"

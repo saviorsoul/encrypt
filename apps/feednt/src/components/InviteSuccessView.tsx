@@ -32,7 +32,9 @@ export function InviteSuccessView({
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const handleCopyPublicKey = () => {
-    if (!publicKeyText) return;
+    if (!publicKeyText) {
+      return;
+    }
     void copyAndNotify(publicKeyText);
   };
 

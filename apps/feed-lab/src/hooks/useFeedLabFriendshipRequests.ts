@@ -1,4 +1,4 @@
-export type { PendingInvitationLink } from '@lab/services/friendshipsCache.ts';
+export type { PendingInvitation } from '@lab/services/friendshipsCache.ts';
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FriendshipRequest } from '@encrypt/core/api/feedApi';

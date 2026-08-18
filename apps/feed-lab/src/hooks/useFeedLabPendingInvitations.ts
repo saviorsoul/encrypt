@@ -1,15 +1,14 @@
-export type { PendingInvitationLink } from '@lab/services/friendshipsCache.ts';
+export type { PendingInvitation } from '@lab/services/friendshipsCache.ts';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { friendshipRequestErrorMessage } from '@lab/lib/friendshipRequestErrors.ts';
-import { buildFeedLabInvitationHref } from '@lab/lib/invitationHref.ts';
 import { buildSentInvitationLabelByToken } from '@lab/services/db/sentInvitations.ts';
 import {
   cacheHasUsersData,
   getFriendshipsCache,
   setFriendshipsCache,
-  type PendingInvitationLink,
+  type PendingInvitation,
 } from '@lab/services/friendshipsCache.ts';
 
 export type RefreshPendingInvitationsOptions = {
@@ -18,7 +17,7 @@ export type RefreshPendingInvitationsOptions = {
 
 export function useFeedLabPendingInvitations(ownerKeyId: string | null) {
   const api = useFeedApi();
-  const [invitations, setInvitations] = useState<PendingInvitationLink[]>([]);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +50,6 @@ export function useFeedLabPendingInvitations(ownerKeyId: string | null) {
           .filter((invitation) => invitation.status === 'pending')
           .map((invitation) => ({
             token: invitation.token,
-            href: buildFeedLabInvitationHref(invitation.token),
             label: labelByToken[invitation.token]?.trim() || null,
             createdAt: invitation.createdAt,
           }));

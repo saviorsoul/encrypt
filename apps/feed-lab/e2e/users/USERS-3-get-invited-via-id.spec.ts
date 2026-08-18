@@ -8,15 +8,7 @@ import { loginWithPrivateKeyAtPath } from '../fixtures/loginWithPrivateKey.ts';
 import { loadTestKeyMaterialFromFile } from '../fixtures/testKeys.ts';
 import { expect, test } from '../fixtures/test.ts';
 
-function invitationTokenFromHref(href: string): string {
-  const match = href.match(/\/invite\/([^/?#]+)/);
-  if (!match?.[1]) {
-    throw new Error(`Could not parse invitation token from: ${href}`);
-  }
-  return match[1];
-}
-
-test.describe('USERS-3 — Get invited via link', () => {
+test.describe('USERS-3 — Get invited via invitation ID', () => {
   test.beforeAll(async () => {
     if (!(await isE2eInviterSeeded())) {
       test.skip(
@@ -26,12 +18,12 @@ test.describe('USERS-3 — Get invited via link', () => {
     }
   });
 
-  test('invitee accepts invitation link and gains feed access', async ({
+  test('invitee accepts invitation ID and gains feed access', async ({
     browser,
     ephemeralPrivateKey,
   }) => {
     const invitationToken =
-      await test.step('inviter creates invitation link', async () => {
+      await test.step('inviter creates invitation', async () => {
         const inviterPage = await browser.newPage();
         await loginWithPrivateKeyAtPath(
           inviterPage,
@@ -45,18 +37,18 @@ test.describe('USERS-3 — Get invited via link', () => {
 
         await inviterPage.getByTestId('users-add-friend').click();
         await inviterPage.getByLabel('Username').fill('e2e invitee');
-        await inviterPage.getByTestId('add-friend-create-link').click();
+        await inviterPage.getByTestId('add-friend-create-invitation').click();
         await expect(
-          inviterPage.getByTestId('add-friend-invitation-link'),
+          inviterPage.getByTestId('add-friend-invitation-id'),
         ).toBeVisible({
           timeout: 15_000,
         });
 
-        const invitationHref = await inviterPage
-          .getByRole('textbox', { name: 'Invitation link' })
+        const invitationId = await inviterPage
+          .getByRole('textbox', { name: 'Invitation ID' })
           .inputValue();
         await inviterPage.close();
-        return invitationTokenFromHref(invitationHref);
+        return invitationId.trim();
       });
 
     await test.step('invitee accepts invitation and opens feed', async () => {

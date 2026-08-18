@@ -6,14 +6,16 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
+import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 
-type AddFriendTab = 'link' | 'publicKey';
+type AddFriendTab = 'id' | 'publicKey';
 
 type AddFriendDialogProps = {
   open: boolean;
@@ -21,7 +23,7 @@ type AddFriendDialogProps = {
   hasFriends: boolean;
   invitationBusy: boolean;
   invitationError: string | null;
-  invitationHref: string | null;
+  invitationId: string | null;
   requestBusy: boolean;
   requestError: string | null;
   requestInfo: string | null;
@@ -42,7 +44,7 @@ export function AddFriendDialog({
   hasFriends,
   invitationBusy,
   invitationError,
-  invitationHref,
+  invitationId,
   requestBusy,
   requestError,
   requestInfo,
@@ -53,45 +55,40 @@ export function AddFriendDialog({
   onCreateInvitation,
   onSendRequestByPublicKey,
 }: AddFriendDialogProps) {
-  const [tab, setTab] = useState<AddFriendTab>('link');
+  const [tab, setTab] = useState<AddFriendTab>('id');
   const [invitationName, setInvitationName] = useState('');
   const [invitationNameError, setInvitationNameError] = useState<string | null>(
     null,
   );
   const [friendName, setFriendName] = useState('');
   const [publicKey, setPublicKey] = useState('');
-  const [copyState, setCopyState] = useState<'idle' | 'ok' | 'err'>('idle');
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
+  const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setTab('link');
+      setTab('id');
       setInvitationName('');
       setInvitationNameError(null);
       setFriendName('');
       setPublicKey('');
-      setCopyState('idle');
+      setQrDialogOpen(false);
     }
   }
 
   const busy = invitationBusy || requestBusy;
   const canInvite = authenticated && hasFriends;
 
-  const handleCopyLink = useCallback(async () => {
-    if (!invitationHref) {
+  const handleCopyId = useCallback(() => {
+    if (!invitationId) {
       return;
     }
-    try {
-      await navigator.clipboard.writeText(invitationHref);
-      setCopyState('ok');
-    } catch {
-      setCopyState('err');
-    }
-    window.setTimeout(() => setCopyState('idle'), 2000);
-  }, [invitationHref]);
+    void copyAndNotify(invitationId);
+  }, [copyAndNotify, invitationId]);
 
-  const handleCreateLink = useCallback(() => {
+  const handleCreateInvitation = useCallback(() => {
     const trimmed = invitationName.trim();
     if (!trimmed) {
       setInvitationNameError('Enter a name for this person.');
@@ -113,13 +110,6 @@ export function AddFriendDialog({
     );
   }, [friendName, onSendRequestByPublicKey, publicKey]);
 
-  const copyLabel =
-    copyState === 'ok'
-      ? 'Copied'
-      : copyState === 'err'
-        ? 'Copy failed'
-        : 'Copy invitation link';
-
   return (
     <Dialog
       open={open}
@@ -132,14 +122,13 @@ export function AddFriendDialog({
       fullWidth
       maxWidth="sm"
     >
-      <DialogTitle>Add friend</DialogTitle>
+      <DialogTitle>Invite friend</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
           {!hasFriends ? (
             <Alert severity="info">
               Add or accept a friend before sending invitations. You can still
-              accept an invitation link from someone else to get your first
-              friend.
+              accept an invitation from someone else to get your first friend.
             </Alert>
           ) : null}
 
@@ -148,7 +137,7 @@ export function AddFriendDialog({
             onChange={(_, next: AddFriendTab) => setTab(next)}
             variant="fullWidth"
           >
-            <Tab label="Invitation link" value="link" disabled={!canInvite} />
+            <Tab label="Invitation ID" value="id" disabled={!canInvite} />
             <Tab
               data-testid="add-friend-public-key-tab"
               label="Public key"
@@ -157,31 +146,36 @@ export function AddFriendDialog({
             />
           </Tabs>
 
-          {tab === 'link' ? (
+          {tab === 'id' ? (
             <Stack spacing={2}>
               <Typography variant="body2" color="text.secondary">
-                The person who gets the link sees your public key. The name you
-                choose is stored only in this browser and matched to the
-                invitation after they accept.
+                The person who gets the invitation ID sees your public key. The
+                name you choose is stored only in this browser and matched to
+                the invitation after they accept.
               </Typography>
-              {invitationHref ? (
+              {invitationId ? (
                 <>
                   <TextField
-                    data-testid="add-friend-invitation-link"
-                    label="Invitation link"
-                    value={invitationHref}
+                    data-testid="add-friend-invitation-id"
+                    label="Invitation ID"
+                    value={invitationId}
                     fullWidth
                     multiline
                     minRows={2}
+                    onClick={handleCopyId}
                     slotProps={{
                       input: {
                         readOnly: true,
-                        sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+                        sx: {
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                        },
                       },
                     }}
                   />
                   <Alert severity="info">
-                    Share this link with one person. It stops working after they
+                    Share this ID with one person. It stops working after they
                     accept.
                   </Alert>
                 </>
@@ -213,8 +207,8 @@ export function AddFriendDialog({
               </Typography>
               <Alert severity="info">
                 This public key must already be registered in the system. Ask
-                your friend to join via an invitation link first if they have
-                not signed up yet.
+                your friend to join via an invitation first if they have not
+                signed up yet.
               </Alert>
               <TextField
                 fullWidth
@@ -250,7 +244,6 @@ export function AddFriendDialog({
           )}
         </Stack>
       </DialogContent>
-      <Divider />
       <DialogActions sx={{ justifyContent: 'space-between' }}>
         <Button
           onClick={() => {
@@ -260,26 +253,31 @@ export function AddFriendDialog({
             onClose();
           }}
         >
-          {invitationHref && tab === 'link' ? 'Close' : 'Cancel'}
+          {invitationId && tab === 'id' ? 'Close' : 'Cancel'}
         </Button>
         <Box>
-          {tab === 'link' ? (
-            invitationHref ? (
-              <Button
-                variant="contained"
-                onClick={() => void handleCopyLink()}
-                color={copyState === 'ok' ? 'success' : 'primary'}
-              >
-                {copyLabel}
-              </Button>
+          {tab === 'id' ? (
+            invitationId ? (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  data-testid="add-friend-show-qr-code"
+                  variant="outlined"
+                  onClick={() => setQrDialogOpen(true)}
+                >
+                  Show QR code
+                </Button>
+                <Button variant="contained" onClick={handleCopyId}>
+                  Copy invitation ID
+                </Button>
+              </Stack>
             ) : (
               <Button
-                data-testid="add-friend-create-link"
+                data-testid="add-friend-create-invitation"
                 variant="contained"
-                onClick={handleCreateLink}
+                onClick={handleCreateInvitation}
                 disabled={busy || !canInvite}
               >
-                {invitationBusy ? 'Creating…' : 'Create link'}
+                {invitationBusy ? 'Creating…' : 'Create invitation'}
               </Button>
             )
           ) : (
@@ -300,6 +298,14 @@ export function AddFriendDialog({
           )}
         </Box>
       </DialogActions>
+      {invitationId ? (
+        <InvitationQrCodeDialog
+          open={qrDialogOpen}
+          token={invitationId}
+          onClose={() => setQrDialogOpen(false)}
+        />
+      ) : null}
+      <CopiedToClipboardSnackbar {...snackbarProps} />
     </Dialog>
   );
 }

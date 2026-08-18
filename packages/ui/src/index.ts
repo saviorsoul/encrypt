@@ -96,3 +96,15 @@ export {
   validateJsonSyntaxText,
   jsonSyntaxError,
 } from './utils/validateJsonSyntaxText.ts';
+export {
+  InvitationQrCodeDialog,
+  type InvitationQrCodeDialogProps,
+} from './components/InvitationQrCodeDialog.tsx';
+export {
+  AcceptInvitationDialog,
+  type AcceptInvitationDialogProps,
+} from './components/AcceptInvitationDialog.tsx';
+export {
+  InvitationQrScanDialog,
+  type InvitationQrScanDialogProps,
+} from './components/InvitationQrScanDialog.tsx';

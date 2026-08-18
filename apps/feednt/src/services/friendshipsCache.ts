@@ -1,8 +1,7 @@
 import type { Friendship, FriendshipRequest } from '@encrypt/core/api/feedApi';
 
-export type PendingInvitationLink = {
+export type PendingInvitation = {
   token: string;
-  href: string;
   label: string | null;
   createdAt: string;
 };
@@ -12,7 +11,7 @@ export type FriendshipsCacheEntry = {
   invitationLabelByToken: Record<string, string>;
   incomingRequests: FriendshipRequest[];
   outgoingRequests: FriendshipRequest[];
-  pendingInvitations: PendingInvitationLink[];
+  pendingInvitations: PendingInvitation[];
   hasFriendships: boolean;
   hasUsersData: boolean;
 };

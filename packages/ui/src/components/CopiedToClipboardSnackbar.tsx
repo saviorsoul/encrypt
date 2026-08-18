@@ -35,7 +35,7 @@ export function CopiedToClipboardSnackbar({
     >
       <Alert
         severity={severity}
-        variant="filled"
+        variant="outlined"
         onClose={onClose}
         sx={{ width: '100%' }}
       >
