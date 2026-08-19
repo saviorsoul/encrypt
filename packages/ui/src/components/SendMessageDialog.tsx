@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import { AppDialog } from './AppDialog.tsx';
@@ -37,8 +37,8 @@ export function SendMessageDialog<
   onMessageSent,
 }: SendMessageDialogProps<TKeys, TRecipients>) {
   const handleSendSuccess = useCallback(async () => {
-    await onSendSuccess();
     onClose();
+    await onSendSuccess();
   }, [onClose, onSendSuccess]);
 
   const form = useSendMessageForm({
@@ -48,11 +48,16 @@ export function SendMessageDialog<
     onMessageSent,
   });
 
+  const openRef = useRef(open);
   useEffect(() => {
-    if (!open) {
-      form.clearFormNotices();
+    openRef.current = open;
+  }, [open]);
+
+  const handleExited = useCallback(() => {
+    if (!openRef.current) {
+      form.clearForm();
     }
-  }, [open, form.clearFormNotices]);
+  }, [form.clearForm]);
 
   const handleClose = useCallback(() => {
     if (form.busy) {
@@ -78,6 +83,9 @@ export function SendMessageDialog<
             maxHeight: 'min(90vh, 720px)',
             overflow: 'hidden',
           },
+        },
+        transition: {
+          onExited: handleExited,
         },
       }}
     >

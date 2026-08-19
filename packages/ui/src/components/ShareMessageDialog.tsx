@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
 import {
   Alert,
-  Box,
   Button,
-  CircularProgress,
   DialogActions,
   DialogContent,
   Stack,
@@ -11,7 +9,7 @@ import {
 } from '@mui/material';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { AppDialog } from './AppDialog.tsx';
-import { MessagePolicyOptions } from './MessagePolicyOptions.tsx';
+import { MessagePolicyOptionsReveal } from './MessagePolicyOptions.tsx';
 
 export type ShareMessageDialogProps = {
   open: boolean;
@@ -78,20 +76,12 @@ export function ShareMessageDialog({
             Share this message with your friends network.
           </Typography>
 
-          {loadingRecipients ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="text.secondary">
-                Loading recipients…
-              </Typography>
-            </Box>
-          ) : !hasFriends ? (
-            <Typography variant="body2" color="text.secondary">
-              No friends yet. Add or accept a friend request before sharing.
-            </Typography>
-          ) : (
-            <MessagePolicyOptions mode="share" />
-          )}
+          <MessagePolicyOptionsReveal
+            loading={loadingRecipients}
+            hasFriends={hasFriends}
+            noFriendsMessage="No friends yet. Add or accept a friend request before sharing."
+            mode="share"
+          />
 
           {recipientsError ? (
             <Typography color="error" variant="body2">

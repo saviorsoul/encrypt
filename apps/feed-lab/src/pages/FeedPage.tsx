@@ -28,6 +28,7 @@ import {
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
   FeedNoFriendsGuide,
+  useCreateMessageRecipientsLoading,
 } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
@@ -81,6 +82,19 @@ export function FeedPage() {
     loadingFriends: friendships.friendshipsLoading,
     friendsError: friendships.friendshipsError,
   });
+  const createMessageRecipientsLoading = useCreateMessageRecipientsLoading(
+    createMessageDialogOpen,
+    ensureFriendshipsLoaded,
+    recipients,
+  );
+  const createMessageRecipients = useMemo(
+    () => ({
+      ...recipients,
+      loadingFriends: createMessageRecipientsLoading.loadingFriends,
+      loadingRecipientKeys: createMessageRecipientsLoading.loadingRecipientKeys,
+    }),
+    [createMessageRecipientsLoading, recipients],
+  );
   const { automateDecryption } = useFeedLabSettings();
   const autoDecryptEnabled = automateDecryption && !keys.isSystemAppSession;
   const decrypt = useBackendDecrypt(keys);
@@ -151,12 +165,6 @@ export function FeedPage() {
       clearDecrypt();
     }
   }, [autoDecryptEnabled, clearDecrypt, feed.loading]);
-
-  useEffect(() => {
-    if (createMessageDialogOpen) {
-      void ensureFriendshipsLoaded();
-    }
-  }, [createMessageDialogOpen, ensureFriendshipsLoaded]);
 
   const handleMessageInteract = useCallback((messageId: string) => {
     setLastInteractedMessageId(messageId);
@@ -352,7 +360,7 @@ export function FeedPage() {
       <SendMessageDialog
         open={createMessageDialogOpen}
         keys={keys}
-        recipients={recipients}
+        recipients={createMessageRecipients}
         onClose={() => setCreateMessageDialogOpen(false)}
         onSendSuccess={handleSendSuccess}
         onMessageSent={handleMessageSent}

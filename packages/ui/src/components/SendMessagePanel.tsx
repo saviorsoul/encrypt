@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   Paper,
   Stack,
   TextField,
@@ -17,7 +16,7 @@ import {
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
 } from '@encrypt/core/constants/contentLimits';
 import { ImportJsonPayloadInput } from './ImportJsonPayloadInput.tsx';
-import { MessagePolicyOptions } from './MessagePolicyOptions.tsx';
+import { MessagePolicyOptionsReveal } from './MessagePolicyOptions.tsx';
 import {
   useBackendSendMessage,
   type SendMessageKeysSession,
@@ -184,15 +183,14 @@ export function useSendMessageForm<
   const importPayloadRef = useRef('');
   const [importFieldResetKey, setImportFieldResetKey] = useState(0);
   const [importHasText, setImportHasText] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const { textRef, status, updateDraft, clearDraft, resetKey } =
     useMessageDraft();
 
   const handleSendImport = useCallback(async () => {
     const ok = await importSend.sendImport(importPayloadRef.current.trim());
     if (ok) {
-      importPayloadRef.current = '';
-      setImportHasText(false);
-      setImportFieldResetKey((current) => current + 1);
+      setSubmitted(true);
       await onSendSuccess();
     }
   }, [importSend, onSendSuccess]);
@@ -204,20 +202,14 @@ export function useSendMessageForm<
   const handleSendMessage = useCallback(async () => {
     const sent = await sendMessage(textRef.current, recipients.recipients);
     if (sent) {
-      clearDraft();
+      setSubmitted(true);
       onMessageSent?.({
         messageId: sent.id,
         copyPayload: sent.copyPayload,
       });
       await onSendSuccess();
     }
-  }, [
-    sendMessage,
-    recipients.recipients,
-    clearDraft,
-    onMessageSent,
-    onSendSuccess,
-  ]);
+  }, [sendMessage, recipients.recipients, onMessageSent, onSendSuccess]);
 
   const handleMessageDraftChange = useCallback(
     (text: string) => {
@@ -234,17 +226,46 @@ export function useSendMessageForm<
     importSend.clearNotices();
   }, [clearError, importSend.clearNotices]);
 
-  const busy = sendMode === 'message' ? sendBusy : importSend.busy;
+  const clearForm = useCallback(() => {
+    clearFormNotices();
+    clearDraft();
+    importPayloadRef.current = '';
+    setImportHasText(false);
+    setImportFieldResetKey((current) => current + 1);
+    setSubmitted(false);
+  }, [clearDraft, clearFormNotices]);
+
+  const handleSendModeChange = useCallback(
+    (next: SendMode) => {
+      if (next === sendMode) {
+        return;
+      }
+      clearDraft();
+      importPayloadRef.current = '';
+      setImportHasText(false);
+      setImportFieldResetKey((current) => current + 1);
+      clearFormNotices();
+      setSendMode(next);
+    },
+    [clearDraft, clearFormNotices, sendMode],
+  );
+
+  const recipientsLoading =
+    recipients.loadingFriends || recipients.loadingRecipientKeys;
+  const busy =
+    submitted || (sendMode === 'message' ? sendBusy : importSend.busy);
   const canSendMessage =
-    !sendBusy &&
+    !busy &&
+    !recipientsLoading &&
     status.hasText &&
     !status.overLimit &&
     recipients.recipients.length > 0;
-  const canSendImport = !importSend.busy && importHasText;
+  const canSendImport = !busy && importHasText;
 
   return {
     sendMode,
     setSendMode,
+    handleSendModeChange,
     messageCiphertextLength: status.ciphertextLength,
     messageOverLimit: status.overLimit,
     messageFieldResetKey: resetKey,
@@ -261,6 +282,8 @@ export function useSendMessageForm<
     canSendMessage,
     canSendImport,
     clearFormNotices,
+    clearForm,
+    recipientsLoading,
   };
 }
 
@@ -283,7 +306,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
 }: SendMessagePanelProps<TRecipients>) {
   const {
     sendMode,
-    setSendMode,
+    handleSendModeChange,
     messageCiphertextLength,
     messageOverLimit,
     messageFieldResetKey,
@@ -299,6 +322,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
     busy,
     canSendMessage,
     canSendImport,
+    recipientsLoading,
   } = form;
 
   const actionButtons =
@@ -357,7 +381,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
           value={sendMode}
           onChange={(_, next: SendMode | null) => {
             if (next) {
-              setSendMode(next);
+              handleSendModeChange(next);
             }
           }}
         >
@@ -386,26 +410,20 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
         <Stack spacing={2} sx={variant === 'plain' ? { pt: 1 } : undefined}>
           <SendMessageTextField
             resetKey={messageFieldResetKey}
-            disabled={sendBusy}
+            disabled={busy || recipientsLoading}
             error={messageOverLimit}
             helperText={`${messageCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
             onDraftChange={handleMessageDraftChange}
           />
 
-          {recipients.loadingFriends || recipients.loadingRecipientKeys ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="text.secondary">
-                Loading recipients…
-              </Typography>
-            </Box>
-          ) : recipients.recipientOptions.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No friends yet. Add or accept a friend in Users before messaging.
-            </Typography>
-          ) : (
-            <MessagePolicyOptions mode="create" />
-          )}
+          <MessagePolicyOptionsReveal
+            loading={
+              recipients.loadingFriends || recipients.loadingRecipientKeys
+            }
+            hasFriends={recipients.recipientOptions.length > 0}
+            noFriendsMessage="No friends yet. Add or accept a friend in Users before messaging."
+            mode="create"
+          />
 
           {showActions && variant !== 'plain' ? (
             <Box sx={{ display: 'flex', gap: 1 }}>{actionButtons}</Box>
@@ -425,7 +443,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
             draftRef={importPayloadRef}
             resetKey={importFieldResetKey}
             onPayloadChange={handleImportPayloadChange}
-            disabled={importSend.busy}
+            disabled={busy}
             description={
               <Typography variant="body2" color="text.secondary">
                 Paste or load JSON to POST to the backend. Syntax warnings are

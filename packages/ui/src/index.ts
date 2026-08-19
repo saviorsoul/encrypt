@@ -80,6 +80,10 @@ export {
   type FeedNoFriendsGuideProps,
 } from './components/FeedNoFriendsGuide.tsx';
 export {
+  useCreateMessageRecipientsLoading,
+  CREATE_MESSAGE_RECIPIENTS_LOADING_MIN_MS,
+} from './hooks/useCreateMessageRecipientsLoading.ts';
+export {
   SendMessageDialogActions,
   SendMessagePanel,
   useSendMessageForm,
