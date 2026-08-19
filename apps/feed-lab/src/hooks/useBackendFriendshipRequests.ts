@@ -244,14 +244,24 @@ export function useBackendFriendshipRequests(
   );
 
   const unfriend = useCallback(
-    async (friendKeyId: string) => {
-      await run(async () => {
+    async (friendKeyId: string): Promise<string | null> => {
+      setBusy(true);
+      setError(null);
+      setInfo(null);
+      try {
         await runSignedApiCall(async () => {
           await api.deleteFriendship({ friendKeyId });
         });
-      });
+        return null;
+      } catch (e) {
+        const message = friendshipRequestErrorMessage(e);
+        setError(message);
+        return message;
+      } finally {
+        setBusy(false);
+      }
     },
-    [run, runSignedApiCall],
+    [api, runSignedApiCall],
   );
 
   const clearError = useCallback(() => {

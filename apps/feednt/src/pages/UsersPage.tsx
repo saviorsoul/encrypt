@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
@@ -22,6 +22,7 @@ import {
 } from '@feednt/components/AcceptFriendRequestDialog.tsx';
 import { AddFriendDialog } from '@feednt/components/AddFriendDialog.tsx';
 import { PublicKeyDialog } from '@feednt/components/PublicKeyDialog.tsx';
+import { UnfriendConfirmDialog } from '@feednt/components/UnfriendConfirmDialog.tsx';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
@@ -60,6 +61,13 @@ export function UsersPage() {
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
   const [qrScanOpen, setQrScanOpen] = useState(false);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
+  const [unfriendDialogOpen, setUnfriendDialogOpen] = useState(false);
+  const [unfriendTarget, setUnfriendTarget] = useState<{
+    keyId: string;
+    label: string;
+  } | null>(null);
+  const [unfriendError, setUnfriendError] = useState<string | null>(null);
+  const unfriendSucceededRef = useRef(false);
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const friendships = useFeedntFriendships();
@@ -145,6 +153,21 @@ export function UsersPage() {
       refreshFriendData,
     ],
   );
+
+  const handleUnfriendConfirm = useCallback(async () => {
+    if (!unfriendTarget || !keys.keyId || friendshipRequests.busy) {
+      return;
+    }
+
+    setUnfriendError(null);
+    const error = await friendshipRequests.unfriend(unfriendTarget.keyId);
+    if (error) {
+      setUnfriendError(error);
+      return;
+    }
+    unfriendSucceededRef.current = true;
+    setUnfriendDialogOpen(false);
+  }, [friendshipRequests, keys.keyId, unfriendTarget]);
 
   const openAddFriendDialog = useCallback(() => {
     friendInvitations.clearError();
@@ -481,7 +504,15 @@ export function UsersPage() {
                           if (!keys.keyId) {
                             return;
                           }
-                          void friendshipRequests.unfriend(friend.keyId);
+                          setUnfriendError(null);
+                          friendshipRequests.clearError();
+                          setUnfriendTarget({
+                            keyId: friend.keyId,
+                            label:
+                              usernameByKeyId[friend.keyId]?.trim() ||
+                              friend.label,
+                          });
+                          setUnfriendDialogOpen(true);
                         }}
                       >
                         Unfriend
@@ -555,6 +586,29 @@ export function UsersPage() {
         }}
         onAccept={handleAcceptFriendWithName}
         onClearError={() => setAcceptFriendError(null)}
+      />
+
+      <UnfriendConfirmDialog
+        open={unfriendDialogOpen}
+        friendName={unfriendTarget?.label ?? ''}
+        busy={friendshipRequests.busy}
+        error={unfriendError}
+        onClose={() => {
+          if (!friendshipRequests.busy) {
+            setUnfriendDialogOpen(false);
+          }
+        }}
+        onExited={() => {
+          const shouldRefresh = unfriendSucceededRef.current;
+          unfriendSucceededRef.current = false;
+          setUnfriendTarget(null);
+          setUnfriendError(null);
+          if (shouldRefresh) {
+            void refreshFriendData();
+          }
+        }}
+        onConfirm={() => void handleUnfriendConfirm()}
+        onClearError={() => setUnfriendError(null)}
       />
 
       <PublicKeyDialog
