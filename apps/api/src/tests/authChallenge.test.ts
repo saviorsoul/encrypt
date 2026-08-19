@@ -225,6 +225,54 @@ describe('auth challenge and nonce rotation', () => {
     );
   });
 
+  it('rejects auth when X-Key-Id does not match X-Public-Key thumbprint', async () => {
+    setAuthNonceStoreForTests(createMemoryAuthNonceStore());
+    const app = createAuthProbeApp();
+    const [materialA, materialB] = await Promise.all([
+      createTestMaterial(),
+      createTestMaterial(),
+    ]);
+    const store = createMemoryAuthNonceStore();
+    setAuthNonceStoreForTests(store);
+    const minted = await store.mint(materialA.keyId);
+
+    const request = {
+      method: 'GET',
+      path: '/api/probe',
+      query: null,
+    };
+    const timeSlot = computeAuthTimeSlot();
+    const signature = await signAuthProof(
+      materialA.ecdsaSignPrivateKey,
+      materialA.keyId,
+      { timeSlot, nonce: minted.nonce },
+      request,
+    );
+    const proof = authHeadersToRecord({
+      keyId: materialA.keyId,
+      publicKey: materialA.publicKey,
+      timeSlot,
+      nonce: minted.nonce,
+      signature,
+    });
+
+    const response = await requestApp(app, {
+      method: 'GET',
+      path: '/api/probe',
+      headers: {
+        [AUTH_HEADER_KEY_ID]: materialB.keyId,
+        [AUTH_HEADER_PUBLIC_KEY]: proof[AUTH_HEADER_PUBLIC_KEY]!,
+        [AUTH_HEADER_TIME_SLOT]: proof[AUTH_HEADER_TIME_SLOT]!,
+        [AUTH_HEADER_NONCE]: proof[AUTH_HEADER_NONCE]!,
+        [AUTH_HEADER_SIGNATURE]: proof[AUTH_HEADER_SIGNATURE]!,
+      },
+    });
+
+    expect(response.status).toBe(401);
+    const body: { error?: string } = JSON.parse(response.body);
+    expect(body.error).toMatch(/thumbprint/i);
+  });
+
   it('exposes challenge on the full app router', async () => {
     setAuthNonceStoreForTests(createMemoryAuthNonceStore());
     const material = await createTestMaterial();
