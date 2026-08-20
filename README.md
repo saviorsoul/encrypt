@@ -25,14 +25,14 @@ Pre-built desktop installers are published on [GitHub Releases](https://github.c
 
 npm workspaces monorepo:
 
-| Package | Path | Description |
-| ------- | ---- | ----------- |
-| `@encrypt/web` | `apps/web` | Main React + Electron app (local-first) |
-| `@encrypt/extension` | `apps/extension` | Chromium MV3 extension (`encrypt://` deep links) |
-| `@encrypt/api` | `apps/api` | Koa HTTP API, Prisma, PostgreSQL/Citus |
-| `@encrypt/feed-lab` | `apps/feed-lab` | Dev UI for testing the backend |
-| `@encrypt/core` | `packages/core` | Shared crypto, feed types, API client |
-| `@encrypt/schemas` | `packages/schemas` | Shared schemas |
+| Package              | Path               | Description                                      |
+| -------------------- | ------------------ | ------------------------------------------------ |
+| `@encrypt/web`       | `apps/web`         | Main React + Electron app (local-first)          |
+| `@encrypt/extension` | `apps/extension`   | Chromium MV3 extension (`encrypt://` deep links) |
+| `@encrypt/api`       | `apps/api`         | Koa HTTP API, Prisma, PostgreSQL/Citus           |
+| `@encrypt/feed-lab`  | `apps/feed-lab`    | Dev UI for testing the backend                   |
+| `@encrypt/core`      | `packages/core`    | Shared crypto, feed types, API client            |
+| `@encrypt/schemas`   | `packages/schemas` | Shared schemas                                   |
 
 ## Prerequisites for local development
 
@@ -232,43 +232,43 @@ Root scripts delegate to workspaces. Run them from the repository root.
 
 ### Main app (`@encrypt/web`)
 
-| Command | Description |
-| ------- | ----------- |
-| `npm start` | Dev server at [http://localhost:5173](http://localhost:5173) |
-| `npm test` | Run web + API tests |
-| `npm run build` | Production web build to `apps/web/dist/` |
-| `npm run build:pages` | Build for GitHub Pages |
-| `npm run preview` | Preview the production web build |
-| `npm run electron:dev` | Electron dev server with hot reload |
-| `npm run electron:preview` | Build and run the Electron app locally |
-| `npm run electron:run` | Run Electron from existing `dist/` build |
-| `npm run electron:build` | Package desktop installers to `release/` |
-| `npm run build:extension` | Build Chromium extension to `apps/extension/dist/` |
-| `npm run dev:extension` | Same as `build:extension` |
+| Command                    | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `npm start`                | Dev server at [http://localhost:5173](http://localhost:5173) |
+| `npm test`                 | Run web + API tests                                          |
+| `npm run build`            | Production web build to `apps/web/dist/`                     |
+| `npm run build:pages`      | Build for GitHub Pages                                       |
+| `npm run preview`          | Preview the production web build                             |
+| `npm run electron:dev`     | Electron dev server with hot reload                          |
+| `npm run electron:preview` | Build and run the Electron app locally                       |
+| `npm run electron:run`     | Run Electron from existing `dist/` build                     |
+| `npm run electron:build`   | Package desktop installers to `release/`                     |
+| `npm run build:extension`  | Build Chromium extension to `apps/extension/dist/`           |
+| `npm run dev:extension`    | Same as `build:extension`                                    |
 
 ### API + feed-lab
 
-| Command | Description |
-| ------- | ----------- |
-| `npm run dev:api` | API dev server (port 3000) |
-| `npm run dev:lab` | feed-lab dev server (port 5174) |
-| `npm run dev:stack` | Start Docker stack (Citus + API + feed-lab) |
-| `npm run dev:stack:build` | Build images and start stack |
-| `npm run dev:stack:logs` | Follow Docker logs |
-| `npm run docker:down` | Stop Docker stack |
-| `npm run db:migrate` | Apply Prisma migrations |
-| `npm run db:citus:distribute` | Run Citus distribution SQL |
-| `npm run db:seed` | Seed database |
-| `npm run db:setup` | Migrate + distribute (host or CI) |
+| Command                       | Description                                 |
+| ----------------------------- | ------------------------------------------- |
+| `npm run dev:api`             | API dev server (port 3000)                  |
+| `npm run dev:lab`             | feed-lab dev server (port 5174)             |
+| `npm run dev:stack`           | Start Docker stack (Citus + API + feed-lab) |
+| `npm run dev:stack:build`     | Build images and start stack                |
+| `npm run dev:stack:logs`      | Follow Docker logs                          |
+| `npm run docker:down`         | Stop Docker stack                           |
+| `npm run db:migrate`          | Apply Prisma migrations                     |
+| `npm run db:citus:distribute` | Run Citus distribution SQL                  |
+| `npm run db:seed`             | Seed database                               |
+| `npm run db:setup`            | Migrate + distribute (host or CI)           |
 
 ### Tooling
 
-| Command | Description |
-| ------- | ----------- |
-| `npm run lint` | Check lint and formatting (ESLint + Prettier) |
-| `npm run lint:fix` | Auto-fix lint and formatting issues |
-| `npm run format` | Format all files with Prettier |
-| `npm run format:check` | Check formatting without writing changes |
+| Command                | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `npm run lint`         | Check lint and formatting (ESLint + Prettier) |
+| `npm run lint:fix`     | Auto-fix lint and formatting issues           |
+| `npm run format`       | Format all files with Prettier                |
+| `npm run format:check` | Check formatting without writing changes      |
 
 ## Linting and formatting
 
@@ -287,6 +287,12 @@ Install the recommended extensions when prompted, or from `.vscode/extensions.js
 - **Prettier** (`esbenp.prettier-vscode`)
 
 Workspace settings in `.vscode/settings.json` enable format on save (Prettier) and ESLint auto-fix on save.
+
+## Development with AI
+
+This project is built with a mix of deliberate engineering and AI-assisted development. Cryptography, data handling, and security rules are designed and reviewed by a human: documented in open RFCs and ADRs, backed by automated tests, and checked against a clear threat model.
+
+Day-to-day implementation—features, refactors, tests, and UI—is often done with **Composer** (Cursor’s AI coding assistant). That speeds iteration (“vibe coding”: describe intent, refine in conversation) but does not replace judgment. AI suggestions are reviewed, constrained by existing architecture, and rejected when they conflict with encryption or privacy goals.
 
 ## License
 

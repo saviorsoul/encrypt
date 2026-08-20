@@ -4,14 +4,13 @@ import {
 } from '@/contexts/users/index.js';
 import { badRequest } from '@/lib/httpError.js';
 import { FRIENDSHIP_REQUEST_PENDING } from '@/contexts/friendships/domain/constants.js';
-import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
 import {
+  assertDistinctKeyIds,
   assertNotAlreadyFriends,
   assertPendingInvitationForRequester,
 } from '@/contexts/friendships/application/services/friendshipAssertions.js';
 import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
-import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 
 export type CreateFriendshipRequestCommand = {
   requesterKeyId: string;
@@ -66,7 +65,7 @@ export async function handleCreateFriendshipRequest(
     reversePending?.status === FRIENDSHIP_REQUEST_PENDING &&
     reversePending.invitationToken
   ) {
-    await friendshipWritePort.establishMutualFriendship(
+    await friendshipRepository.establishMutualFriendship(
       reversePending.requesterKeyId,
       requesterKeyId,
       reversePending.invitationToken,

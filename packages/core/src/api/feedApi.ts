@@ -400,6 +400,17 @@ export function createFeedApi(config: FeedApiConfig) {
       }
     },
 
+    async deleteAccount(): Promise<void> {
+      const response = await authorizedFetch('/api/account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+    },
+
     async postFriendInvitation(): Promise<FriendInvitation> {
       const response = await authorizedFetch('/api/friend-invitations', {
         method: 'POST',

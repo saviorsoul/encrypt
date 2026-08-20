@@ -10,6 +10,7 @@ datasource db {
 model User {
   keyId     String   @id
   publicKey Json
+  status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("users")

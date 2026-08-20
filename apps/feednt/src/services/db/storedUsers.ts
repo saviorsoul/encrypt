@@ -81,10 +81,7 @@ function readStoredUsers(ownerKeyId: string): FeedntStoredUser[] {
   }
 }
 
-function writeStoredUsers(
-  ownerKeyId: string,
-  users: FeedntStoredUser[],
-): void {
+function writeStoredUsers(ownerKeyId: string, users: FeedntStoredUser[]): void {
   if (typeof localStorage === 'undefined') {
     return;
   }
@@ -182,4 +179,8 @@ export async function loadRecipientKeysForUsername(
 
   const publicKey = await importPublicKeyExtractable(stored.publicJwk);
   return { keyId: stored.keyId, publicKey };
+}
+
+export function clearFeedntStoredUsers(ownerKeyId: string): void {
+  writeStoredUsers(ownerKeyId, []);
 }

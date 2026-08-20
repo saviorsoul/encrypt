@@ -15,6 +15,7 @@ import { createCommentsRouter } from './routes/comments.js';
 import { createInboxRouter } from './routes/inbox.js';
 import { createMessagesRouter } from './routes/messages.js';
 import { createSharesRouter } from './routes/shares.js';
+import { createAccountRouter } from './routes/account.js';
 import { createAuthRouter } from './routes/auth.js';
 import { readConfig } from './config.js';
 
@@ -69,6 +70,9 @@ export function createApp(): Koa {
 
   const authRouter = createAuthRouter();
   app.use(authRouter.routes()).use(authRouter.allowedMethods());
+
+  const accountRouter = createAccountRouter();
+  app.use(accountRouter.routes()).use(accountRouter.allowedMethods());
 
   const messagesRouter = createMessagesRouter();
   app.use(messagesRouter.routes()).use(messagesRouter.allowedMethods());

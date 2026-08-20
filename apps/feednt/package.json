@@ -7,7 +7,9 @@
     "node": ">=24"
   },
   "scripts": {
+    "predev": "npm run generate:gdpr-html -w @encrypt/ui",
     "dev": "vite",
+    "prebuild": "npm run generate:gdpr-html -w @encrypt/ui",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -27,7 +29,7 @@
     "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
-    "@types/node": "^22.15.21",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.0",

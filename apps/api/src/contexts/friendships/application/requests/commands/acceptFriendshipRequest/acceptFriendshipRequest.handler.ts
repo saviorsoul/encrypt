@@ -1,10 +1,9 @@
 import { badRequest, notFound } from '@/lib/httpError.js';
 import { FRIENDSHIP_REQUEST_PENDING } from '@/contexts/friendships/domain/constants.js';
-import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
+import { assertDistinctKeyIds } from '@/contexts/friendships/application/services/friendshipAssertions.js';
 import { userRepository } from '@/contexts/users/index.js';
 import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
-import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 
 export type AcceptFriendshipRequestCommand = {
   requesterKeyId: string;
@@ -42,7 +41,7 @@ export async function handleAcceptFriendshipRequest(
   }
 
   if (await friendshipRepository.areFriends(requesterKeyId, targetKeyId)) {
-    await friendshipWritePort.clearPendingAndConsumeInvitation(
+    await friendshipRepository.clearPendingAndConsumeInvitation(
       requesterKeyId,
       targetKeyId,
       invitationToken,
@@ -51,7 +50,7 @@ export async function handleAcceptFriendshipRequest(
     return { status: 'accepted' as const };
   }
 
-  await friendshipWritePort.establishMutualFriendship(
+  await friendshipRepository.establishMutualFriendship(
     requesterKeyId,
     targetKeyId,
     invitationToken,

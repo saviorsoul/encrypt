@@ -25,10 +25,12 @@ import { requestApp } from './requestApp.js';
 
 const userRepoMocks = vi.hoisted(() => ({
   findRegisteredKeyIds: vi.fn(),
+  findStatuses: vi.fn(),
   register: vi.fn(),
   registerIfAbsent: vi.fn(),
   exists: vi.fn(),
   findPublicKeysByKeyIds: vi.fn(),
+  markInactive: vi.fn(),
 }));
 
 vi.mock('@/contexts/users/infrastructure/prismaUserRepository.js', () => ({
@@ -109,7 +111,7 @@ describe('registered user gate middleware', () => {
   it('returns 400 for authenticated but unregistered key on protected routes', async () => {
     const app = createRegisteredGateProbeApp();
     const material = await createTestMaterial();
-    userRepoMocks.findRegisteredKeyIds.mockResolvedValue(new Set());
+    userRepoMocks.findStatuses.mockResolvedValue(new Map());
     const nonce = await mintNonce(material.keyId);
 
     const response = await authorizedGet(app, '/api/inbox', material, nonce);
@@ -118,11 +120,25 @@ describe('registered user gate middleware', () => {
     expect(response.body).toContain(`Unknown user keyId: ${material.keyId}`);
   });
 
+  it('returns 403 for authenticated but inactive key on protected routes', async () => {
+    const app = createRegisteredGateProbeApp();
+    const material = await createTestMaterial();
+    userRepoMocks.findStatuses.mockResolvedValue(
+      new Map([[material.keyId, 'inactive']]),
+    );
+    const nonce = await mintNonce(material.keyId);
+
+    const response = await authorizedGet(app, '/api/inbox', material, nonce);
+
+    expect(response.status).toBe(403);
+    expect(response.body).toContain('This account is inactive.');
+  });
+
   it('allows registered key through protected routes', async () => {
     const app = createRegisteredGateProbeApp();
     const material = await createTestMaterial();
-    userRepoMocks.findRegisteredKeyIds.mockResolvedValue(
-      new Set([material.keyId]),
+    userRepoMocks.findStatuses.mockResolvedValue(
+      new Map([[material.keyId, 'active']]),
     );
     const nonce = await mintNonce(material.keyId);
 
@@ -135,7 +151,7 @@ describe('registered user gate middleware', () => {
   it('skips registration gate for invitation accept (auth-only)', async () => {
     const app = createRegisteredGateProbeApp();
     const material = await createTestMaterial();
-    userRepoMocks.findRegisteredKeyIds.mockResolvedValue(new Set());
+    userRepoMocks.findStatuses.mockResolvedValue(new Map());
     const nonce = await mintNonce(material.keyId);
 
     const timeSlot = computeAuthTimeSlot();
@@ -175,6 +191,53 @@ describe('registered user gate middleware', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(userRepoMocks.findRegisteredKeyIds).not.toHaveBeenCalled();
+    expect(userRepoMocks.findStatuses).not.toHaveBeenCalled();
+  });
+
+  it('requires a registered user for account erase', async () => {
+    const app = createRegisteredGateProbeApp();
+    const material = await createTestMaterial();
+    userRepoMocks.findStatuses.mockResolvedValue(new Map());
+    const nonce = await mintNonce(material.keyId);
+
+    const timeSlot = computeAuthTimeSlot();
+    const path = '/api/account';
+    const request = {
+      method: 'DELETE',
+      path,
+      query: null,
+      body: {},
+    };
+    const signature = await signAuthProof(
+      material.ecdsaSignPrivateKey,
+      material.keyId,
+      { timeSlot, nonce },
+      request,
+    );
+    const proof = authHeadersToRecord({
+      keyId: material.keyId,
+      publicKey: material.publicKey,
+      timeSlot,
+      nonce,
+      signature,
+    });
+
+    const response = await requestApp(app, {
+      method: 'DELETE',
+      path,
+      headers: {
+        [AUTH_HEADER_KEY_ID]: proof[AUTH_HEADER_KEY_ID]!,
+        [AUTH_HEADER_PUBLIC_KEY]: proof[AUTH_HEADER_PUBLIC_KEY]!,
+        [AUTH_HEADER_TIME_SLOT]: proof[AUTH_HEADER_TIME_SLOT]!,
+        [AUTH_HEADER_NONCE]: proof[AUTH_HEADER_NONCE]!,
+        [AUTH_HEADER_SIGNATURE]: proof[AUTH_HEADER_SIGNATURE]!,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toContain(`Unknown user keyId: ${material.keyId}`);
+    expect(userRepoMocks.findStatuses).toHaveBeenCalled();
   });
 });

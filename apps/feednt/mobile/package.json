@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
-    "@types/node": "^22.15.21",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.0",

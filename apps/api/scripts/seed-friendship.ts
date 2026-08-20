@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import '../src/loadEnv.js';
-import { insertFriendshipPair } from '../src/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
+import { insertFriendshipPair } from '../src/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 import { prisma } from '../src/lib/prisma.js';
 
 export async function seedFriendship(

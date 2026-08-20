@@ -21,6 +21,20 @@ export async function insertMessage(
   };
 }
 
+export async function deleteMessagesByIds(
+  messageIds: string[],
+  tx?: PrismaTx,
+): Promise<void> {
+  if (messageIds.length === 0) {
+    return;
+  }
+
+  const client = tx ?? prisma;
+  await client.message.deleteMany({
+    where: { id: { in: messageIds } },
+  });
+}
+
 export const messageRepository: MessageRepository = {
   async getById(id: string): Promise<StoredMessage | null> {
     const row = await prisma.message.findUnique({ where: { id } });

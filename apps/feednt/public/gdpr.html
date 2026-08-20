@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Personal data in this app</title>
+    <meta name="description" content="This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab)." />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <script>(function () {
+  var keys = ['encrypt:feed-lab:settings', 'encrypt:feednt:settings'];
+  var colorMode = null;
+
+  try {
+    for (var i = 0; i < keys.length; i += 1) {
+      var raw = localStorage.getItem(keys[i]);
+      if (!raw) {
+        continue;
+      }
+      var parsed = JSON.parse(raw);
+      if (
+        parsed &&
+        (parsed.colorMode === 'dark' || parsed.colorMode === 'light')
+      ) {
+        colorMode = parsed.colorMode;
+        break;
+      }
+    }
+  } catch (_error) {
+    colorMode = null;
+  }
+
+  if (colorMode) {
+    document.documentElement.setAttribute('data-theme', colorMode);
+  }
+})();</script>
+    <style>
+  :root {
+    color-scheme: light;
+    --text: #1a1a1a;
+    --text-muted: #5c5c5c;
+    --surface: #ffffff;
+    --border: #e0e0e0;
+    --accent: #02baa5;
+    --page-bg: #f6f7f8;
+  }
+  html[data-theme='dark'] {
+    color-scheme: dark;
+    --text: #f2f2f2;
+    --text-muted: #b3b3b3;
+    --surface: #1e1e1e;
+    --border: #3a3a3a;
+    --page-bg: #121212;
+  }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) {
+      color-scheme: dark;
+      --text: #f2f2f2;
+      --text-muted: #b3b3b3;
+      --surface: #1e1e1e;
+      --border: #3a3a3a;
+      --page-bg: #121212;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans", system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--page-bg);
+  }
+  .page {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+  }
+  .back {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: inherit;
+    padding: 0;
+    margin: 0 0 1rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  h1 {
+    margin: 0 0 0.75rem;
+    font-size: 1.5rem;
+    line-height: 1.25;
+    text-align: center;
+  }
+  .intro {
+    margin: 0 0 1.25rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+  }
+  .notice {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9375rem;
+  }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0 0 0.75rem;
+  }
+  section h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  section p {
+    margin: 0 0 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+  }
+  section p:last-child { margin-bottom: 0; }
+  ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+  }
+  li + li { margin-top: 0.25rem; }
+</style>
+  </head>
+  <body>
+    <main class="page">
+      <button type="button" class="back" onclick="history.back()">Back</button>
+      <h1>Personal data in this app</h1>
+      <p class="notice">This page describes the rules for open tests (beta version) of the application. All data will be removed on 06.09.26 (DD.MM.YY).</p>
+      <p class="intro">This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).</p>
+      <section id="summary">
+  <h2>Summary</h2>
+  <p>The app does not ask for email, phone number, legal name, or password. You are identified by a cryptographic keyId (a thumbprint of your public key) and your EC P-256 public key.</p><p>Messages are end-to-end encrypted. The server stores ciphertext and cannot read message content. Encrypted data is still personal data under GDPR when it relates to you.</p>
+  
+</section>
+<section id="on-device">
+  <h2>Data on your device</h2>
+  <p>The following stays in your browser or app storage until you clear it:</p>
+  <ul><li>keyId and public key (your cryptographic identity)</li><li>Private key in secure device storage (Feednt) or a key file you import (Feed Lab)</li><li>Local username you choose to label yourself and friends</li><li>Encrypted messages, shares, comments, and key-manifest shards (IndexedDB or localStorage)</li><li>Friend invitation labels you create when sending invites</li><li>App settings (for example dark mode and decryption preferences)</li></ul>
+</section>
+<section id="on-server">
+  <h2>Data on the Feed API server</h2>
+  <p>When you connect to the Feed API, the operator stores:</p>
+  <ul><li>keyId, public key, and account status (active or inactive) in the users table</li><li>Encrypted message, share, and comment payloads (ciphertext JSON)</li><li>Key-manifest shards (which keyIds can decrypt each message)</li><li>Friendship graph and friendship requests</li><li>Friend invitations (token, inviter/invitee keyId; kept after you clear your account; see retention)</li><li>Account creation timestamp</li><li>Request auth nonces (TTL 15 minutes)</li></ul>
+</section>
+<section id="not-collected">
+  <h2>What we do not collect</h2>
+  <p>By design, the application code does not store:</p>
+  <ul><li>Email address, phone number, or legal name</li><li>Passwords or password hashes</li><li>IP addresses in application logs</li><li>Cookies or third-party analytics</li><li>Profile photos or avatars</li></ul>
+</section>
+<section id="why-invite">
+  <h2>Why this matters when you accept an invite</h2>
+  <p>Accepting an invitation registers your keyId and public key on the server (if not already present), creates a friendship with the inviter, and may store encrypted feed data tied to your identity.</p>
+  
+</section>
+<section id="your-rights">
+  <h2>Your rights and retention</h2>
+  <p>You can clear your account from Settings → Clear account data while signed in. That is a self-service erasure request (GDPR Art. 17) for friendships, friendship requests, your decryption shards, and ciphertext that nobody else can still decrypt. Your users row is kept with status inactive (keyId and public key remain) so the same key cannot register a new account. It also removes local friend labels for this account and signs you out.</p><p>Friend invitation records are not deleted when you clear your account. The Feed API is invite-only: those rows are how the operator knows who was invited into the app (invitation token, inviter keyId, invitee keyId, status, and timestamps). They do not include message content.</p><p>Friends keep their own copies of messages. Encrypted payloads on threads others still hold will remain, those copies also relate to the remaining recipients. During this open test (beta), all server-held test data — including retained invitations — will be removed on 06.09.26.</p><p>For any concerns around data retency mechanisms contact support@feednt.com</p>
+  
+</section>
+    </main>
+  </body>
+</html>

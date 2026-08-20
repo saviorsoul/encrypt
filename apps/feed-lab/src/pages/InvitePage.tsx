@@ -23,6 +23,7 @@ import {
   parseInvitationRoute,
 } from '@encrypt/core/invite/invitationLink';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
+import { GdprConsentCheckbox } from '@encrypt/ui/GdprConsentCheckbox';
 import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
@@ -152,6 +153,7 @@ export function InvitePage() {
   const [keyPairGenerated, setKeyPairGenerated] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [gdprConsent, setGdprConsent] = useState(false);
 
   const invitationId = routeToken?.trim() ?? '';
 
@@ -610,12 +612,18 @@ export function InvitePage() {
             <Alert severity="error">{keys.sessionError}</Alert>
           ) : null}
 
+          <GdprConsentCheckbox
+            checked={gdprConsent}
+            onChange={setGdprConsent}
+            disabled={busy}
+          />
+
           {protocolBridgeEnabled ? (
             <>
               <Button
                 variant="contained"
                 fullWidth
-                disabled={busy}
+                disabled={busy || !gdprConsent}
                 onClick={() => void handleAcceptWithEncryptApp()}
                 startIcon={
                   pairBusy ? (
@@ -657,7 +665,7 @@ export function InvitePage() {
                 variant="contained"
                 fullWidth
                 startIcon={<UploadFileOutlinedIcon />}
-                disabled={busy}
+                disabled={busy || !gdprConsent}
                 onClick={() => {
                   setAcceptError(null);
                   void handleImportPrivateKey();

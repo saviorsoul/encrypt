@@ -14,3 +14,4 @@
 
 - E2E: `apps/feed-lab/e2e/users/USERS-6-lose-friends-stay-registered.spec.ts`
 - API: `apps/api/src/tests/registeredUserGate.test.ts`
+- Clearing the account (inactive, cannot re-register): `docs/user-stories/users/USERS-8-delete-personal-data.md`

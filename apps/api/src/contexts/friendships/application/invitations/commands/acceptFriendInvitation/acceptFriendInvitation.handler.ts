@@ -3,7 +3,7 @@ import { badRequest, gone, notFound } from '@/lib/httpError.js';
 import { FRIEND_INVITATION_CONSUMED } from '@/contexts/friendships/domain/constants.js';
 import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendInvitationRepository } from '@/contexts/friendships/infrastructure/prismaFriendInvitationRepository.js';
-import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
+import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 
 export type AcceptFriendInvitationCommand = {
   token: string;
@@ -30,12 +30,10 @@ export async function handleAcceptFriendInvitation(
   }
 
   if (!(await userRepository.exists(row.inviterKeyId))) {
-    throw badRequest(
-      'Invitation inviter is not registered. Ask them to create a new invitation link.',
-    );
+    throw badRequest('Invitation inviter is not registered.');
   }
 
-  await friendshipWritePort.acceptFriendInvitationEstablishingFriendship(
+  await friendshipRepository.acceptFriendInvitationEstablishingFriendship(
     row.inviterKeyId,
     inviteeKeyId,
     token,
@@ -47,7 +45,7 @@ export async function handleAcceptFriendInvitation(
   const inviterPublicKey = inviterPublicKeys.get(row.inviterKeyId);
   if (!inviterPublicKey) {
     throw badRequest(
-      'Invitation inviter is not registered. Ask them to create a new invitation link.',
+      'Invitation inviter is not an active account. Ask them for a new invitation link.',
     );
   }
 

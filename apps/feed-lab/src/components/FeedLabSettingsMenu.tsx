@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Collapse,
   Divider,
   IconButton,
   ListItemIcon,
@@ -10,14 +11,23 @@ import {
   Tooltip,
 } from '@mui/material';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ExpandLessOutlinedIcon from '@mui/icons-material/ExpandLessOutlined';
+import ExpandMoreOutlinedIcon from '@mui/icons-material/ExpandMoreOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
 import { CopiedToClipboardSnackbar, TooltipIconWrap } from '@encrypt/ui';
+import { ClearAccountDataDialog } from '@encrypt/ui/ClearAccountDataDialog';
+import { gdprPageHref } from '@encrypt/ui/gdprPageHref';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import { useNavigate } from 'react-router-dom';
+import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { clearFeedLabStoredUsers } from '@lab/services/db/storedUsers.ts';
+import { clearSentInvitationsForInviter } from '@lab/services/db/sentInvitations.ts';
 
 function shortenMiddle(text: string, head = 12, tail = 8): string {
   if (text.length <= head + tail + 3) {
@@ -29,7 +39,7 @@ function shortenMiddle(text: string, head = 12, tail = 8): string {
 const menuItemSx = {
   fontSize: '0.8125rem',
   py: 0.75,
-  minHeight: 36,
+  minHeight: '36px !important',
 } as const;
 
 const listItemTextProps = {
@@ -41,6 +51,7 @@ const listItemTextProps = {
 
 export function FeedLabSettingsMenu() {
   const navigate = useNavigate();
+  const api = useFeedApi();
   const { keys } = useFeedLabSession();
   const {
     automateDecryption,
@@ -52,6 +63,12 @@ export function FeedLabSettingsMenu() {
   } = useFeedLabSettings();
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [clearAccountOpen, setClearAccountOpen] = useState(false);
+  const [clearAccountBusy, setClearAccountBusy] = useState(false);
+  const [clearAccountError, setClearAccountError] = useState<string | null>(
+    null,
+  );
+  const [personalDataOpen, setPersonalDataOpen] = useState(false);
   const open = anchorEl !== null;
 
   const publicKeyWire = keys.publicKey
@@ -64,6 +81,7 @@ export function FeedLabSettingsMenu() {
 
   const handleClose = useCallback(() => {
     setAnchorEl(null);
+    setPersonalDataOpen(false);
   }, []);
 
   const handleCopyKeyId = useCallback(() => {
@@ -88,6 +106,36 @@ export function FeedLabSettingsMenu() {
     navigate('/login', { replace: true });
   }, [handleClose, keys, navigate]);
 
+  const handleOpenClearAccount = useCallback(() => {
+    handleClose();
+    setClearAccountError(null);
+    setClearAccountOpen(true);
+  }, [handleClose]);
+
+  const handleClearAccount = useCallback(async () => {
+    if (!keys.keyId || clearAccountBusy) {
+      return;
+    }
+    setClearAccountBusy(true);
+    setClearAccountError(null);
+    try {
+      await api.deleteAccount();
+      clearFeedLabStoredUsers(keys.keyId);
+      clearSentInvitationsForInviter(keys.keyId);
+      setClearAccountOpen(false);
+      keys.clearSession();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setClearAccountError(
+        error instanceof Error
+          ? error.message
+          : 'Could not clear account data.',
+      );
+    } finally {
+      setClearAccountBusy(false);
+    }
+  }, [api, clearAccountBusy, keys, navigate]);
+
   const toggleAutomateDecryption = useCallback(() => {
     setAutomateDecryption(!automateDecryption);
   }, [automateDecryption, setAutomateDecryption]);
@@ -99,6 +147,11 @@ export function FeedLabSettingsMenu() {
   const toggleDarkMode = useCallback(() => {
     setColorMode(colorMode === 'dark' ? 'light' : 'dark');
   }, [colorMode, setColorMode]);
+
+  const handleOpenGdpr = useCallback(() => {
+    handleClose();
+    window.location.assign(gdprPageHref());
+  }, [handleClose]);
 
   return (
     <>
@@ -183,6 +236,46 @@ export function FeedLabSettingsMenu() {
           </>
         ) : null}
         <MenuItem
+          onClick={() => setPersonalDataOpen((current) => !current)}
+          sx={menuItemSx}
+          aria-expanded={personalDataOpen}
+        >
+          <ListItemText primary="Personal data" {...listItemTextProps} />
+          <ListItemIcon sx={{ minWidth: 0, pl: 1 }}>
+            {personalDataOpen ? (
+              <ExpandLessOutlinedIcon sx={{ fontSize: 16 }} />
+            ) : (
+              <ExpandMoreOutlinedIcon sx={{ fontSize: 16 }} />
+            )}
+          </ListItemIcon>
+        </MenuItem>
+        <Collapse in={personalDataOpen} timeout={0} unmountOnExit>
+          <MenuItem onClick={handleOpenGdpr} sx={menuItemSx}>
+            <ListItemText
+              primary="Personal data notice"
+              {...listItemTextProps}
+            />
+            <ListItemIcon sx={{ minWidth: 0, pl: 1 }}>
+              <PolicyOutlinedIcon sx={{ fontSize: 16 }} />
+            </ListItemIcon>
+          </MenuItem>
+          {keys.keyId ? (
+            <MenuItem onClick={handleOpenClearAccount} sx={menuItemSx}>
+              <ListItemText
+                primary="Clear account data"
+                {...listItemTextProps}
+              />
+              <ListItemIcon sx={{ minWidth: 0, pl: 1 }}>
+                <DeleteOutlineOutlinedIcon
+                  color="error"
+                  sx={{ fontSize: 16 }}
+                />
+              </ListItemIcon>
+            </MenuItem>
+          ) : null}
+        </Collapse>
+        <Divider />
+        <MenuItem
           onClick={toggleAutomateDecryption}
           disabled={keys.isSystemAppSession}
           sx={{ ...menuItemSx, justifyContent: 'space-between', gap: 2 }}
@@ -234,6 +327,14 @@ export function FeedLabSettingsMenu() {
       </Menu>
 
       <CopiedToClipboardSnackbar {...snackbarProps} />
+      <ClearAccountDataDialog
+        open={clearAccountOpen}
+        busy={clearAccountBusy}
+        error={clearAccountError}
+        onClose={() => setClearAccountOpen(false)}
+        onConfirm={() => void handleClearAccount()}
+        onClearError={() => setClearAccountError(null)}
+      />
     </>
   );
 }

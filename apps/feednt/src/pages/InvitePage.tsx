@@ -20,6 +20,7 @@ import {
   parseInvitationRoute,
 } from '@encrypt/core/invite/invitationLink';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
+import { GdprConsentCheckbox } from '@encrypt/ui/GdprConsentCheckbox';
 import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
@@ -134,6 +135,7 @@ export function InvitePage() {
     useState<InviteSuccessVariant>('accepted');
   const inviteFlowFinishedRef = useRef(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [gdprConsent, setGdprConsent] = useState(false);
 
   const invitationId = routeToken?.trim() ?? '';
 
@@ -490,11 +492,16 @@ export function InvitePage() {
           {acceptError ? <Alert severity="error">{acceptError}</Alert> : null}
           {sessionError ? <Alert severity="error">{sessionError}</Alert> : null}
 
+          <GdprConsentCheckbox
+            checked={gdprConsent}
+            onChange={setGdprConsent}
+          />
+
           <Button
             data-testid="invite-accept"
             variant="contained"
             fullWidth
-            disabled={!keyId}
+            disabled={!keyId || !gdprConsent}
             onClick={() => void handleAcceptInvitation()}
           >
             Accept invite

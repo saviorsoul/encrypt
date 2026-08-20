@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
   },
-  "include": ["src", "src/global.d.ts"]
+  "include": ["src", "src/global.d.ts", "scripts"]
 }

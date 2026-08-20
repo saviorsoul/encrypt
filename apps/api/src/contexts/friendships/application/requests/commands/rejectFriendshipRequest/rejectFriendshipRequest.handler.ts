@@ -1,6 +1,6 @@
 import { badRequest, notFound } from '@/lib/httpError.js';
 import { FRIENDSHIP_REQUEST_PENDING } from '@/contexts/friendships/domain/constants.js';
-import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
+import { assertDistinctKeyIds } from '@/contexts/friendships/application/services/friendshipAssertions.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 
 export type RejectFriendshipRequestCommand = {

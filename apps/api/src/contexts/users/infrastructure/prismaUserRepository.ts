@@ -1,11 +1,15 @@
 import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma.js';
-import { conflict } from '@/lib/httpError.js';
+import { prisma, type PrismaTx } from '@/lib/prisma.js';
+import { conflict, forbidden } from '@/lib/httpError.js';
 import type {
   EcPublicKey,
   UserRepository,
 } from '@/contexts/users/domain/ports/UserRepository.js';
 import type { RegisterUserInput } from '@/contexts/users/domain/types.js';
+import {
+  USER_STATUS_ACTIVE,
+  USER_STATUS_INACTIVE,
+} from '@/contexts/users/domain/constants.js';
 
 function toPrismaPublicKey(
   publicKey: RegisterUserInput['publicKey'],
@@ -24,6 +28,25 @@ function parseEcPublicKey(value: unknown): EcPublicKey | null {
   return { x: record.x, y: record.y };
 }
 
+function isInactiveAccountError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2002'
+  );
+}
+
+export async function markUserInactive(
+  keyId: string,
+  tx?: PrismaTx,
+): Promise<void> {
+  const client = tx ?? prisma;
+  await client.user.updateMany({
+    where: { keyId },
+    data: { status: USER_STATUS_INACTIVE },
+  });
+}
+
 export const userRepository: UserRepository = {
   async register(input: RegisterUserInput): Promise<void> {
     try {
@@ -31,14 +54,18 @@ export const userRepository: UserRepository = {
         data: {
           keyId: input.keyId,
           publicKey: toPrismaPublicKey(input.publicKey),
+          status: USER_STATUS_ACTIVE,
         },
       });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        'code' in error &&
-        (error as { code: string }).code === 'P2002'
-      ) {
+      if (isInactiveAccountError(error)) {
+        const existing = await prisma.user.findUnique({
+          where: { keyId: input.keyId },
+          select: { status: true },
+        });
+        if (existing?.status === USER_STATUS_INACTIVE) {
+          throw forbidden('This key cannot be used to create a new account.');
+        }
         throw conflict(`User already exists: ${input.keyId}`);
       }
       throw error;
@@ -46,9 +73,15 @@ export const userRepository: UserRepository = {
   },
 
   async registerIfAbsent(input: RegisterUserInput): Promise<void> {
-    const registered = await userRepository.findRegisteredKeyIds([input.keyId]);
-    if (registered.has(input.keyId)) {
+    const existing = await prisma.user.findUnique({
+      where: { keyId: input.keyId },
+      select: { status: true },
+    });
+    if (existing?.status === USER_STATUS_ACTIVE) {
       return;
+    }
+    if (existing?.status === USER_STATUS_INACTIVE) {
+      throw forbidden('This key cannot be used to create a new account.');
     }
     await userRepository.register(input);
   },
@@ -59,11 +92,24 @@ export const userRepository: UserRepository = {
     }
 
     const rows = await prisma.user.findMany({
-      where: { keyId: { in: keyIds } },
+      where: { keyId: { in: keyIds }, status: USER_STATUS_ACTIVE },
       select: { keyId: true },
     });
 
     return new Set(rows.map((row) => row.keyId));
+  },
+
+  async findStatuses(keyIds: string[]): Promise<Map<string, string>> {
+    if (keyIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await prisma.user.findMany({
+      where: { keyId: { in: keyIds } },
+      select: { keyId: true, status: true },
+    });
+
+    return new Map(rows.map((row) => [row.keyId, row.status]));
   },
 
   async findPublicKeysByKeyIds(
@@ -91,8 +137,12 @@ export const userRepository: UserRepository = {
   async exists(keyId: string): Promise<boolean> {
     const row = await prisma.user.findUnique({
       where: { keyId },
-      select: { keyId: true },
+      select: { status: true },
     });
-    return row != null;
+    return row?.status === USER_STATUS_ACTIVE;
+  },
+
+  async markInactive(keyId: string, tx?: PrismaTx): Promise<void> {
+    await markUserInactive(keyId, tx);
   },
 };

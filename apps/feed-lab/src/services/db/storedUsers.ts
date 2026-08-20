@@ -183,3 +183,7 @@ export async function loadRecipientKeysForUsername(
   const publicKey = await importPublicKeyExtractable(stored.publicJwk);
   return { keyId: stored.keyId, publicKey };
 }
+
+export function clearFeedLabStoredUsers(ownerKeyId: string): void {
+  writeStoredUsers(ownerKeyId, []);
+}

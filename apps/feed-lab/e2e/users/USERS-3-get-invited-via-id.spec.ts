@@ -56,9 +56,11 @@ test.describe('USERS-3 — Get invited via invitation ID', () => {
       const inviteePage = await inviteeContext.newPage();
 
       await inviteePage.goto(`/invite/${invitationToken}`);
-      await expect(inviteePage.getByText('Accept invitation')).toBeVisible({
+      await expect(inviteePage.getByText('Accept invite')).toBeVisible({
         timeout: 15_000,
       });
+
+      await inviteePage.getByTestId('invite-gdpr-consent').check();
 
       await acceptPrivateKeyViaFileChooser(
         inviteePage,

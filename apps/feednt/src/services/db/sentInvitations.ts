@@ -121,3 +121,11 @@ export async function buildSentInvitationLabelByToken(
       .map((invitation) => [invitation.token, invitation.label]),
   );
 }
+
+export function clearSentInvitationsForInviter(inviterKeyId: string): void {
+  writeStoredInvitations(
+    readStoredInvitations().filter(
+      (invitation) => invitation.inviterKeyId !== inviterKeyId,
+    ),
+  );
+}

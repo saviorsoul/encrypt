@@ -1,7 +1,6 @@
 import { notFound } from '@/lib/httpError.js';
-import { assertDistinctKeyIds } from '@/contexts/friendships/domain/friendshipRules.js';
+import { assertDistinctKeyIds } from '@/contexts/friendships/application/services/friendshipAssertions.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
-import { friendshipWritePort } from '@/contexts/friendships/infrastructure/prismaFriendshipWriteAdapter.js';
 
 export type DeleteFriendshipCommand = {
   ownerKeyId: string;
@@ -16,5 +15,5 @@ export async function handleDeleteFriendship(command: DeleteFriendshipCommand) {
     throw notFound('Friendship not found.');
   }
 
-  await friendshipWritePort.deleteFriendship(ownerKeyId, friendKeyId);
+  await friendshipRepository.deleteFriendship(ownerKeyId, friendKeyId);
 }

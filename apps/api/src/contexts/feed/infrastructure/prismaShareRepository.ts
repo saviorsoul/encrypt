@@ -31,6 +31,20 @@ export async function insertShare(
   };
 }
 
+export async function deleteSharesForMessages(
+  messageIds: string[],
+  tx?: PrismaTx,
+): Promise<void> {
+  if (messageIds.length === 0) {
+    return;
+  }
+
+  const client = tx ?? prisma;
+  await client.share.deleteMany({
+    where: { messageId: { in: messageIds } },
+  });
+}
+
 export const shareRepository: ShareRepository = {
   async getById(id: string): Promise<StoredShare | null> {
     const row = await prisma.share.findUnique({ where: { id } });

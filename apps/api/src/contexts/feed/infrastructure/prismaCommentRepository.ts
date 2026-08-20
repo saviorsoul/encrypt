@@ -1,6 +1,20 @@
 import type { StoredComment } from '@encrypt/core/feed/types';
-import { prisma } from '@/lib/prisma.js';
+import { prisma, type PrismaTx } from '@/lib/prisma.js';
 import type { CommentRepository } from '@/contexts/feed/domain/ports/CommentRepository.js';
+
+export async function deleteCommentsForMessages(
+  messageIds: string[],
+  tx?: PrismaTx,
+): Promise<void> {
+  if (messageIds.length === 0) {
+    return;
+  }
+
+  const client = tx ?? prisma;
+  await client.comment.deleteMany({
+    where: { messageId: { in: messageIds } },
+  });
+}
 
 export const commentRepository: CommentRepository = {
   async listForMessage(messageId: string): Promise<StoredComment[]> {

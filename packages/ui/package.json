@@ -39,7 +39,12 @@
     "./validateJsonSyntaxText": "./src/utils/validateJsonSyntaxText.ts",
     "./InvitationQrCodeDialog": "./src/components/InvitationQrCodeDialog.tsx",
     "./InvitationQrScanDialog": "./src/components/InvitationQrScanDialog.tsx",
-    "./AcceptInvitationDialog": "./src/components/AcceptInvitationDialog.tsx"
+    "./AcceptInvitationDialog": "./src/components/AcceptInvitationDialog.tsx",
+    "./GdprConsentCheckbox": "./src/components/GdprConsentCheckbox.tsx",
+    "./ClearAccountDataDialog": "./src/components/ClearAccountDataDialog.tsx",
+    "./gdprDataContent": "./src/content/gdprDataContent.ts",
+    "./renderGdprHtml": "./src/content/renderGdprHtml.ts",
+    "./gdprPageHref": "./src/utils/gdprPageHref.ts"
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
@@ -53,7 +58,11 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
+  "devDependencies": {
+    "@types/node": "^24.13.3"
+  },
   "scripts": {
+    "generate:gdpr-html": "node --experimental-strip-types scripts/generate-gdpr-html.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   }

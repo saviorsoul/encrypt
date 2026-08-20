@@ -1,4 +1,5 @@
 import type { EcPublicKey } from '@/contexts/users/index.js';
+import type { PrismaTx } from '@/lib/prisma.js';
 
 export type FriendshipRequestRecord = {
   requesterKeyId: string;
@@ -62,4 +63,24 @@ export interface FriendshipRepository {
   serializeFriendshipRequests(
     rows: FriendshipRequestRecord[],
   ): SerializedFriendshipRequest[];
+
+  establishMutualFriendship(
+    inviterKeyId: string,
+    inviteeKeyId: string,
+    invitationToken: string,
+  ): Promise<void>;
+  clearPendingAndConsumeInvitation(
+    keyIdA: string,
+    keyIdB: string,
+    invitationToken: string,
+    inviteeKeyId: string,
+  ): Promise<void>;
+  deleteFriendship(ownerKeyId: string, friendKeyId: string): Promise<void>;
+  acceptFriendInvitationEstablishingFriendship(
+    inviterKeyId: string,
+    inviteeKeyId: string,
+    token: string,
+  ): Promise<void>;
+  deleteFriendshipRequestsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
+  deleteFriendshipsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
 }

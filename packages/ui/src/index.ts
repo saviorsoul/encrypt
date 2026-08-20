@@ -109,6 +109,23 @@ export {
   type AcceptInvitationDialogProps,
 } from './components/AcceptInvitationDialog.tsx';
 export {
+  GdprConsentCheckbox,
+  type GdprConsentCheckboxProps,
+} from './components/GdprConsentCheckbox.tsx';
+export {
+  ClearAccountDataDialog,
+  type ClearAccountDataDialogProps,
+} from './components/ClearAccountDataDialog.tsx';
+export {
+  GDPR_DATA_PAGE_INTRO,
+  GDPR_DATA_PAGE_NOTICE,
+  GDPR_DATA_PAGE_TITLE,
+  GDPR_DATA_SECTIONS,
+  type GdprDataSection,
+} from './content/gdprDataContent.ts';
+export { renderGdprPageHtml } from './content/renderGdprHtml.ts';
+export { gdprPageHref } from './utils/gdprPageHref.ts';
+export {
   InvitationQrScanDialog,
   type InvitationQrScanDialogProps,
 } from './components/InvitationQrScanDialog.tsx';

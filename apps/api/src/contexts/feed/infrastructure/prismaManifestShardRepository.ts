@@ -42,6 +42,44 @@ export async function insertManifestShards(
   }
 }
 
+export async function listMessageIdsForRecipientManifestShards(
+  recipientKeyId: string,
+  tx?: PrismaTx,
+): Promise<string[]> {
+  const client = tx ?? prisma;
+  const rows = await client.messageKeyManifestShard.findMany({
+    where: { recipientKeyId },
+    select: { messageId: true },
+  });
+  return [...new Set(rows.map((row) => row.messageId))];
+}
+
+export async function deleteManifestShardsForRecipientKeyId(
+  recipientKeyId: string,
+  tx?: PrismaTx,
+): Promise<void> {
+  const client = tx ?? prisma;
+  await client.messageKeyManifestShard.deleteMany({
+    where: { recipientKeyId },
+  });
+}
+
+export async function listMessageIdsWithRemainingManifestShards(
+  messageIds: string[],
+  tx?: PrismaTx,
+): Promise<string[]> {
+  if (messageIds.length === 0) {
+    return [];
+  }
+
+  const client = tx ?? prisma;
+  const rows = await client.messageKeyManifestShard.findMany({
+    where: { messageId: { in: messageIds } },
+    select: { messageId: true },
+  });
+  return [...new Set(rows.map((row) => row.messageId))];
+}
+
 export const manifestShardRepository: ManifestShardRepository = {
   async listDeliveryIdsForRecipientKeyId(
     recipientKeyId: string,
