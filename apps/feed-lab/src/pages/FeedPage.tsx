@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
@@ -28,6 +29,7 @@ import {
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
   FeedNoFriendsGuide,
+  AcceptInvitationDialog,
   useCreateMessageRecipientsLoading,
 } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -35,6 +37,7 @@ import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import { cancelPendingSystemOps } from '@lab/crypto/systemAppSigner.ts';
 
 export function FeedPage() {
+  const navigate = useNavigate();
   const { keys, feedLabUsers } = useFeedLabSession();
   const { usernameByKeyId, usernames, addLocalUser } = feedLabUsers;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
@@ -50,6 +53,7 @@ export function FeedPage() {
   >(null);
   const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
+  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
 
   const friendships = useFeedLabFriendships();
   const { ensureFriendshipsLoaded } = friendships;
@@ -240,6 +244,14 @@ export function FeedPage() {
     clearShareError();
   }, [clearShareError]);
 
+  const handleInvitationIdSubmit = useCallback(
+    (token: string) => {
+      setAcceptInvitationOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
   return (
     <>
       <Stack
@@ -287,6 +299,8 @@ export function FeedPage() {
         <FeedNoFriendsGuide
           loading={friendships.friendshipsLoading && !feed.notRegistered}
           error={feed.notRegistered ? null : friendships.friendshipsError}
+          onAcceptInvite={() => setAcceptInvitationOpen(true)}
+          acceptInviteDisabled={!keys.keyId}
         />
       ) : null}
 
@@ -407,6 +421,13 @@ export function FeedPage() {
       />
 
       <IdentityDialog {...identity.dialogProps} />
+
+      <AcceptInvitationDialog
+        open={acceptInvitationOpen}
+        onClose={() => setAcceptInvitationOpen(false)}
+        onSubmit={handleInvitationIdSubmit}
+        qrScanAvailable={false}
+      />
     </>
   );
 }

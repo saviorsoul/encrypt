@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@feednt/hooks/useBackendFeedData.ts';
@@ -22,12 +23,15 @@ import {
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
   FeedNoFriendsGuide,
+  AcceptInvitationDialog,
   useCreateMessageRecipientsLoading,
 } from '@encrypt/ui';
+import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
 
 export function FeedPage() {
+  const navigate = useNavigate();
   const { session, keys, feedntUsers } = useFeedntSession();
   const { usernameByKeyId, usernames, addLocalUser } = feedntUsers;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
@@ -43,6 +47,8 @@ export function FeedPage() {
   >(null);
   const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
+  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
+  const [qrScanOpen, setQrScanOpen] = useState(false);
 
   const friendships = useFeedntFriendships();
   const { ensureFriendshipsLoaded } = friendships;
@@ -231,6 +237,27 @@ export function FeedPage() {
     clearShareError();
   }, [clearShareError]);
 
+  const handleQrTokenScanned = useCallback(
+    (token: string) => {
+      setQrScanOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
+  const handleQrScanRequest = useCallback(() => {
+    setAcceptInvitationOpen(false);
+    setQrScanOpen(true);
+  }, []);
+
+  const handleInvitationIdSubmit = useCallback(
+    (token: string) => {
+      setAcceptInvitationOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
   if (!session) {
     return null;
   }
@@ -282,6 +309,8 @@ export function FeedPage() {
         <FeedNoFriendsGuide
           loading={friendships.friendshipsLoading && !feed.notRegistered}
           error={feed.notRegistered ? null : friendships.friendshipsError}
+          onAcceptInvite={() => setAcceptInvitationOpen(true)}
+          acceptInviteDisabled={!keys.keyId}
         />
       ) : null}
 
@@ -403,6 +432,20 @@ export function FeedPage() {
       />
 
       <IdentityDialog {...identity.dialogProps} />
+
+      <AcceptInvitationDialog
+        open={acceptInvitationOpen}
+        onClose={() => setAcceptInvitationOpen(false)}
+        onSubmit={handleInvitationIdSubmit}
+        qrScanAvailable
+        onQrScanRequest={handleQrScanRequest}
+      />
+
+      <FeedntInvitationQrScan
+        open={qrScanOpen}
+        onClose={() => setQrScanOpen(false)}
+        onTokenScanned={handleQrTokenScanned}
+      />
     </>
   );
 }

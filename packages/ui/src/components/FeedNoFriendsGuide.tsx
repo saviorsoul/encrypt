@@ -1,6 +1,7 @@
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Paper,
   Stack,
@@ -10,11 +11,15 @@ import {
 export type FeedNoFriendsGuideProps = {
   loading: boolean;
   error: string | null;
+  onAcceptInvite?: () => void;
+  acceptInviteDisabled?: boolean;
 };
 
 export function FeedNoFriendsGuide({
   loading,
   error,
+  onAcceptInvite,
+  acceptInviteDisabled = false,
 }: FeedNoFriendsGuideProps) {
   if (loading) {
     return (
@@ -52,6 +57,19 @@ export function FeedNoFriendsGuide({
           with your network. Ask someone already on the network to send you an
           invitation ID.
         </Typography>
+        {onAcceptInvite ? (
+          <Box>
+            <Button
+              data-testid="feed-accept-invitation"
+              variant="outlined"
+              size="small"
+              disabled={acceptInviteDisabled}
+              onClick={onAcceptInvite}
+            >
+              Accept invite
+            </Button>
+          </Box>
+        ) : null}
       </Stack>
     </Paper>
   );
