@@ -158,6 +158,15 @@ export const friendshipRepository: FriendshipRepository = {
       .filter((row): row is FriendshipWithPublicKey => row !== null);
   },
 
+  async listFriendKeyIds(ownerKeyId: string): Promise<Set<string>> {
+    const rows = await prisma.userFriendship.findMany({
+      where: { ownerKeyId },
+      select: { friendKeyId: true },
+    });
+
+    return new Set(rows.map((row) => row.friendKeyId));
+  },
+
   async findFriendshipRequest(
     requesterKeyId: string,
     targetKeyId: string,

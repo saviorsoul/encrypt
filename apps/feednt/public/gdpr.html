@@ -97,13 +97,14 @@
     font-size: 0.9375rem;
   }
   .notice {
-    margin: 0 0 1.25rem;
+    margin: 0 0 0.75rem;
     padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
     background: var(--surface);
     color: var(--text);
     font-size: 0.9375rem;
+    border-radius: 8px;
   }
   section {
     background: var(--surface);
@@ -136,8 +137,8 @@
     <main class="page">
       <button type="button" class="back" onclick="history.back()">Back</button>
       <h1>Personal data in this app</h1>
+      <p class="intro"><b>This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).</b></p>
       <p class="notice">This page describes the rules for open tests (beta version) of the application. All data will be removed on 06.09.26 (DD.MM.YY).</p>
-      <p class="intro">This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).</p>
       <section id="summary">
   <h2>Summary</h2>
   <p>The app does not ask for email, phone number, legal name, or password. You are identified by a cryptographic keyId (a thumbprint of your public key) and your EC P-256 public key.</p><p>Messages are end-to-end encrypted. The server stores ciphertext and cannot read message content. Encrypted data is still personal data under GDPR when it relates to you.</p>
@@ -146,7 +147,7 @@
 <section id="on-device">
   <h2>Data on your device</h2>
   <p>The following stays in your browser or app storage until you clear it:</p>
-  <ul><li>keyId and public key (your cryptographic identity)</li><li>Private key in secure device storage (Feednt) or a key file you import (Feed Lab)</li><li>Local username you choose to label yourself and friends</li><li>Encrypted messages, shares, comments, and key-manifest shards (IndexedDB or localStorage)</li><li>Friend invitation labels you create when sending invites</li><li>App settings (for example dark mode and decryption preferences)</li></ul>
+  <ul><li>keyId and public key (your cryptographic identity)</li><li>Private key in secure device storage (Feednt) or a key file you import (Feed Lab)</li><li>Local username you choose to label your friends</li><li>Encrypted messages, shares, comments, and key-manifest shards (IndexedDB or localStorage)</li><li>Friend invitation labels you create when sending invites</li><li>App settings (for example dark mode and decryption preferences)</li></ul>
 </section>
 <section id="on-server">
   <h2>Data on the Feed API server</h2>

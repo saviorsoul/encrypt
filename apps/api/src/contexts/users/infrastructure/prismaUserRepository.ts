@@ -120,7 +120,7 @@ export const userRepository: UserRepository = {
     }
 
     const rows = await prisma.user.findMany({
-      where: { keyId: { in: keyIds } },
+      where: { keyId: { in: keyIds }, status: USER_STATUS_ACTIVE },
       select: { keyId: true, publicKey: true },
     });
 

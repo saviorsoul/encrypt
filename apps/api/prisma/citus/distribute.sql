@@ -9,7 +9,8 @@ DECLARE
     'messages',
     'shares',
     'comments',
-    'friendship_requests'
+    'friendship_requests',
+    'friend_invitations'
   ];
 BEGIN
   FOREACH table_name IN ARRAY ref_tables LOOP

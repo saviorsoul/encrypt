@@ -13,6 +13,14 @@ model User {
   status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Inverses of keyId relations on friendship tables. No DB FKs (Citus); Prisma-only.
+  ownedFriendships           UserFriendship[]    @relation("FriendshipOwner")
+  listedAsFriend             UserFriendship[]    @relation("FriendshipFriend")
+  friendshipRequestsSent     FriendshipRequest[] @relation("FriendshipRequestRequester")
+  friendshipRequestsReceived FriendshipRequest[] @relation("FriendshipRequestTarget")
+  invitationsCreated         FriendInvitation[]  @relation("FriendInvitationInviter")
+  invitationsAccepted        FriendInvitation[]  @relation("FriendInvitationInvitee")
+
   @@map("users")
 }
 
@@ -71,6 +79,10 @@ model FriendshipRequest {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
+  // No DB FKs to users. Prisma-only joins.
+  requester User @relation("FriendshipRequestRequester", fields: [requesterKeyId], references: [keyId])
+  target    User @relation("FriendshipRequestTarget", fields: [targetKeyId], references: [keyId])
+
   @@id([requesterKeyId, targetKeyId])
   @@index([targetKeyId, status])
   @@map("friendship_requests")
@@ -81,6 +93,10 @@ model UserFriendship {
   friendKeyId     String   @map("friend_key_id")
   invitationToken String?  @map("invitation_token")
   createdAt       DateTime @default(now()) @map("created_at")
+
+  // No DB FKs: Citus distributed table → users reference table. Prisma-only joins.
+  owner  User @relation("FriendshipOwner", fields: [ownerKeyId], references: [keyId])
+  friend User @relation("FriendshipFriend", fields: [friendKeyId], references: [keyId])
 
   @@id([ownerKeyId, friendKeyId])
   @@map("user_friendships")
@@ -93,6 +109,10 @@ model FriendInvitation {
   inviteeKeyId String?   @map("invitee_key_id")
   createdAt    DateTime  @default(now()) @map("created_at")
   consumedAt   DateTime? @map("consumed_at")
+
+  // No DB FKs to users. Prisma-only joins. inviteeKeyId is null until accept.
+  inviter User  @relation("FriendInvitationInviter", fields: [inviterKeyId], references: [keyId])
+  invitee User? @relation("FriendInvitationInvitee", fields: [inviteeKeyId], references: [keyId])
 
   @@index([inviterKeyId, status])
   @@map("friend_invitations")

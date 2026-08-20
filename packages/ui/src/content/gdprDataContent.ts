@@ -31,7 +31,7 @@ export const GDPR_DATA_SECTIONS: GdprDataSection[] = [
     bullets: [
       'keyId and public key (your cryptographic identity)',
       'Private key in secure device storage (Feednt) or a key file you import (Feed Lab)',
-      'Local username you choose to label yourself and friends',
+      'Local username you choose to label your friends',
       'Encrypted messages, shares, comments, and key-manifest shards (IndexedDB or localStorage)',
       'Friend invitation labels you create when sending invites',
       'App settings (for example dark mode and decryption preferences)',

@@ -77,13 +77,14 @@ const PAGE_STYLES = `
     font-size: 0.9375rem;
   }
   .notice {
-    margin: 0 0 1.25rem;
+    margin: 0 0 0.75rem;
     padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
     background: var(--surface);
     color: var(--text);
     font-size: 0.9375rem;
+    border-radius: 8px;
   }
   section {
     background: var(--surface);
@@ -174,8 +175,8 @@ export function renderGdprPageHtml(): string {
     <main class="page">
       <button type="button" class="back" onclick="history.back()">Back</button>
       <h1>${escapeHtml(GDPR_DATA_PAGE_TITLE)}</h1>
+      <p class="intro"><b>${escapeHtml(GDPR_DATA_PAGE_INTRO)}</b></p>
       <p class="notice">${escapeHtml(GDPR_DATA_PAGE_NOTICE)}</p>
-      <p class="intro">${escapeHtml(GDPR_DATA_PAGE_INTRO)}</p>
       ${sections}
     </main>
   </body>

@@ -32,6 +32,7 @@ export interface FriendshipRepository {
   listFriendshipsWithPublicKeys(
     ownerKeyId: string,
   ): Promise<FriendshipWithPublicKey[]>;
+  listFriendKeyIds(ownerKeyId: string): Promise<Set<string>>;
   findFriendshipRequest(
     requesterKeyId: string,
     targetKeyId: string,

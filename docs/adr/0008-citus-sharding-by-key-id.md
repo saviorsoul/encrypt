@@ -26,6 +26,7 @@ Identity in the API is the EC P-256 `keyId` thumbprint (ADR 0007). Distribution 
 | `shares`                      | **Reference**               | —                         | Same as messages: fetch by share id from inbox assembly.                                                                                           |
 | `comments`                    | **Reference**               | —                         | Fetched by parent `message_id`; volume lower than shards.                                                                                          |
 | `friendship_requests`         | **Reference**               | —                         | Low volume; queried by `requester_key_id` or `target_key_id` (not a single owner column).                                                          |
+| `friend_invitations`          | **Reference**               | —                         | Low volume; lookup by `token`, list by `inviter_key_id`. Replicated so it is not coordinator-local.                                                |
 
 ```sql
 -- apps/api/prisma/citus/distribute.sql (abbreviated)
@@ -34,7 +35,7 @@ PERFORM create_distributed_table(
   'user_friendships', 'owner_key_id',
   colocate_with => 'message_key_manifest_shards'
 );
--- users, messages, shares, comments, friendship_requests → create_reference_table(...)
+-- users, messages, shares, comments, friendship_requests, friend_invitations → create_reference_table(...)
 ```
 
 ### Why shard on key ids (not message ids)
@@ -72,12 +73,13 @@ PERFORM create_distributed_table(
 
 ### Negative / limitations
 
-- **Medium-sized reference tables — replication cost.** Every worker holds a full copy of `users`, `messages`, `shares`, `comments`, and `friendship_requests`. Storage and buffer-cache footprint scale with **worker count × table size**, not with shard count alone.
+- **Medium-sized reference tables — replication cost.** Every worker holds a full copy of `users`, `messages`, `shares`, `comments`, `friendship_requests`, and `friend_invitations`. Storage and buffer-cache footprint scale with **worker count × table size**, not with shard count alone.
 - **Medium-sized reference tables — write path.** Inserts and updates to reference tables go through the coordinator and are replicated to all workers. A burst of new posts updates one replicated `messages` row everywhere; this is acceptable at medium scale but becomes a bottleneck if the feed table grows large.
 - **Medium-sized reference tables — sweet spot vs cliff.** “Medium” here means: total reference data remains small enough (typically sub‑GB to low tens of GB per table in aggregate) that broadcasting is cheaper than redesigning queries. If `messages` / `shares` grow to very large cardinality, reference placement will need revisiting (e.g. distribute by `id`, object storage for payloads, or archival).
 - **Medium-sized reference tables — positive side of the trade.** For our access pattern, replication avoids expensive reshuffles: inbox already found the relevant ids on the distributed shard; workers then resolve ciphertext rows locally. That is often faster and simpler than distributing messages by `id` and joining across shards for every recipient poll.
 - **Friendship symmetry** requires two distributed rows per pair (`A→B` and `B→A`). Deletes use `deleteMany` with `OR` across both orientations (potential multi-shard write).
 - **`friendship_requests` on both key columns** does not map cleanly to one distribution key; keeping it reference accepts full-table replication in exchange for simple pending-request queries at low volume.
+- **`friend_invitations`** is looked up by primary key `token` (accept link) and listed by `inviter_key_id`. Those columns do not share a distribution key with shards; a reference table keeps accept-by-token on every worker instead of leaving the table coordinator-local.
 - **No database-enforced shard recipient validity** without the dropped FK; bad `recipient_key_id` values are rejected in the app layer only.
 
 ## Alternatives considered
@@ -90,6 +92,10 @@ PERFORM create_distributed_table(
 
 - **Rejected:** incoming and outgoing pending lists use different columns. One distribution key would scatter half the queries. Volume is low enough that a reference table is acceptable.
 
+### Distribute `friend_invitations` by `inviter_key_id` or `token`
+
+- **Rejected:** listing an inviter’s pending links would be single-shard on `inviter_key_id`, but accept is `WHERE token = …` and would scatter. Volume is low; a reference table matches `friendship_requests`.
+
 ### Single-node PostgreSQL (no Citus)
 
 - **Rejected for production path:** shard table growth is the expected limiter; Citus keeps the relational model while allowing horizontal scale. Local Docker still uses Citus to mirror production topology.
@@ -97,6 +103,12 @@ PERFORM create_distributed_table(
 ### Application-level sharding or a non-SQL store for shards
 
 - **Rejected:** would split transactional guarantees for posts + shards + friendships and complicate Prisma. Citus keeps one SQL database with declarative distribution.
+
+## Changes
+
+### 2026-08-20 — `friend_invitations` is a reference table
+
+`friend_invitations` was added after this ADR. It is registered with `create_reference_table` in `distribute.sql` (same as `friendship_requests`). Leaving it undistributed would keep it coordinator-local.
 
 ## References
 

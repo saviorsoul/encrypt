@@ -21,7 +21,10 @@ export function createSharesRouter(): Router {
     verifySignature('sharer', { bodyPath: 'share' }),
     async (ctx) => {
       const command = ctx.request.body as CreateShareCommand;
-      const result = await handleCreateShare(command);
+      const result = await handleCreateShare({
+        ...command,
+        senderKeyId: ctx.state.authenticatedKeyId!,
+      });
       if ('recipientsAlreadyHadAccess' in result) {
         ctx.status = 200;
       } else {

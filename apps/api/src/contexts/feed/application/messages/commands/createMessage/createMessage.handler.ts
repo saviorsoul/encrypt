@@ -1,14 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { parseKeyManifest } from '@/schemas/parseKeyManifest.js';
-import { assertUsersRegistered } from '@/contexts/users/index.js';
+import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 import { messageRepository } from '@/contexts/feed/infrastructure/prismaMessageRepository.js';
+import { filterKeyManifestToFriends } from '@/contexts/feed/application/messages/filterKeyManifestToFriends.js';
 import type { CreateMessageCommand } from './createMessage.command.js';
 
 export async function handleCreateMessage(
   command: CreateMessageCommand,
 ): Promise<{ id: string }> {
-  const keyManifest = parseKeyManifest(command.keyManifest);
-  await assertUsersRegistered(Object.keys(keyManifest));
+  const friendKeyIds = await friendshipRepository.listFriendKeyIds(
+    command.senderKeyId,
+  );
+  const keyManifest = filterKeyManifestToFriends(
+    parseKeyManifest(command.keyManifest),
+    command.senderKeyId,
+    friendKeyIds,
+  );
 
   const corePayloadJson = JSON.stringify({
     version: command.version,

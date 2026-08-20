@@ -1,5 +1,5 @@
 import type { Middleware } from 'koa';
-import { assertUsersRegistered } from '@/contexts/users/index.js';
+import { assertCurrentUserRegistered } from '@/contexts/users/index.js';
 import { unauthorized } from '@/lib/httpError.js';
 
 export function requireRegisteredUser(): Middleware {
@@ -8,7 +8,7 @@ export function requireRegisteredUser(): Middleware {
     if (!keyId) {
       throw unauthorized('Authentication is required.');
     }
-    await assertUsersRegistered([keyId]);
+    await assertCurrentUserRegistered(keyId);
     await next();
   };
 }

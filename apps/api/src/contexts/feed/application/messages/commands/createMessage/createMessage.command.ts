@@ -1,3 +1,5 @@
 import type { CreateMessageRequest } from '@/schemas/common.js';
 
-export type CreateMessageCommand = CreateMessageRequest;
+export type CreateMessageCommand = CreateMessageRequest & {
+  senderKeyId: string;
+};

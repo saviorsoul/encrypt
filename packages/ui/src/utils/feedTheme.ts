@@ -73,15 +73,11 @@ function feedAppBackgroundImage(mode: 'light' | 'dark', stone: StonePalette) {
   // vw/vh tie gradients to the viewport; background-attachment: fixed keeps them still while scrolling.
   return isLight
     ? [
-        `radial-gradient(ellipse 60vw 56vh at 0vw 0vh, ${alpha(brandColor, 0.1)}, transparent 54%)`,
         `radial-gradient(ellipse 88vw 76vh at 50vw 52vh, ${alpha('#e7e5e4', 0.38)}, transparent 66%)`,
         `radial-gradient(ellipse 78vw 62vh at 100vw 100vh, ${alpha('#a8a29e', 0.22)}, transparent 58%)`,
         `linear-gradient(168deg, ${alpha(stone.bg, 0)} 42%, ${alpha('#f5f3ef', 0.5)} 68%, ${alpha('#d6d3d1', 0.34)} 100%)`,
       ].join(', ')
-    : [
-        `radial-gradient(ellipse 95vw 65vh at 0vw 0vh, ${alpha(brandColor, 0.15)}, transparent 62%)`,
-        `radial-gradient(ellipse 75vw 60vh at 100vw 100vh, ${alpha('#a8a29e', 0.14)}, transparent 58%)`,
-      ].join(', ');
+    : `radial-gradient(ellipse 75vw 60vh at 100vw 100vh, ${alpha('#a8a29e', 0.14)}, transparent 58%)`;
 }
 
 function feedAppBackgroundStyles(mode: 'light' | 'dark', stone: StonePalette) {

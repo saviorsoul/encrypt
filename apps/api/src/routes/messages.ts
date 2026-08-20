@@ -18,7 +18,10 @@ export function createMessagesRouter(): Router {
     verifySignature('sender'),
     async (ctx) => {
       const command = ctx.request.body as CreateMessageCommand;
-      const result = await handleCreateMessage(command);
+      const result = await handleCreateMessage({
+        ...command,
+        senderKeyId: ctx.state.authenticatedKeyId!,
+      });
       ctx.status = 201;
       ctx.body = result;
     },
