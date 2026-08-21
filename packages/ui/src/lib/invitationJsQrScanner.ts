@@ -1,3 +1,4 @@
+import jsQR from 'jsqr';
 import type { InvitationQrScannerSession } from './invitationQrScannerSupport.ts';
 import { getInvitationQrScannerErrorMessage } from './invitationQrScannerSupport.ts';
 import {
@@ -6,24 +7,10 @@ import {
   createSessionStopper,
 } from './invitationQrScannerRuntime.ts';
 
-type JsQrDecoder = (
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-) => { data: string } | null;
-
-let jsQrModulePromise: Promise<JsQrDecoder> | null = null;
-
-function loadJsQrDecoder(): Promise<JsQrDecoder> {
-  jsQrModulePromise ??= import('jsqr').then((module) => module.default);
-  return jsQrModulePromise;
-}
-
 export async function startJsQrScanner(options: {
   video: HTMLVideoElement;
   onDecoded: (text: string) => void;
 }): Promise<InvitationQrScannerSession> {
-  const jsQR = await loadJsQrDecoder();
   const stream = await attachVideoStream(options.video);
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { willReadFrequently: true });
