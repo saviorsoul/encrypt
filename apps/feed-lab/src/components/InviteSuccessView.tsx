@@ -6,8 +6,6 @@ import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
@@ -15,18 +13,14 @@ import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSn
 type InviteSuccessViewProps = {
   inviterName: string;
   publicKeyText: string;
-  publicKeyFormat: 'xy' | 'json';
   variant?: 'accepted' | 'alreadyFriends';
-  onPublicKeyFormatChange: (format: 'xy' | 'json') => void;
   onOpenFeed: () => void;
 };
 
 export function InviteSuccessView({
   inviterName,
   publicKeyText,
-  publicKeyFormat,
   variant = 'accepted',
-  onPublicKeyFormatChange,
   onOpenFeed,
 }: InviteSuccessViewProps) {
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
@@ -65,25 +59,12 @@ export function InviteSuccessView({
         >
           Copy your public key below if you want to share it with someone.
         </Typography>
-        <ToggleButtonGroup
-          value={publicKeyFormat}
-          exclusive
-          onChange={(_, next: 'xy' | 'json' | null) => {
-            if (next) {
-              onPublicKeyFormatChange(next);
-            }
-          }}
-          size="small"
-        >
-          <ToggleButton value="xy">x;y</ToggleButton>
-          <ToggleButton value="json">JSON</ToggleButton>
-        </ToggleButtonGroup>
         <TextField
           label="Your public key"
           value={publicKeyText}
           fullWidth
           multiline
-          minRows={publicKeyFormat === 'json' ? 6 : 2}
+          minRows={2}
           onClick={handleCopyPublicKey}
           slotProps={{
             input: {

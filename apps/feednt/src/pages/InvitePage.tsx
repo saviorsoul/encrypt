@@ -12,8 +12,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import {
   isInvitationTokenUuid,
@@ -25,7 +23,6 @@ import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/ecPublicKey';
-import { prettifyJsonText } from '@encrypt/core/utils/prettifyJsonText';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
 import { resolveDefaultInviteUsername } from '@feednt/lib/defaultInviteUsername.ts';
@@ -78,19 +75,13 @@ async function validateInviterUsername(
   return null;
 }
 
-function formatPublicKeyText(
-  publicKey: { x: string; y: string },
-  format: 'xy' | 'json',
-): string {
+function formatPublicKeyText(publicKey: { x: string; y: string }): string {
   const jwk = slimEcPublicJwk({
     kty: 'EC',
     crv: 'P-256',
     x: publicKey.x,
     y: publicKey.y,
   });
-  if (format === 'json') {
-    return prettifyJsonText(JSON.stringify(jwk));
-  }
   return formatEcPublicKeyText(jwk);
 }
 
@@ -124,10 +115,6 @@ export function InvitePage() {
   const [invitation, setInvitation] = useState<FriendInvitationPublic | null>(
     null,
   );
-  const [publicKeyFormat, setPublicKeyFormat] = useState<'xy' | 'json'>('xy');
-  const [inviterPublicKeyFormat, setInviterPublicKeyFormat] = useState<
-    'xy' | 'json'
-  >('xy');
   const [inviterName, setInviterName] = useState('');
   const [inviterNameError, setInviterNameError] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -136,8 +123,6 @@ export function InvitePage() {
   const inviteFlowFinishedRef = useRef(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [gdprConsent, setGdprConsent] = useState(false);
-
-  const invitationId = routeToken?.trim() ?? '';
 
   const inviterDisplayLabel =
     inviterName.trim() ||
@@ -192,18 +177,15 @@ export function InvitePage() {
     if (!publicKey) {
       return '';
     }
-    return formatPublicKeyText(publicKey, publicKeyFormat);
-  }, [publicKey, publicKeyFormat]);
+    return formatPublicKeyText(publicKey);
+  }, [publicKey]);
 
   const inviterPublicKeyText = useMemo(() => {
     if (!invitation) {
       return '';
     }
-    return formatPublicKeyText(
-      invitation.inviterPublicKey,
-      inviterPublicKeyFormat,
-    );
-  }, [invitation, inviterPublicKeyFormat]);
+    return formatPublicKeyText(invitation.inviterPublicKey);
+  }, [invitation]);
 
   const saveInviterLocally = useCallback(async () => {
     if (!invitation) {
@@ -364,9 +346,7 @@ export function InvitePage() {
         <InviteSuccessView
           inviterName={inviterDisplayLabel}
           publicKeyText={publicKeyText}
-          publicKeyFormat={publicKeyFormat}
           variant={successVariant}
-          onPublicKeyFormatChange={setPublicKeyFormat}
           onOpenFeed={() => navigate('/feed')}
         />
       </InvitePageShell>
@@ -414,52 +394,23 @@ export function InvitePage() {
             Verify the public key below, then accept with your key in this app.
           </Typography>
 
-          {invitationId ? (
-            <>
-              <TextField
-                data-testid="invite-invitation-id"
-                label="Invitation ID"
-                value={invitationId}
-                fullWidth
-                multiline
-                minRows={2}
-                slotProps={{
-                  input: {
-                    readOnly: true,
-                    sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
-                  },
-                }}
-              />
-              <Button
-                data-testid="invite-show-qr-code"
-                variant="outlined"
-                fullWidth
-                onClick={() => setQrDialogOpen(true)}
-              >
-                Show QR code
-              </Button>
-            </>
+          {routeToken?.trim() ? (
+            <Button
+              data-testid="invite-show-qr-code"
+              variant="outlined"
+              fullWidth
+              onClick={() => setQrDialogOpen(true)}
+            >
+              Show QR code
+            </Button>
           ) : null}
 
-          <ToggleButtonGroup
-            value={inviterPublicKeyFormat}
-            exclusive
-            onChange={(_, next: 'xy' | 'json' | null) => {
-              if (next) {
-                setInviterPublicKeyFormat(next);
-              }
-            }}
-            size="small"
-          >
-            <ToggleButton value="xy">x;y</ToggleButton>
-            <ToggleButton value="json">JSON</ToggleButton>
-          </ToggleButtonGroup>
           <TextField
             label="Inviter public key"
             value={inviterPublicKeyText}
             fullWidth
             multiline
-            minRows={inviterPublicKeyFormat === 'json' ? 6 : 2}
+            maxRows={2}
             slotProps={{
               input: {
                 readOnly: true,

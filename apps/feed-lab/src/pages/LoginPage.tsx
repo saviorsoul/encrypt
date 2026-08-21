@@ -8,6 +8,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
@@ -19,6 +20,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
+  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
 
   const handleChooseFile = useCallback(async () => {
     keys.clearSessionError();
@@ -45,6 +47,14 @@ export function LoginPage() {
       setPairBusy(false);
     }
   }, [keys, navigate]);
+
+  const handleInvitationIdSubmit = useCallback(
+    (token: string) => {
+      setAcceptInvitationOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
 
   if (keys.keyId) {
     return <Navigate to="/feed" replace />;
@@ -114,8 +124,25 @@ export function LoginPage() {
           >
             {busy ? 'Opening file picker…' : 'Choose private key file'}
           </Button>
+          <Divider>or</Divider>
+          <Button
+            data-testid="login-accept-invitation"
+            variant="outlined"
+            size="large"
+            fullWidth
+            disabled={busy || pairBusy}
+            onClick={() => setAcceptInvitationOpen(true)}
+          >
+            Accept invitation
+          </Button>
         </Stack>
       </Paper>
+      <AcceptInvitationDialog
+        open={acceptInvitationOpen}
+        onClose={() => setAcceptInvitationOpen(false)}
+        onSubmit={handleInvitationIdSubmit}
+        qrScanAvailable={false}
+      />
     </Box>
   );
 }
