@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import { viewportMinHeightSx } from '@encrypt/ui/feedTheme';
 import {
   handlePairCallback,
   parseBridgeCallbackRecord,
@@ -108,7 +109,7 @@ export function BridgeCallbackPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
+        ...viewportMinHeightSx,
       }}
     >
       <Typography variant="body2" color="text.secondary">

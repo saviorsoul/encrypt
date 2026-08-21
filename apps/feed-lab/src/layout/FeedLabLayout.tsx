@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FeedLabTopNav } from '@lab/components/FeedLabTopNav.tsx';
 import { UsersDrawer } from '@lab/components/UsersDrawer.tsx';
 import { FeedLabFriendshipsProvider } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
+import { viewportMinHeightSx } from '@encrypt/ui/feedTheme';
 
 function usersDrawerOpenFromPathname(pathname: string): boolean {
   return pathname.startsWith('/users');
@@ -24,7 +25,7 @@ export function FeedLabLayout() {
 
   return (
     <FeedLabFriendshipsProvider>
-      <Box sx={{ minHeight: '100vh' }}>
+      <Box sx={viewportMinHeightSx}>
         <AppBar position="sticky">
           <FeedLabTopNav
             usersActive={usersDrawerOpen}

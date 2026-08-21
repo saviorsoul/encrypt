@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FeedntTopNav } from '@feednt/components/FeedntTopNav.tsx';
 import { UsersDrawer } from '@feednt/components/UsersDrawer.tsx';
 import { FeedntFriendshipsProvider } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
+import { viewportMinHeightSx } from '@encrypt/ui/feedTheme';
 
 function usersDrawerOpenFromPathname(pathname: string): boolean {
   return pathname.startsWith('/users');
@@ -24,7 +25,7 @@ export function FeedntLayout() {
 
   return (
     <FeedntFriendshipsProvider>
-      <Box sx={{ minHeight: '100vh' }}>
+      <Box sx={viewportMinHeightSx}>
         <AppBar position="sticky">
           <FeedntTopNav
             usersActive={usersDrawerOpen}
