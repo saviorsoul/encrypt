@@ -26,6 +26,7 @@ import { UnfriendConfirmDialog } from '@lab/components/UnfriendConfirmDialog.tsx
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
+import { InvitationQrScanDialog } from '@encrypt/ui/InvitationQrScanDialog';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
@@ -59,6 +60,7 @@ export function UsersPage() {
   } | null>(null);
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
+  const [qrScanOpen, setQrScanOpen] = useState(false);
   const [unfriendDialogOpen, setUnfriendDialogOpen] = useState(false);
   const [unfriendTarget, setUnfriendTarget] = useState<{
     keyId: string;
@@ -190,6 +192,19 @@ export function UsersPage() {
     },
     [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
   );
+
+  const handleQrTokenScanned = useCallback(
+    (token: string) => {
+      setQrScanOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
+  const handleQrScanRequest = useCallback(() => {
+    setAcceptInvitationOpen(false);
+    setQrScanOpen(true);
+  }, []);
 
   const handleInvitationIdSubmit = useCallback(
     (token: string) => {
@@ -608,7 +623,13 @@ export function UsersPage() {
         open={acceptInvitationOpen}
         onClose={() => setAcceptInvitationOpen(false)}
         onSubmit={handleInvitationIdSubmit}
-        qrScanAvailable={false}
+        qrScanAvailable
+        onQrScanRequest={handleQrScanRequest}
+      />
+      <InvitationQrScanDialog
+        open={qrScanOpen}
+        onClose={() => setQrScanOpen(false)}
+        onTokenScanned={handleQrTokenScanned}
       />
 
       {qrCodeToken ? (

@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
+import { InvitationQrScanDialog } from '@encrypt/ui/InvitationQrScanDialog';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
@@ -21,6 +22,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
+  const [qrScanOpen, setQrScanOpen] = useState(false);
 
   const handleChooseFile = useCallback(async () => {
     keys.clearSessionError();
@@ -47,6 +49,19 @@ export function LoginPage() {
       setPairBusy(false);
     }
   }, [keys, navigate]);
+
+  const handleQrTokenScanned = useCallback(
+    (token: string) => {
+      setQrScanOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
+  const handleQrScanRequest = useCallback(() => {
+    setAcceptInvitationOpen(false);
+    setQrScanOpen(true);
+  }, []);
 
   const handleInvitationIdSubmit = useCallback(
     (token: string) => {
@@ -141,7 +156,13 @@ export function LoginPage() {
         open={acceptInvitationOpen}
         onClose={() => setAcceptInvitationOpen(false)}
         onSubmit={handleInvitationIdSubmit}
-        qrScanAvailable={false}
+        qrScanAvailable
+        onQrScanRequest={handleQrScanRequest}
+      />
+      <InvitationQrScanDialog
+        open={qrScanOpen}
+        onClose={() => setQrScanOpen(false)}
+        onTokenScanned={handleQrTokenScanned}
       />
     </Box>
   );

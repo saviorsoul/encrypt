@@ -30,6 +30,7 @@ import {
   useFeedRefreshFeedback,
   FeedNoFriendsGuide,
   AcceptInvitationDialog,
+  InvitationQrScanDialog,
   useCreateMessageRecipientsLoading,
 } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -54,6 +55,7 @@ export function FeedPage() {
   const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
+  const [qrScanOpen, setQrScanOpen] = useState(false);
 
   const friendships = useFeedLabFriendships();
   const { ensureFriendshipsLoaded } = friendships;
@@ -244,6 +246,19 @@ export function FeedPage() {
     clearShareError();
   }, [clearShareError]);
 
+  const handleQrTokenScanned = useCallback(
+    (token: string) => {
+      setQrScanOpen(false);
+      navigate(`/invite/${encodeURIComponent(token)}`);
+    },
+    [navigate],
+  );
+
+  const handleQrScanRequest = useCallback(() => {
+    setAcceptInvitationOpen(false);
+    setQrScanOpen(true);
+  }, []);
+
   const handleInvitationIdSubmit = useCallback(
     (token: string) => {
       setAcceptInvitationOpen(false);
@@ -426,7 +441,13 @@ export function FeedPage() {
         open={acceptInvitationOpen}
         onClose={() => setAcceptInvitationOpen(false)}
         onSubmit={handleInvitationIdSubmit}
-        qrScanAvailable={false}
+        qrScanAvailable
+        onQrScanRequest={handleQrScanRequest}
+      />
+      <InvitationQrScanDialog
+        open={qrScanOpen}
+        onClose={() => setQrScanOpen(false)}
+        onTokenScanned={handleQrTokenScanned}
       />
     </>
   );
