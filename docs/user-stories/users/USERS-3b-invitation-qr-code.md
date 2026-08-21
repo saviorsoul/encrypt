@@ -27,7 +27,7 @@
 
 ## Related
 
-- UI: `InvitationQrCodeDialog`, `AcceptInvitationDialog`, `FeedntInvitationQrScan`
+- UI: `InvitationQrCodeDialog`, `AcceptInvitationDialog`, `InvitationQrScanDialog` (`BarcodeDetector` with `jsqr` fallback)
 - Feednt native scan: `apps/feednt/src/lib/scanInvitationQrCode.ts`
 - UUID parsing: `packages/core/src/invite/invitationLink.ts` (`parseScannedInvitationUuid`)
 - Invitation accept flow: `docs/user-stories/users/USERS-3-get-invited-via-id.md`

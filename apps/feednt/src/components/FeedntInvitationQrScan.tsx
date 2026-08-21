@@ -10,7 +10,7 @@ import IconButton from '@mui/material/IconButton';
 import { parseScannedInvitationUuid } from '@encrypt/core/invite/invitationLink';
 import { isCapacitorApp } from '@encrypt/platform/isCapacitorApp';
 import { scanInvitationQrCodeNative } from '@feednt/lib/scanInvitationQrCode.ts';
-import { InvitationQrScanDialog } from '@encrypt/ui/InvitationQrScanDialog';
+import { LazyInvitationQrScanDialog } from '@encrypt/ui/LazyInvitationQrScanDialog';
 
 type FeedntInvitationQrScanProps = {
   open: boolean;
@@ -117,5 +117,5 @@ export function FeedntInvitationQrScan(props: FeedntInvitationQrScanProps) {
     return <FeedntNativeInvitationQrScan {...props} />;
   }
 
-  return <InvitationQrScanDialog {...props} />;
+  return <LazyInvitationQrScanDialog {...props} />;
 }

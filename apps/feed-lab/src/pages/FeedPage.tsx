@@ -30,7 +30,7 @@ import {
   useFeedRefreshFeedback,
   FeedNoFriendsGuide,
   AcceptInvitationDialog,
-  InvitationQrScanDialog,
+  LazyInvitationQrScanDialog,
   useCreateMessageRecipientsLoading,
 } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
@@ -444,7 +444,7 @@ export function FeedPage() {
         qrScanAvailable
         onQrScanRequest={handleQrScanRequest}
       />
-      <InvitationQrScanDialog
+      <LazyInvitationQrScanDialog
         open={qrScanOpen}
         onClose={() => setQrScanOpen(false)}
         onTokenScanned={handleQrTokenScanned}

@@ -129,3 +129,4 @@ export {
   InvitationQrScanDialog,
   type InvitationQrScanDialogProps,
 } from './components/InvitationQrScanDialog.tsx';
+export { LazyInvitationQrScanDialog } from './components/LazyInvitationQrScanDialog.tsx';

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -9,10 +15,15 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 import { parseScannedInvitationUuid } from '@encrypt/core/invite/invitationLink';
-import { Html5Qrcode } from 'html5-qrcode';
-
-const SCANNER_ELEMENT_ID = 'invitation-qr-scanner';
+import {
+  getInvitationQrScannerErrorMessage,
+  isInvitationQrScanSupported,
+  startInvitationQrScanner,
+  type InvitationQrScannerSession,
+} from '../lib/invitationQrScanner.ts';
 
 export type InvitationQrScanDialogProps = {
   open: boolean;
@@ -25,23 +36,27 @@ export function InvitationQrScanDialog({
   onClose,
   onTokenScanned,
 }: InvitationQrScanDialogProps) {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
+    null,
+  );
+  const sessionRef = useRef<InvitationQrScannerSession | null>(null);
+  const onTokenScannedRef = useRef(onTokenScanned);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [invalidScanError, setInvalidScanError] = useState<string | null>(null);
-  const [scannerReady, setScannerReady] = useState(false);
   const handledScanRef = useRef(false);
 
+  onTokenScannedRef.current = onTokenScanned;
+
   const stopScanner = useCallback(async () => {
-    const scanner = scannerRef.current;
-    scannerRef.current = null;
-    if (!scanner) {
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    if (!session) {
       return;
     }
     try {
-      if (scanner.isScanning) {
-        await scanner.stop();
-      }
-      scanner.clear();
+      await session.stop();
     } catch {
       /* ignore stop errors during teardown */
     }
@@ -51,62 +66,75 @@ export function InvitationQrScanDialog({
     void stopScanner();
     setCameraError(null);
     setInvalidScanError(null);
-    setScannerReady(false);
     handledScanRef.current = false;
     onClose();
   }, [onClose, stopScanner]);
 
   useEffect(() => {
-    if (!open) {
-      void stopScanner();
-      setScannerReady(false);
-      setCameraError(null);
-      setInvalidScanError(null);
-      handledScanRef.current = false;
+    if (open) {
       return;
     }
+
+    void stopScanner();
+    setCameraError(null);
+    setInvalidScanError(null);
+    handledScanRef.current = false;
   }, [open, stopScanner]);
 
   useEffect(() => {
-    if (!open || !scannerReady) {
+    if (!open) {
+      setVideoElement(null);
       return;
     }
 
-    const mount = document.getElementById(SCANNER_ELEMENT_ID);
-    if (!mount) {
-      setCameraError('Could not start camera scanner.');
+    setCameraError(null);
+    setInvalidScanError(null);
+    handledScanRef.current = false;
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !videoElement) {
+      return;
+    }
+
+    if (!isInvitationQrScanSupported()) {
+      setCameraError(getInvitationQrScannerErrorMessage());
       return;
     }
 
     let cancelled = false;
-    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
-    scannerRef.current = scanner;
 
-    void scanner
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          if (handledScanRef.current || cancelled) {
-            return;
+    void startInvitationQrScanner({
+      video: videoElement,
+      onDecoded: (decodedText) => {
+        if (handledScanRef.current || cancelled) {
+          return;
+        }
+
+        const token = parseScannedInvitationUuid(decodedText);
+        if (!token) {
+          setInvalidScanError(
+            'QR code is not a valid invitation UUID. Scan an invitation QR code.',
+          );
+          return;
+        }
+
+        handledScanRef.current = true;
+        void (async () => {
+          await stopScanner();
+          if (!cancelled) {
+            onTokenScannedRef.current(token);
           }
-
-          const token = parseScannedInvitationUuid(decodedText);
-          if (!token) {
-            setInvalidScanError(
-              'QR code is not a valid invitation UUID. Scan an invitation QR code.',
-            );
-            return;
-          }
-
-          handledScanRef.current = true;
-          void stopScanner();
-          onTokenScanned(token);
-        },
-        () => {
-          /* ignore per-frame scan misses */
-        },
-      )
+        })();
+      },
+    })
+      .then((session) => {
+        if (cancelled) {
+          void session.stop();
+          return;
+        }
+        sessionRef.current = session;
+      })
       .catch((error: unknown) => {
         if (cancelled) {
           return;
@@ -114,7 +142,7 @@ export function InvitationQrScanDialog({
         const message =
           error instanceof Error
             ? error.message
-            : 'Could not access the camera.';
+            : getInvitationQrScannerErrorMessage();
         setCameraError(message);
       });
 
@@ -122,17 +150,22 @@ export function InvitationQrScanDialog({
       cancelled = true;
       void stopScanner();
     };
-  }, [open, onTokenScanned, scannerReady, stopScanner]);
+  }, [open, stopScanner, videoElement]);
 
   return (
     <Dialog
       open={open}
       onClose={handleClose}
       fullWidth
+      fullScreen={isMobile}
       maxWidth="sm"
+      disableScrollLock
       slotProps={{
+        paper: isMobile
+          ? { sx: { display: 'flex', flexDirection: 'column' } }
+          : undefined,
         transition: {
-          onEntered: () => setScannerReady(true),
+          timeout: 0,
         },
       }}
     >
@@ -146,27 +179,58 @@ export function InvitationQrScanDialog({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent
+        sx={
+          isMobile
+            ? {
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                minHeight: 0,
+              }
+            : undefined
+        }
+      >
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Point your camera at an invitation QR code.
         </Typography>
         {cameraError ? (
-          <Alert severity="error" sx={{ mb: 2 }}>{cameraError}</Alert>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {cameraError}
+          </Alert>
         ) : null}
         {invalidScanError ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>{invalidScanError}</Alert>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {invalidScanError}
+          </Alert>
         ) : null}
         <Box
-          id={SCANNER_ELEMENT_ID}
           sx={{
+            position: 'relative',
             width: '100%',
-            minHeight: 280,
-            bgcolor: 'action.hover',
+            flex: isMobile ? 1 : undefined,
+            height: isMobile ? undefined : 280,
+            minHeight: isMobile ? 240 : 280,
+            bgcolor: 'common.black',
             borderRadius: 1,
             overflow: 'hidden',
-            '& video': { borderRadius: 1 },
           }}
-        />
+        >
+          <Box
+            component="video"
+            ref={setVideoElement}
+            autoPlay
+            muted
+            playsInline
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>Cancel</Button>

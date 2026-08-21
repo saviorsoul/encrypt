@@ -26,7 +26,7 @@ import { UnfriendConfirmDialog } from '@lab/components/UnfriendConfirmDialog.tsx
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
-import { InvitationQrScanDialog } from '@encrypt/ui/InvitationQrScanDialog';
+import { LazyInvitationQrScanDialog } from '@encrypt/ui/LazyInvitationQrScanDialog';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
@@ -626,7 +626,7 @@ export function UsersPage() {
         qrScanAvailable
         onQrScanRequest={handleQrScanRequest}
       />
-      <InvitationQrScanDialog
+      <LazyInvitationQrScanDialog
         open={qrScanOpen}
         onClose={() => setQrScanOpen(false)}
         onTokenScanned={handleQrTokenScanned}

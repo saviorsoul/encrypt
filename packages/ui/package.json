@@ -39,6 +39,7 @@
     "./validateJsonSyntaxText": "./src/utils/validateJsonSyntaxText.ts",
     "./InvitationQrCodeDialog": "./src/components/InvitationQrCodeDialog.tsx",
     "./InvitationQrScanDialog": "./src/components/InvitationQrScanDialog.tsx",
+    "./LazyInvitationQrScanDialog": "./src/components/LazyInvitationQrScanDialog.tsx",
     "./AcceptInvitationDialog": "./src/components/AcceptInvitationDialog.tsx",
     "./GdprConsentCheckbox": "./src/components/GdprConsentCheckbox.tsx",
     "./ClearAccountDataDialog": "./src/components/ClearAccountDataDialog.tsx",
@@ -47,7 +48,7 @@
     "./gdprPageHref": "./src/utils/gdprPageHref.ts"
   },
   "dependencies": {
-    "html5-qrcode": "^2.3.8",
+    "jsqr": "^1.4.0",
     "qrcode.react": "^4.2.0"
   },
   "peerDependencies": {
