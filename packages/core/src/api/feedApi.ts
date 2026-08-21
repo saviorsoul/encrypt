@@ -208,7 +208,7 @@ export function createFeedApi(config: FeedApiConfig) {
 
   return {
     async getHealth(): Promise<{ status: string }> {
-      const response = await http(joinUrl(baseUrl, '/health'));
+      const response = await http(joinUrl(baseUrl, '/api/health'));
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }

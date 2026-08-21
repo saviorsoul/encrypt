@@ -1,4 +1,15 @@
 import { BrowserRouter, HashRouter } from 'react-router-dom';
 
-/** GCS static URLs put the bucket in pathname; BrowserRouter never matches app routes there. */
-export const FeedLabRouter = import.meta.env.PROD ? HashRouter : BrowserRouter;
+function shouldUseBrowserRouter(): boolean {
+  if (!import.meta.env.PROD) {
+    return true;
+  }
+
+  const flag = import.meta.env.VITE_BROWSER_ROUTER;
+  return flag === 'true' || flag === '1';
+}
+
+/** HashRouter is only for legacy GCS bucket URLs without a load balancer. */
+export const FeedLabRouter = shouldUseBrowserRouter()
+  ? BrowserRouter
+  : HashRouter;

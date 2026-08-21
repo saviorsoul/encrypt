@@ -120,7 +120,7 @@ npm run dev:stack:build   # first time: build images, migrate, distribute tables
 Then open:
 
 - **feed-lab** — [http://localhost:5174](http://localhost:5174)
-- **API health** — [http://localhost:3000/health](http://localhost:3000/health)
+- **API health** — [http://localhost:3000/api/health](http://localhost:3000/api/health)
 
 To run API and feed-lab on the host (with Citus still in Docker):
 

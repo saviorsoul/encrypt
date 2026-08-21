@@ -47,7 +47,7 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
 
 8. **Open the apps**:
    - feed-lab: http://localhost:5174 (or `https://` when `FEED_LAB_DEV_HTTPS=true` in `.env.docker`)
-   - API health: http://localhost:3000/health
+   - API health: http://localhost:3000/api/health
    - Postgres: `psql`, DBeaver, etc. at `localhost:<POSTGRES_PORT>` with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` from `.env.docker`
 
 ### Feednt Android + Docker API

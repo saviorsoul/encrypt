@@ -19,17 +19,22 @@ function parseDevHostnames(raw: string | undefined): string[] {
 export default defineConfig(({ command, mode }) => {
   const isDevServer = command === 'serve';
   const env = loadEnv(mode, repoRoot, '');
+  const useBrowserRouter =
+    isDevServer ||
+    env.VITE_BROWSER_ROUTER === 'true' ||
+    env.VITE_BROWSER_ROUTER === '1';
   const devHttps =
     env.FEED_LAB_DEV_HTTPS === 'true' || env.FEED_LAB_DEV_HTTPS === '1';
   const apiProxyTarget = env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
   const devHostnames = parseDevHostnames(env.VITE_FEED_LAB_DEV_HOSTNAME);
+  const assetBase = useBrowserRouter ? '/' : './';
 
   const plugins: PluginOption[] = [
     react(),
     {
       name: 'feed-lab-favicon-href',
-      transformIndexHtml(html: string, ctx: { server?: unknown }) {
-        const href = ctx.server ? '/favicon.svg' : './favicon.svg';
+      transformIndexHtml(html: string) {
+        const href = assetBase === '/' ? '/favicon.svg' : './favicon.svg';
         return html.replace('%BASE_URL%favicon.svg', href);
       },
     },
@@ -49,8 +54,7 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    // GCS static hosting: relative asset URLs (./assets/...) from bucket root index.html.
-    base: './',
+    base: assetBase,
     envDir: repoRoot,
     plugins,
     resolve: {
@@ -64,10 +68,6 @@ export default defineConfig(({ command, mode }) => {
       ...(devHttps ? { https: {} } : {}),
       proxy: {
         '/api': {
-          target: apiProxyTarget,
-          changeOrigin: true,
-        },
-        '/health': {
           target: apiProxyTarget,
           changeOrigin: true,
         },

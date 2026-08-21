@@ -1,5 +1,6 @@
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
+import helmet from 'koa-helmet';
 import { MAX_BODY_BYTES } from './constants.js';
 import { badRequest } from './lib/httpError.js';
 import { authenticate } from './middleware/authenticate.js';
@@ -7,6 +8,7 @@ import { authenticateApiUnlessPublic } from './middleware/authenticateApiUnlessP
 import { registeredApiUnlessPublic } from './middleware/registeredApiUnlessPublic.js';
 import { requireRegisteredUser } from './middleware/requireRegisteredUser.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { preBodyParserGuards } from './middleware/preBodyParserGuards.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { createFriendshipsRouter } from './routes/friendships.js';
 import { createFriendInvitationsRouter } from './routes/friendInvitations.js';
@@ -21,7 +23,11 @@ import { readConfig } from './config.js';
 
 export function createApp(): Koa {
   const app = new Koa();
-  const { corsAllowedOrigins, corsPreflightMaxAgeSeconds } = readConfig();
+  const {
+    corsAllowedOrigins,
+    corsPreflightMaxAgeSeconds,
+    crossOriginResourcePolicy,
+  } = readConfig();
 
   app.use(async (ctx, next) => {
     const origin = ctx.get('Origin');
@@ -51,8 +57,15 @@ export function createApp(): Koa {
     await next();
   });
 
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: crossOriginResourcePolicy },
+    }),
+  );
   app.use(requestLogger());
   app.use(errorHandler());
+  app.use(preBodyParserGuards());
   app.use(
     bodyParser({
       enableTypes: ['json'],

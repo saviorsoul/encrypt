@@ -8,6 +8,35 @@ export const FRIEND_INVITATIONS_PATH_PREFIX = `${API_PATH}${FRIEND_INVITATIONS_P
 
 const DEFAULT_CORS_PREFLIGHT_MAX_AGE_SECONDS = 86_400;
 
+export type CrossOriginResourcePolicy =
+  | 'same-origin'
+  | 'same-site'
+  | 'cross-origin';
+
+const CROSS_ORIGIN_RESOURCE_POLICIES = new Set<CrossOriginResourcePolicy>([
+  'same-origin',
+  'same-site',
+  'cross-origin',
+]);
+
+function parseCrossOriginResourcePolicy(
+  raw: string | undefined,
+  isDev: boolean,
+): CrossOriginResourcePolicy {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return isDev ? 'cross-origin' : 'same-site';
+  }
+
+  if (
+    !CROSS_ORIGIN_RESOURCE_POLICIES.has(trimmed as CrossOriginResourcePolicy)
+  ) {
+    throw new Error(`Invalid CROSS_ORIGIN_RESOURCE_POLICY: ${raw ?? ''}`);
+  }
+
+  return trimmed as CrossOriginResourcePolicy;
+}
+
 function parseCorsAllowedOrigins(raw: string | undefined): ReadonlySet<string> {
   if (!raw?.trim()) {
     return new Set();
@@ -45,6 +74,10 @@ export function readConfig() {
     ),
     corsPreflightMaxAgeSeconds: parseCorsPreflightMaxAgeSeconds(
       process.env.CORS_PREFLIGHT_MAX_AGE_SECONDS,
+    ),
+    crossOriginResourcePolicy: parseCrossOriginResourcePolicy(
+      process.env.CROSS_ORIGIN_RESOURCE_POLICY,
+      process.env.NODE_ENV !== 'production',
     ),
   } as const;
 }

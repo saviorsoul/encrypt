@@ -11,7 +11,7 @@ import {
 } from '@encrypt/core/api/feedApiAuth';
 import { createExternalFeedApiAuthProvider } from '@encrypt/core/api/externalFeedApiAuth';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
-import { getApiBaseUrl } from '@lab/lib/feedApiClient.ts';
+import { getChallengeUrl } from '@lab/lib/feedApiClient.ts';
 import {
   cachePrivateKeyMaterial,
   clearSessionPrivateKeyStorage,
@@ -90,10 +90,10 @@ async function resolvePrivateKeyMaterial(): Promise<UploadedPrivateKeyMaterial |
 
 const fileKeyAuthProvider = createFeedApiAuthProvider(
   resolvePrivateKeyMaterial,
-  { challengeUrl: `${getApiBaseUrl()}/api/auth/challenge` },
+  { challengeUrl: getChallengeUrl() },
 );
 
-const authConfig = { challengeUrl: `${getApiBaseUrl()}/api/auth/challenge` };
+const authConfig = { challengeUrl: getChallengeUrl() };
 
 const systemAppAuthProvider = createExternalFeedApiAuthProvider(
   {

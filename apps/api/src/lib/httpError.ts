@@ -43,6 +43,14 @@ export function forbidden(message: string): HttpError {
   return new HttpError(403, message);
 }
 
+export function payloadTooLarge(message: string): HttpError {
+  return new HttpError(413, message);
+}
+
+export function unsupportedMediaType(message: string): HttpError {
+  return new HttpError(415, message);
+}
+
 export function gone(message: string, details?: unknown): HttpError {
   return new HttpError(410, message, details);
 }

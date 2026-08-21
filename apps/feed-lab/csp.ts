@@ -39,7 +39,10 @@ function parseApiConnectOrigin(apiUrl: string | undefined): string | null {
   }
 }
 
-function buildConnectSources({ isDevServer, apiUrl }: NetworkAppCspOptions): string[] {
+function buildConnectSources({
+  isDevServer,
+  apiUrl,
+}: NetworkAppCspOptions): string[] {
   if (isDevServer) {
     const sources: string[] = [...DEV_CONNECT_SOURCES];
     const apiOrigin = parseApiConnectOrigin(apiUrl);
@@ -50,14 +53,16 @@ function buildConnectSources({ isDevServer, apiUrl }: NetworkAppCspOptions): str
   }
 
   const sources = ["'self'"];
-  const apiOrigin = parseApiConnectOrigin(apiUrl) ?? 'http://localhost:3000';
-  if (!sources.includes(apiOrigin)) {
+  const apiOrigin = parseApiConnectOrigin(apiUrl);
+  if (apiOrigin && !sources.includes(apiOrigin)) {
     sources.push(apiOrigin);
   }
   return sources;
 }
 
-function buildDirectives(options: NetworkAppCspOptions): Record<string, string[]> {
+function buildDirectives(
+  options: NetworkAppCspOptions,
+): Record<string, string[]> {
   const baseDirectives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': ["'self'"],
@@ -114,7 +119,9 @@ export function buildNetworkAppMetaCsp(options: NetworkAppCspOptions): string {
 }
 
 /** @deprecated Use buildNetworkAppCsp */
-export function getContentSecurityPolicy(options: NetworkAppCspOptions): string {
+export function getContentSecurityPolicy(
+  options: NetworkAppCspOptions,
+): string {
   return buildNetworkAppCsp(options);
 }
 

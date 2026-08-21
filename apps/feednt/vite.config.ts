@@ -37,10 +37,6 @@ export default defineConfig(({ command }) => {
           target: apiProxyTarget,
           changeOrigin: true,
         },
-        '/health': {
-          target: apiProxyTarget,
-          changeOrigin: true,
-        },
       },
     },
   };

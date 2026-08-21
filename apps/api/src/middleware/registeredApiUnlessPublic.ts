@@ -6,7 +6,7 @@ import {
 } from '@/routes/friendInvitationRouteAccess.js';
 
 const PUBLIC_API_ROUTES: Array<{ method: string; path: string }> = [
-  { method: 'GET', path: '/health' },
+  { method: 'GET', path: `${API_PATH}/health` },
   { method: 'POST', path: `${API_PATH}/auth/challenge` },
 ];
 

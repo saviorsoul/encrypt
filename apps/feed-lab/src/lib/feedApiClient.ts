@@ -1,13 +1,12 @@
 import { createFeedApi, type FeedApi } from '@encrypt/core/api/feedApi';
 
 /**
- * API base URL for feed-lab HTTP clients.
+ * API origin for feed-lab HTTP clients (scheme + host, no path).
  *
- * In dev, always use same-origin (empty base) so the Vite proxy serves /api from
- * the feed-lab host the browser opened (localhost, LAN IP, https://…:5174, etc.).
- * VITE_PROXY_TARGET configures where the dev server proxies those requests.
- *
- * In production builds, set VITE_API_URL when the API is on another origin.
+ * - Dev: empty string → same-origin; Vite proxies `/api/*` to the API container.
+ * - Prod on a custom domain (e.g. test.feednt.com): empty → browser calls `/api/...`
+ *   on the same host via the load balancer.
+ * - Prod cross-origin: set `VITE_API_URL` to the API origin (e.g. https://api.example.com).
  */
 function resolveApiBaseUrl(): string {
   if (import.meta.env.DEV) {
@@ -28,6 +27,12 @@ export function getFeedApi(): FeedApi {
   return createFeedApi({ baseUrl: apiBaseUrl });
 }
 
+/** API origin only — paths always include `/api/...`. */
 export function getApiBaseUrl(): string {
   return apiBaseUrl;
+}
+
+export function getChallengeUrl(): string {
+  const base = getApiBaseUrl();
+  return base ? `${base}/api/auth/challenge` : '/api/auth/challenge';
 }
