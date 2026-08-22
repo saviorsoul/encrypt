@@ -2,12 +2,14 @@
   "name": "@feednt/local",
   "version": "0.4.0",
   "private": true,
+  "description": "Desktop app for Feedn't",
   "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
   "license": "MIT",
   "homepage": "https://feednt.com",
   "bugs": "https://github.com/saviorsoul/encrypt/issues",
   "type": "module",
   "main": "electron/main.js",
+  "desktopName": "com.feednt.app",
   "engines": {
     "node": ">=24"
   },
@@ -40,7 +42,7 @@
     "@types/node": "^24.13.3",
     "@vitejs/plugin-react": "^4.5.0",
     "concurrently": "^9.2.1",
-    "electron": "43.4.1",
+    "electron": "43.2.0",
     "electron-builder": "^26.0.12",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
@@ -60,14 +62,28 @@
       "package.json"
     ],
     "extraMetadata": {
-      "main": "electron/main.js"
+      "main": "electron/main.js",
+      "name": "feednt"
     },
+    "asarUnpack": [
+      "electron/tray-icon.png",
+      "electron/tray-icon-24.png",
+      "electron/tray-icon-48.png",
+      "electron/tray-icon.ico",
+      "electron/icon.png"
+    ],
+    "icon": "electron/icons",
     "linux": {
       "target": [
         "deb"
       ],
       "category": "Network",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "feednt"
+        }
+      }
     },
     "win": {
       "target": [

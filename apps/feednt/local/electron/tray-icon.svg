@@ -1,0 +1,15 @@
+<!-- Tray icon: mid-gray tile + bright F for visibility on dark Ubuntu panels. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Feednt">
+  <rect width="128" height="128" rx="32" fill="#3a3d4a" />
+  <text
+    x="64"
+    y="88"
+    fill="#02baa5"
+    font-family="ui-sans-serif, system-ui, sans-serif"
+    font-size="72"
+    font-weight="700"
+    text-anchor="middle"
+  >
+    F
+  </text>
+</svg>
