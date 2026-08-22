@@ -146,13 +146,13 @@
 </section>
 <section id="on-device">
   <h2>Data on your device</h2>
-  <p>The following stays in your browser or app storage until you clear it:</p>
-  <ul><li>keyId and public key (your cryptographic identity)</li><li>Private key in secure device storage (Feednt) or a key file you import (Feed Lab)</li><li>Local username you choose to label your friends</li><li>Encrypted messages, shares, comments, and key-manifest shards (IndexedDB or localStorage)</li><li>Friend invitation labels you create when sending invites</li><li>App settings (for example dark mode and decryption preferences)</li></ul>
+  <p>The following stays in your browser or app storage until you clear it or refresh the page (memory stored data):</p>
+  <ul><li>keyId and public key (your cryptographic identity)</li><li>Private key from secure device storage (Feednt) or a key file you import (Feed Lab) - both stored in memory</li><li>Encrypted messages, shares, comments, and key-manifest shards - stored in memory</li><li>Local username you choose to label your friends</li><li>Friend invitation labels you create when sending invites</li><li>App settings (for example dark mode and decryption preferences)</li></ul>
 </section>
 <section id="on-server">
   <h2>Data on the Feed API server</h2>
   <p>When you connect to the Feed API, the operator stores:</p>
-  <ul><li>keyId, public key, and account status (active or inactive) in the users table</li><li>Encrypted message, share, and comment payloads (ciphertext JSON)</li><li>Key-manifest shards (which keyIds can decrypt each message)</li><li>Friendship graph and friendship requests</li><li>Friend invitations (token, inviter/invitee keyId; kept after you clear your account; see retention)</li><li>Account creation timestamp</li><li>Request auth nonces (TTL 15 minutes)</li></ul>
+  <ul><li>keyId, public key, and account status (active or inactive) in the users table</li><li>Encrypted message, share, and comment payloads (ciphertext JSON)</li><li>Key-manifest shards (which keyIds can decrypt each message)</li><li>Friendship graph and friendship requests</li><li>Friend invitations (token, inviter/invitee keyId - kept after you clear your account, see retention)</li><li>Account creation timestamp</li><li>Request auth nonces (TTL 15 minutes)</li></ul>
 </section>
 <section id="not-collected">
   <h2>What we do not collect</h2>
