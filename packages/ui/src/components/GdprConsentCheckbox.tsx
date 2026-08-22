@@ -40,7 +40,11 @@ export function GdprConsentCheckbox({
             *
           </Typography>
           I have read the{' '}
-          <Link href={gdprPageHref()} underline="always" variant="body2">
+          <Link
+            href={gdprPageHref({ withReturnUrl: true })}
+            underline="always"
+            variant="body2"
+          >
             personal data notice
           </Link>{' '}
           and understand how my data is stored before accepting this invitation.

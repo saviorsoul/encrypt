@@ -6,33 +6,7 @@
     <title>Personal data in this app</title>
     <meta name="description" content="This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab)." />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <script>(function () {
-  var keys = ['encrypt:feed-lab:settings', 'encrypt:feednt:settings'];
-  var colorMode = null;
-
-  try {
-    for (var i = 0; i < keys.length; i += 1) {
-      var raw = localStorage.getItem(keys[i]);
-      if (!raw) {
-        continue;
-      }
-      var parsed = JSON.parse(raw);
-      if (
-        parsed &&
-        (parsed.colorMode === 'dark' || parsed.colorMode === 'light')
-      ) {
-        colorMode = parsed.colorMode;
-        break;
-      }
-    }
-  } catch (_error) {
-    colorMode = null;
-  }
-
-  if (colorMode) {
-    document.documentElement.setAttribute('data-theme', colorMode);
-  }
-})();</script>
+    <script src="./gdpr.js"></script>
     <style>
   :root {
     color-scheme: light;
@@ -135,7 +109,7 @@
   </head>
   <body>
     <main class="page">
-      <button type="button" class="back" onclick="history.back()">Back</button>
+      <button type="button" class="back" id="gdpr-back-button">Back</button>
       <h1>Personal data in this app</h1>
       <p class="intro"><b>This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).</b></p>
       <p class="notice">This page describes the rules for open tests (beta version) of the application. All data will be removed on 06.09.26 (DD.MM.YY).</p>

@@ -14,9 +14,11 @@ export default defineConfig(({ command }) => {
   return {
     root: __dirname,
     base: './',
+    publicDir: path.resolve(feedntRoot, 'public'),
     envDir: repoRoot,
     define: {
       'import.meta.env.VITE_ELECTRON': JSON.stringify('1'),
+      'import.meta.env.VITE_FEEDNT_HASH_ROUTER': JSON.stringify('1'),
     },
     plugins: [
       react(),

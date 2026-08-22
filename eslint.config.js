@@ -220,6 +220,14 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/feednt/public/**/*.js', 'apps/feed-lab/public/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.browser,
+      sourceType: 'script',
+    },
+  },
+  {
     files: ['apps/feednt/local/electron/**/*.js'],
     languageOptions: {
       globals: globals.node,

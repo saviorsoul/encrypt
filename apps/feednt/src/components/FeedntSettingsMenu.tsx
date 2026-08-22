@@ -20,7 +20,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { formatAuthPublicKeyWire } from '@encrypt/core/crypto/authProof';
 import { CopiedToClipboardSnackbar, TooltipIconWrap } from '@encrypt/ui';
 import { ClearAccountDataDialog } from '@encrypt/ui/ClearAccountDataDialog';
-import { gdprPageHref } from '@encrypt/ui/gdprPageHref';
+import { openGdprPage } from '@encrypt/ui/gdprPageHref';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import { useNavigate } from 'react-router-dom';
 import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
@@ -132,7 +132,7 @@ export function FeedntSettingsMenu() {
 
   const handleOpenGdpr = useCallback(() => {
     handleClose();
-    window.location.assign(gdprPageHref());
+    openGdprPage();
   }, [handleClose]);
 
   return (

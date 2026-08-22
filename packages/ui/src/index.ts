@@ -123,8 +123,16 @@ export {
   GDPR_DATA_SECTIONS,
   type GdprDataSection,
 } from './content/gdprDataContent.ts';
-export { renderGdprPageHtml } from './content/renderGdprHtml.ts';
-export { gdprPageHref } from './utils/gdprPageHref.ts';
+export {
+  renderGdprPageHtml,
+  renderGdprPageScript,
+} from './content/renderGdprHtml.ts';
+export {
+  GDPR_RETURN_QUERY_PARAM,
+  gdprPageHref,
+  openGdprPage,
+  type GdprPageHrefOptions,
+} from './utils/gdprPageHref.ts';
 export {
   InvitationQrScanDialog,
   type InvitationQrScanDialogProps,

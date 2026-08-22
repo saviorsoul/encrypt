@@ -4,6 +4,7 @@ import {
   GDPR_DATA_PAGE_TITLE,
   GDPR_DATA_SECTIONS,
 } from './gdprDataContent.ts';
+import { GDPR_RETURN_QUERY_PARAM } from '../utils/gdprPageHref.ts';
 
 function escapeHtml(text: string): string {
   return text
@@ -113,14 +114,14 @@ const PAGE_STYLES = `
   li + li { margin-top: 0.25rem; }
 `;
 
-const THEME_BOOTSTRAP_SCRIPT = `
-(function () {
-  var keys = ['encrypt:feed-lab:settings', 'encrypt:feednt:settings'];
+export function renderGdprPageScript(): string {
+  return `(function () {
+  var settingsKeys = ['encrypt:feed-lab:settings', 'encrypt:feednt:settings'];
   var colorMode = null;
 
   try {
-    for (var i = 0; i < keys.length; i += 1) {
-      var raw = localStorage.getItem(keys[i]);
+    for (var i = 0; i < settingsKeys.length; i += 1) {
+      var raw = localStorage.getItem(settingsKeys[i]);
       if (!raw) {
         continue;
       }
@@ -133,15 +134,48 @@ const THEME_BOOTSTRAP_SCRIPT = `
         break;
       }
     }
-  } catch (_error) {
+  } catch {
     colorMode = null;
   }
 
   if (colorMode) {
     document.documentElement.setAttribute('data-theme', colorMode);
   }
-})();
-`.trim();
+
+  function goBackFromGdpr() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var returnUrl = params.get('${GDPR_RETURN_QUERY_PARAM}');
+      if (returnUrl) {
+        window.location.assign(returnUrl);
+        return;
+      }
+    } catch {
+      // Fall through to history or index.html.
+    }
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.assign('./index.html');
+  }
+
+  function wireBackButton() {
+    var backButton = document.getElementById('gdpr-back-button');
+    if (backButton) {
+      backButton.addEventListener('click', goBackFromGdpr);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireBackButton);
+  } else {
+    wireBackButton();
+  }
+})();\n`;
+}
 
 export function renderGdprPageHtml(): string {
   const sections = GDPR_DATA_SECTIONS.map((section) => {
@@ -168,12 +202,12 @@ export function renderGdprPageHtml(): string {
     <title>${escapeHtml(GDPR_DATA_PAGE_TITLE)}</title>
     <meta name="description" content="${escapeHtml(GDPR_DATA_PAGE_INTRO)}" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <script>${THEME_BOOTSTRAP_SCRIPT}</script>
+    <script src="./gdpr.js"></script>
     <style>${PAGE_STYLES}</style>
   </head>
   <body>
     <main class="page">
-      <button type="button" class="back" onclick="history.back()">Back</button>
+      <button type="button" class="back" id="gdpr-back-button">Back</button>
       <h1>${escapeHtml(GDPR_DATA_PAGE_TITLE)}</h1>
       <p class="intro"><b>${escapeHtml(GDPR_DATA_PAGE_INTRO)}</b></p>
       <p class="notice">${escapeHtml(GDPR_DATA_PAGE_NOTICE)}</p>

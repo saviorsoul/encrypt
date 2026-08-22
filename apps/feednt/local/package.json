@@ -14,7 +14,9 @@
     "node": ">=24"
   },
   "scripts": {
+    "predev": "npm run generate:gdpr-html -w @encrypt/ui",
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5180 && node scripts/electron-dev.mjs\"",
+    "prebuild": "npm run generate:gdpr-html -w @encrypt/ui",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "build:electron": "npm run build",
     "electron:dev": "npm run dev",
