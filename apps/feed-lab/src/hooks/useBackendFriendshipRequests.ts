@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import type { CreateFriendshipRequestResult } from '@encrypt/core/api/feedApi';
-import type { FeedApiRequestOptions } from '@encrypt/core/api/feedApi';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useSignNetworkRequest } from '@lab/providers/SignNetworkRequestProvider.tsx';
@@ -13,22 +12,6 @@ import { saveSentInvitation } from '@lab/services/db/sentInvitations.ts';
 export type SendFriendRequestResult =
   | { ok: true; keyId: string; outcome: CreateFriendshipRequestResult }
   | { ok: false; error: string };
-
-type EnsureTargetUserResult =
-  | {
-      ok: true;
-      keyId: string;
-      publicKey: { x: string; y: string };
-    }
-  | { ok: false; error: string };
-
-async function resolveTargetUser(
-  api: ReturnType<typeof useFeedApi>,
-  publicKeyText: string,
-  auth?: FeedApiRequestOptions,
-): Promise<EnsureTargetUserResult> {
-  return ensureBackendUserFromPublicKey(api, publicKeyText, auth);
-}
 
 function validateFriendRequestName(
   trimmedName: string,
@@ -141,19 +124,10 @@ export function useBackendFriendshipRequests(
       setError(null);
       setInfo(null);
       try {
-        const ensured = keys.isSystemAppSession
-          ? await resolveTargetUser(api, publicKeyText)
-          : await keys.withPrivateKey(async (material) =>
-              resolveTargetUser(api, publicKeyText, {
-                auth: { authMaterial: material },
-              }),
-            );
-
-        if (!ensured) {
-          const message = 'Private key is required to send a friend request.';
-          setError(message);
-          return { ok: false, error: message };
-        }
+        const ensured = await ensureBackendUserFromPublicKey(
+          api,
+          publicKeyText,
+        );
 
         if (ensured.ok === false) {
           setError(ensured.error);
@@ -240,7 +214,7 @@ export function useBackendFriendshipRequests(
         });
       });
     },
-    [run, runSignedApiCall],
+    [api, run, runSignedApiCall],
   );
 
   const unfriend = useCallback(
