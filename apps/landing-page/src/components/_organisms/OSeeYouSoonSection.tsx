@@ -1,8 +1,6 @@
 import { Heading } from '@/components/_atoms/AHeading.tsx';
 import { Section } from '@/components/_molecules/MSection.tsx';
-
-const GITHUB_URL = 'https://github.com/saviorsoul/encrypt';
-const DISCORD_INVITE_URL = 'https://discord.gg/PAmgfU7ZR9';
+import { DISCORD_INVITE_URL, GITHUB_URL } from '@/lib/links.ts';
 
 export function SeeYouSoonSection() {
   return (
