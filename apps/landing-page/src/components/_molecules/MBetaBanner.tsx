@@ -1,9 +1,5 @@
 import { useState } from 'react';
-import {
-  DISCORD_INVITE_URL,
-  FEEDNT_TEST_URL,
-  LINKEDIN_URL,
-} from '@/lib/links.ts';
+import { DISCORD_INVITE_URL, FEEDNT_TEST_URL } from '@/lib/links.ts';
 import { cn } from '@/lib/cn.ts';
 import { FeedntText } from '@/components/_molecules/MFeedntText.tsx';
 
@@ -40,15 +36,6 @@ export function BetaBanner() {
               target="_blank"
             >
               Discord
-            </a>
-            , contact on{' '}
-            <a
-              className={linkClassName}
-              href={LINKEDIN_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              LinkedIn
             </a>{' '}
             or just ask your friend for an invitation.
           </p>
