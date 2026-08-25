@@ -1,6 +1,6 @@
 {
   "name": "@encrypt/mobile",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Capacitor shell for the Encrypt app (reuses apps/web UI via Vite aliases)",
   "type": "module",
