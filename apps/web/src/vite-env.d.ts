@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_ELECTRON?: string;
   readonly VITE_CAPACITOR?: string;
+  readonly VITE_ENCRYPT_PROTOCOL_DEEP_LINKS?: string;
   readonly VITE_FEED_LAB_HOSTNAME?: string;
   readonly VITE_FEED_LAB_DEV_HOSTNAME?: string;
   readonly VITE_FEED_LAB_PROTOCOL_BRIDGE?: string;
@@ -27,9 +28,9 @@ export type ExternalTextImportPayload =
   | { sourceName: string; error: string; text?: undefined };
 
 export type TrayAuthState = {
-  canExportPublicKey: boolean;
-  publicKeyText: string | null;
-  isLoggedIn: boolean;
+  canExportPublicKey?: boolean;
+  publicKeyText?: string | null;
+  isLoggedIn?: boolean;
   keyId?: string | null;
 };
 
@@ -112,6 +113,7 @@ interface ElectronBridge {
   onTrayEncryptCopiedMessage: (
     callback: (payload: TrayEncryptCopiedMessagePayload) => void,
   ) => () => void;
+  onTrayCopyPublicKey: (callback: () => void) => () => void;
   onDeepLinkActionRequest: (
     callback: (action: DeepLinkAction) => void,
   ) => () => void;

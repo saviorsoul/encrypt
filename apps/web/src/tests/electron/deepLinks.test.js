@@ -1,5 +1,6 @@
 import process from 'node:process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resetEncryptProtocolConfigForTests } from '../../../electron/encryptProtocolConfig.js';
 import {
   FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
   resetFeedLabBridgeConfigForTests,
@@ -18,6 +19,12 @@ const FEED_OP_URL =
   'encrypt://feed-op?session=s1&requestId=r1&op=ecdsa-sign&payload=eyJ0ZXN0IjoxfQ&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ';
 
 describe('parseDeepLink', () => {
+  afterEach(() => {
+    resetEncryptProtocolConfigForTests();
+    resetFeedLabBridgeConfigForTests();
+    delete process.env.VITE_ENCRYPT_PROTOCOL_DEEP_LINKS;
+    delete process.env.VITE_FEED_LAB_PROTOCOL_BRIDGE;
+  });
   it('parses copy-public-key', () => {
     expect(parseDeepLink('encrypt://copy-public-key')).toEqual({
       ok: true,
@@ -78,6 +85,7 @@ describe('parseDeepLink', () => {
     expect(parseDeepLink(FEED_PAIR_URL)).toEqual({
       ok: false,
       error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+      silent: true,
     });
   });
 
@@ -85,6 +93,25 @@ describe('parseDeepLink', () => {
     expect(parseDeepLink(FEED_OP_URL)).toEqual({
       ok: false,
       error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+      silent: true,
+    });
+  });
+
+  it('rejects all deep link actions when master switch is disabled', () => {
+    process.env.VITE_ENCRYPT_PROTOCOL_DEEP_LINKS = 'false';
+    resetEncryptProtocolConfigForTests();
+
+    expect(parseDeepLink('encrypt://encrypt?text=hello')).toMatchObject({
+      ok: false,
+      silent: true,
+    });
+    expect(parseDeepLink('encrypt://copy-public-key')).toMatchObject({
+      ok: false,
+      silent: true,
+    });
+    expect(parseDeepLink(FEED_PAIR_URL)).toMatchObject({
+      ok: false,
+      silent: true,
     });
   });
 

@@ -22,6 +22,7 @@ import {
   parseDeepLink,
   isBackgroundFeedBridgeDeepLinkAction,
 } from './deepLinks.js';
+import { isEncryptProtocolDeepLinksEnabled } from './encryptProtocolConfig.js';
 import { validateFeedLabOpenExternalUrl } from './feedLabBridgeOpenExternal.js';
 import {
   FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
@@ -65,6 +66,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distIndexPath = path.join(__dirname, '../dist/index.html');
 const LINUX_WM_CLASS = 'encrypt';
 const PROTOCOL_SCHEME = 'encrypt';
+const encryptProtocolDeepLinksEnabled = isEncryptProtocolDeepLinksEnabled();
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('class', LINUX_WM_CLASS);
@@ -144,24 +146,16 @@ let pendingDeepLinkError = null;
 /** @type {string | null} */
 let earlyOpenUrlDeepLink = null;
 
+/** @type {boolean} */
+let pendingTrayCopyPublicKey = false;
+
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
-    const deepLink = findDeepLinkInArgv(argv);
-    if (deepLink) {
-      handleDeepLinkUrl(deepLink);
-      return;
-    }
-
-    // Linux desktop launches sometimes pass the URL only after Electron flags;
-    // also accept a single bare argv entry that failed the first scan after join.
-    const joined = argv.filter((a) => typeof a === 'string').join(' ');
-    const embedded = joined.match(/encrypt:\/\/[^\s'"]+/i);
-    if (embedded) {
-      handleDeepLinkUrl(embedded[0]);
+    if (encryptProtocolDeepLinksEnabled && handleDeepLinkLaunchFromArgv(argv)) {
       return;
     }
 
@@ -173,6 +167,9 @@ if (!gotTheLock) {
   // macOS may deliver the URL before ready.
   app.on('open-url', (event, url) => {
     event.preventDefault();
+    if (!encryptProtocolDeepLinksEnabled) {
+      return;
+    }
     if (app.isReady()) {
       handleDeepLinkUrl(url);
       return;
@@ -275,16 +272,76 @@ function isFeedLabBridgeDeepLinkAction(action) {
 }
 
 /**
- * @param {string} href
+ * @param {string[]} argv
+ * @returns {boolean} Whether a deep link launch was handled.
  */
-function handleDeepLinkUrl(href) {
+function handleDeepLinkLaunchFromArgv(argv) {
+  const deepLink = findDeepLinkInArgv(argv);
+  if (deepLink) {
+    handleDeepLinkUrl(deepLink);
+    return true;
+  }
+
+  // Linux desktop launches sometimes pass the URL only after Electron flags;
+  // also accept a single bare argv entry that failed the first scan after join.
+  const joined = argv.filter((a) => typeof a === 'string').join(' ');
+  const embedded = joined.match(/encrypt:\/\/[^\s'"]+/i);
+  if (embedded) {
+    handleDeepLinkUrl(embedded[0]);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * @param {string} href
+ * @returns {import('./deepLinks.js').DeepLinkAction | null}
+ */
+function dispatchDeepLinkHref(href) {
+  if (!encryptProtocolDeepLinksEnabled) {
+    return null;
+  }
+
   const parsed = parseDeepLink(href);
   if (!parsed.ok) {
-    sendDeepLinkError(parsed.error);
-    return;
+    if (!parsed.silent) {
+      sendDeepLinkError(parsed.error);
+    }
+    return null;
   }
 
   dispatchDeepLinkAction(parsed.action);
+  return parsed.action;
+}
+
+/**
+ * @param {string} href
+ */
+function handleDeepLinkUrl(href) {
+  dispatchDeepLinkHref(href);
+}
+
+/**
+ * Cold-start: open queued files or handle argv / macOS open-url deep link.
+ * @returns {{ showWindowOnReady: boolean }}
+ */
+function runStartupLaunch() {
+  const startupDeepLink = encryptProtocolDeepLinksEnabled
+    ? (earlyOpenUrlDeepLink ?? findDeepLinkInArgv(process.argv))
+    : null;
+  earlyOpenUrlDeepLink = null;
+
+  if (!startupDeepLink) {
+    enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
+    return { showWindowOnReady: true };
+  }
+
+  const action = dispatchDeepLinkHref(startupDeepLink);
+  const showWindowOnReady =
+    !action || !isBackgroundFeedBridgeDeepLinkAction(action);
+
+  return { showWindowOnReady };
 }
 
 /**
@@ -711,6 +768,32 @@ function flashTraySuccessIcon(durationMs = TRAY_SUCCESS_ICON_DURATION_MS) {
   }, durationMs);
 }
 
+function copyTrayPublicKeyToClipboard() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!mainWindow.webContents.isLoading()) {
+      mainWindow.webContents.send('tray:copy-public-key');
+      return;
+    }
+
+    pendingTrayCopyPublicKey = true;
+    return;
+  }
+
+  if (trayPublicKeyText) {
+    clipboard.writeText(trayPublicKeyText);
+    flashTraySuccessIcon();
+  }
+}
+
+function flushPendingTrayCopyPublicKey() {
+  if (!pendingTrayCopyPublicKey || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  pendingTrayCopyPublicKey = false;
+  mainWindow.webContents.send('tray:copy-public-key');
+}
+
 function updateTrayMenu() {
   if (!tray) {
     return;
@@ -730,9 +813,7 @@ function updateTrayMenu() {
     template.push({
       label: 'Copy public key',
       click: () => {
-        if (trayPublicKeyText) {
-          clipboard.writeText(trayPublicKeyText);
-        }
+        copyTrayPublicKeyToClipboard();
       },
     });
   }
@@ -892,6 +973,7 @@ function createWindow({ showOnReady = true } = {}) {
     flushExternalFileQueue();
     flushPendingClipboardImport();
     flushPendingTrayEncryptCopiedMessage();
+    flushPendingTrayCopyPublicKey();
     flushPendingDeepLinkAction();
     flushPendingDeepLinkError();
   });
@@ -1134,14 +1216,28 @@ ipcMain.handle('external-file:consume', (_event, filePath) => {
 });
 
 ipcMain.on('tray:set-auth-state', (_event, state) => {
-  trayCanExportPublicKey = Boolean(state?.canExportPublicKey);
-  trayIsLoggedIn = Boolean(state?.isLoggedIn);
-  trayPublicKeyText =
-    typeof state?.publicKeyText === 'string' ? state.publicKeyText : null;
-  setPrivateKeySafeStorageAuthState({
-    isLoggedIn: trayIsLoggedIn,
-    keyId: typeof state?.keyId === 'string' ? state.keyId : null,
-  });
+  if (typeof state?.canExportPublicKey === 'boolean') {
+    trayCanExportPublicKey = state.canExportPublicKey;
+  }
+  if (typeof state?.isLoggedIn === 'boolean') {
+    trayIsLoggedIn = state.isLoggedIn;
+  }
+  if (state?.publicKeyText !== undefined) {
+    trayPublicKeyText =
+      typeof state.publicKeyText === 'string' ? state.publicKeyText : null;
+  }
+
+  const authPatch = {};
+  if (typeof state?.isLoggedIn === 'boolean') {
+    authPatch.isLoggedIn = state.isLoggedIn;
+  }
+  if (state?.keyId !== undefined) {
+    authPatch.keyId = typeof state.keyId === 'string' ? state.keyId : null;
+  }
+  if (Object.keys(authPatch).length > 0) {
+    setPrivateKeySafeStorageAuthState(authPatch);
+  }
+
   updateTrayMenu();
 });
 
@@ -1162,19 +1258,7 @@ app.whenReady().then(() => {
   configureContentSecurityPolicy();
   blockRemoteNetworkRequests();
 
-  const startupDeepLink =
-    earlyOpenUrlDeepLink ?? findDeepLinkInArgv(process.argv);
-  earlyOpenUrlDeepLink = null;
-  let showWindowOnReady = true;
-  if (startupDeepLink) {
-    const parsed = parseDeepLink(startupDeepLink);
-    if (parsed.ok && isBackgroundFeedBridgeDeepLinkAction(parsed.action)) {
-      showWindowOnReady = false;
-    }
-    handleDeepLinkUrl(startupDeepLink);
-  } else {
-    enqueueExternalFiles(parseFilePathsFromArgv(process.argv));
-  }
+  const { showWindowOnReady } = runStartupLaunch();
 
   createTray();
   if (!mainWindow || mainWindow.isDestroyed()) {

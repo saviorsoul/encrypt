@@ -149,8 +149,6 @@ describe('registerElectronPrivateKeyOnLogin', () => {
     await registerElectronPrivateKeyOnLogin(testJwk);
 
     expect(setTrayAuthState).toHaveBeenCalledWith({
-      canExportPublicKey: false,
-      publicKeyText: null,
       isLoggedIn: true,
       keyId: testMaterial.keyId,
     });

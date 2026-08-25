@@ -40,9 +40,13 @@ export function resetPrivateKeySafeStorageSession() {
  * @param {{ isLoggedIn?: boolean; keyId?: string | null }} state
  */
 export function setPrivateKeySafeStorageAuthState(state) {
-  isLoggedIn = Boolean(state?.isLoggedIn);
-  if (!isLoggedIn) {
-    resetPrivateKeySafeStorageSession();
+  if (typeof state?.isLoggedIn === 'boolean') {
+    isLoggedIn = state.isLoggedIn;
+    if (!isLoggedIn) {
+      resetPrivateKeySafeStorageSession();
+      return;
+    }
+  } else if (!isLoggedIn) {
     return;
   }
 

@@ -69,6 +69,17 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('tray:encrypt-copied-message', listener);
     };
   },
+  onTrayCopyPublicKey: (callback) => {
+    const listener = () => {
+      callback();
+    };
+
+    ipcRenderer.on('tray:copy-public-key', listener);
+
+    return () => {
+      ipcRenderer.removeListener('tray:copy-public-key', listener);
+    };
+  },
   onDeepLinkActionRequest: (callback) => {
     const listener = (_event, action) => {
       callback(action);

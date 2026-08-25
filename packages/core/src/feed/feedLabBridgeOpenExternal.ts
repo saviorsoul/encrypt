@@ -186,7 +186,9 @@ export function validateFeedLabPairCallback(
   return validateFeedLabBridgeCallbackPath(callbackUrl, 'pair');
 }
 
-export function validateFeedLabOpenExternalUrl(urlString: string): string | null {
+export function validateFeedLabOpenExternalUrl(
+  urlString: string,
+): string | null {
   const httpError = validateHttpExternalUrl(urlString);
   if (httpError) {
     return httpError;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useKeysContext } from '@/hooks/useKeysContext.ts';
 import { useStoredUsernames } from '@/hooks/useStoredUsernames.ts';
@@ -19,6 +19,41 @@ export function ElectronTraySync() {
 
     return formatEcPublicKeyText(publicKeyJwk);
   }, [canExportPublicKey, publicKeyJwk]);
+
+  const copyTrayPublicKeyRef = useRef<() => Promise<void>>(async () => {});
+
+  const copyTrayPublicKey = useCallback(async () => {
+    if (!canExportPublicKey || !publicKeyJwk) {
+      return;
+    }
+
+    const text = formatEcPublicKeyText(publicKeyJwk);
+
+    try {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        await window.electron?.writeTextToClipboard(text);
+      }
+      await window.electron?.flashTraySuccess();
+    } catch (caught) {
+      console.error('Failed to copy public key from tray.', caught);
+    }
+  }, [canExportPublicKey, publicKeyJwk]);
+
+  useEffect(() => {
+    copyTrayPublicKeyRef.current = copyTrayPublicKey;
+  }, [copyTrayPublicKey]);
+
+  useEffect(() => {
+    const unsubscribe = window.electron?.onTrayCopyPublicKey(() => {
+      void copyTrayPublicKeyRef.current();
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

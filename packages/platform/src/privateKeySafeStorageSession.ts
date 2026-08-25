@@ -34,9 +34,13 @@ export function setPrivateKeySafeStorageAuthState(state: {
   isLoggedIn?: boolean;
   keyId?: string | null;
 }) {
-  isLoggedIn = Boolean(state?.isLoggedIn);
-  if (!isLoggedIn) {
-    resetPrivateKeySafeStorageSession();
+  if (typeof state.isLoggedIn === 'boolean') {
+    isLoggedIn = state.isLoggedIn;
+    if (!isLoggedIn) {
+      resetPrivateKeySafeStorageSession();
+      return;
+    }
+  } else if (!isLoggedIn) {
     return;
   }
 
@@ -44,7 +48,7 @@ export function setPrivateKeySafeStorageAuthState(state: {
     phase = 'unlock';
   }
 
-  if (typeof state?.keyId === 'string' && KEY_ID_PATTERN.test(state.keyId)) {
+  if (typeof state.keyId === 'string' && KEY_ID_PATTERN.test(state.keyId)) {
     boundKeyId = state.keyId;
   }
 }

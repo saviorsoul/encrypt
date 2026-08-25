@@ -51,8 +51,6 @@ function syncPlatformLoggedInKeySession(keyId: string): void {
 
   if (isElectronApp() && window.electron) {
     window.electron.setTrayAuthState({
-      canExportPublicKey: false,
-      publicKeyText: null,
       isLoggedIn: true,
       keyId,
     });

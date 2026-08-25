@@ -9,6 +9,7 @@
  * - encrypt://feed-op?session=…&requestId=…&op=…&payload=…
  */
 
+import { rejectDisabledEncryptProtocolDeepLinks } from './encryptProtocolConfig.js';
 import {
   FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
   isFeedLabProtocolBridgeEnabled,
@@ -142,6 +143,21 @@ export function parseDeepLink(href) {
 
   const params = url.searchParams;
 
+  const policyError = rejectDisabledEncryptProtocolDeepLinks();
+  if (!policyError.ok) {
+    return policyError;
+  }
+
+  if (action === 'feed-pair' || action === 'feed-op') {
+    if (!isFeedLabProtocolBridgeEnabled()) {
+      return {
+        ok: false,
+        error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+        silent: true,
+      };
+    }
+  }
+
   if (action === 'copy-public-key') {
     if ([...params.keys()].length > 0) {
       return {
@@ -196,12 +212,6 @@ export function parseDeepLink(href) {
     }
 
     return { ok: true, action: { type: 'decrypt', text: textResult.text } };
-  }
-
-  if (action === 'feed-pair' || action === 'feed-op') {
-    if (!isFeedLabProtocolBridgeEnabled()) {
-      return { ok: false, error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE };
-    }
   }
 
   if (action === 'feed-pair') {
