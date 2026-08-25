@@ -3,6 +3,8 @@ import {
   isPrivateKeyMismatchError,
   type UploadedPrivateKeyMaterial,
 } from '@encrypt/core/crypto/privateKeyMaterial';
+import { generateExtractableEcdhKeyPair } from '@encrypt/core/crypto/ecdhKeys';
+import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { getActivePrivateKeyId } from './activePrivateKeyId.ts';
 import {
   ELECTRON_STORED_KEY_UNLOCK_FAILED,
@@ -86,6 +88,11 @@ async function listPrivateKeyIdsFromBridge(): Promise<string[]> {
   return bridge.listPrivateKeyIds();
 }
 
+export async function hasStoredPrivateKeyInSafeStorage(): Promise<boolean> {
+  const storedKeyIds = await listPrivateKeyIdsFromBridge();
+  return storedKeyIds.length > 0;
+}
+
 function getSafeStorageDiscoveryBridge():
   | PrivateKeySafeStorageBridge
   | undefined {
@@ -145,6 +152,39 @@ export async function importPrivateKeyToSafeStorage(): Promise<UploadedPrivateKe
   const material = await importUploadedPrivateKeyMaterial(jwk);
   syncPlatformSafeStorageAuthState(material.keyId);
   await registerElectronPrivateKey(jwk);
+  setActivePrivateKeyId(material.keyId);
+
+  const cached = getCachedPrivateKeyMaterial();
+  return cached ?? material;
+}
+
+export async function generatePrivateKeyToSafeStorage(): Promise<UploadedPrivateKeyMaterial> {
+  if (!hasPlatformSafeStorageBridge()) {
+    throw new Error(FEEDNT_REQUIRES_NATIVE_APP_MESSAGE);
+  }
+
+  const encryptionAvailable = await isElectronPrivateKeyEncryptionAvailable();
+  if (!encryptionAvailable) {
+    throw new Error(
+      'OS secure storage is not available. Unlock your system keychain and try again.',
+    );
+  }
+
+  const storedKeyIds = await listPrivateKeyIdsFromBridge();
+  if (storedKeyIds.length > 1) {
+    throw new Error(FEEDNT_MULTIPLE_STORED_PRIVATE_KEYS_MESSAGE);
+  }
+  if (storedKeyIds.length === 1) {
+    throw new Error(FEEDNT_KEY_ALREADY_STORED_MESSAGE);
+  }
+
+  const keyPair = await generateExtractableEcdhKeyPair();
+  const privateJwk = slimEcPrivateJwk(
+    (await crypto.subtle.exportKey('jwk', keyPair.privateKey)) as JsonWebKey,
+  );
+  const material = await importUploadedPrivateKeyMaterial(privateJwk);
+  syncPlatformSafeStorageAuthState(material.keyId);
+  await registerElectronPrivateKey(privateJwk);
   setActivePrivateKeyId(material.keyId);
 
   const cached = getCachedPrivateKeyMaterial();

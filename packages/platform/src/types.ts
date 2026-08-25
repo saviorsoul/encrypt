@@ -32,7 +32,9 @@ export type TrayAuthState = {
 export interface PlatformAdapter {
   privateKey: {
     withUploadedPrivateKey<T>(
-      fn: (material: import('@encrypt/core/crypto/privateKeyMaterial').UploadedPrivateKeyMaterial) => Promise<T>,
+      fn: (
+        material: import('@encrypt/core/crypto/privateKeyMaterial').UploadedPrivateKeyMaterial,
+      ) => Promise<T>,
     ): Promise<T>;
     clearStorage(): void;
   };

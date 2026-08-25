@@ -8,19 +8,14 @@ const FeedApiContext = createContext<FeedApi | null>(null);
 export function FeedApiProvider({ children }: { children: ReactNode }) {
   const { session } = useFeedntSession();
 
-  const api = useMemo(() => {
-    if (!session) {
-      return null;
-    }
-    return createFeedApi({
-      baseUrl: getApiBaseUrl(),
-      auth: session.authProvider,
-    });
-  }, [session]);
-
-  if (!api) {
-    return <>{children}</>;
-  }
+  const api = useMemo(
+    () =>
+      createFeedApi({
+        baseUrl: getApiBaseUrl(),
+        ...(session ? { auth: session.authProvider } : {}),
+      }),
+    [session],
+  );
 
   return (
     <FeedApiContext.Provider value={api}>{children}</FeedApiContext.Provider>
@@ -30,7 +25,7 @@ export function FeedApiProvider({ children }: { children: ReactNode }) {
 export function useFeedApi(): FeedApi {
   const api = useContext(FeedApiContext);
   if (!api) {
-    throw new Error('useFeedApi requires an authenticated session.');
+    throw new Error('useFeedApi must be used within FeedApiProvider');
   }
   return api;
 }

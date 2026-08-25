@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -105,7 +106,8 @@ export function InvitePage() {
   const { token: routeToken } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const api = useFeedApi();
-  const { session, sessionError, keys, feedntUsers } = useFeedntSession();
+  const { session, sessionError, keys, feedntUsers, importKey, generateKey } =
+    useFeedntSession();
   const { addLocalUser, refresh: refreshFeedntUsers } = feedntUsers;
   const keyId = session?.keyId ?? keys.keyId;
   const publicKey = session?.publicKey;
@@ -123,6 +125,7 @@ export function InvitePage() {
   const inviteFlowFinishedRef = useRef(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [gdprConsent, setGdprConsent] = useState(false);
+  const [keySetupBusy, setKeySetupBusy] = useState(false);
 
   const inviterDisplayLabel =
     inviterName.trim() ||
@@ -315,6 +318,35 @@ export function InvitePage() {
     refreshFeedntUsers,
   ]);
 
+  const handleGenerateKeyPair = useCallback(async () => {
+    setAcceptError(null);
+    setKeySetupBusy(true);
+    try {
+      const ok = await generateKey();
+      if (!ok) {
+        return;
+      }
+    } finally {
+      setKeySetupBusy(false);
+    }
+  }, [generateKey]);
+
+  const handleImportPrivateKey = useCallback(async () => {
+    setAcceptError(null);
+    setKeySetupBusy(true);
+    try {
+      await importKey();
+    } finally {
+      setKeySetupBusy(false);
+    }
+  }, [importKey]);
+
+  const handleCancel = useCallback(() => {
+    navigate(session ? '/feed' : '/login');
+  }, [navigate, session]);
+
+  const busy = keySetupBusy;
+
   if (step === 'loading') {
     return (
       <InvitePageShell>
@@ -360,8 +392,8 @@ export function InvitePage() {
           <Alert severity="error" sx={{ mb: 2 }}>
             {loadError ?? 'Invitation not found.'}
           </Alert>
-          <Button variant="contained" onClick={() => navigate('/users')}>
-            Go to Users
+          <Button variant="contained" onClick={() => navigate('/login')}>
+            Back to sign in
           </Button>
         </Paper>
       </InvitePageShell>
@@ -375,8 +407,8 @@ export function InvitePage() {
           <Alert severity="warning" sx={{ mb: 2 }}>
             This invitation has already been used and cannot be opened again.
           </Alert>
-          <Button variant="contained" onClick={() => navigate('/users')}>
-            Go to Users
+          <Button variant="contained" onClick={() => navigate('/login')}>
+            Back to sign in
           </Button>
         </Paper>
       </InvitePageShell>
@@ -391,7 +423,9 @@ export function InvitePage() {
             Accept invite
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center">
-            Verify the public key below, then accept with your key in this app.
+            {keyId
+              ? 'Verify the public key below, then accept with your key in this app.'
+              : 'Verify the public key below, then generate a new key pair or import an existing private key into secure storage.'}
           </Typography>
 
           {routeToken?.trim() ? (
@@ -446,23 +480,48 @@ export function InvitePage() {
           <GdprConsentCheckbox
             checked={gdprConsent}
             onChange={setGdprConsent}
+            disabled={busy}
           />
 
-          <Button
-            data-testid="invite-accept"
-            variant="contained"
-            fullWidth
-            disabled={!keyId || !gdprConsent}
-            onClick={() => void handleAcceptInvitation()}
-          >
-            Accept invite
-          </Button>
+          {keyId ? (
+            <Button
+              data-testid="invite-accept"
+              variant="contained"
+              fullWidth
+              disabled={!gdprConsent || busy}
+              onClick={() => void handleAcceptInvitation()}
+            >
+              Accept invite
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outlined"
+                fullWidth
+                disabled={!gdprConsent || busy}
+                onClick={() => void handleGenerateKeyPair()}
+              >
+                {keySetupBusy ? 'Generating…' : 'Generate new key pair'}
+              </Button>
+              <Button
+                data-testid="invite-use-private-key-to-accept"
+                variant="contained"
+                fullWidth
+                startIcon={<UploadFileOutlinedIcon />}
+                disabled={!gdprConsent || busy}
+                onClick={() => void handleImportPrivateKey()}
+              >
+                {keySetupBusy ? 'Opening file picker…' : 'Import private key'}
+              </Button>
+            </>
+          )}
 
           <Button
             data-testid="invite-cancel"
             variant="outlined"
             fullWidth
-            onClick={() => navigate('/feed')}
+            disabled={busy}
+            onClick={handleCancel}
           >
             Cancel
           </Button>

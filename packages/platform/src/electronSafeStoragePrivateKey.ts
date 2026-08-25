@@ -9,7 +9,6 @@ import {
   getCachedPrivateKeyMaterial,
 } from './sessionPrivateKeyStorage.ts';
 import { parsePrivateKeyJwkText } from './privateKeyJwkText.ts';
-import { isCapacitorApp } from './isCapacitorApp.ts';
 import { isElectronApp } from './isElectronApp.ts';
 import { getPrivateKeySafeStorageBridge } from './platformBridge.ts';
 import { setPrivateKeySafeStorageAuthState } from './privateKeySafeStorageSession.ts';

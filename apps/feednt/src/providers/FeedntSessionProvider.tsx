@@ -13,6 +13,7 @@ import {
 } from '@encrypt/core/api/feedApiAuth';
 import { getCachedPrivateKeyMaterial } from '@encrypt/platform/sessionPrivateKeyStorage';
 import {
+  generatePrivateKeyToSafeStorage,
   importPrivateKeyToSafeStorage,
   isPrivateKeyImportSelectionCancelled,
   unlockPrivateKeyMaterialFromSafeStorage,
@@ -37,6 +38,7 @@ type FeedntSessionContextValue = {
   feedntUsers: ReturnType<typeof useFeedntUsers>;
   unlock: () => Promise<boolean>;
   importKey: () => Promise<boolean>;
+  generateKey: () => Promise<boolean>;
   signOut: () => void;
   clearSessionError: () => void;
 };
@@ -133,6 +135,27 @@ export function FeedntSessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const generateKey = useCallback(async (): Promise<boolean> => {
+    setSessionError(null);
+    try {
+      const material = await generatePrivateKeyToSafeStorage();
+      setActivePrivateKeyId(material.keyId);
+      setPrivateKeySafeStorageAuthState({
+        isLoggedIn: true,
+        keyId: material.keyId,
+      });
+      setSession(createSessionFromMaterial(material));
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate a private key in secure storage.';
+      setSessionError(message);
+      return false;
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       session,
@@ -141,6 +164,7 @@ export function FeedntSessionProvider({ children }: { children: ReactNode }) {
       feedntUsers,
       unlock,
       importKey,
+      generateKey,
       signOut,
       clearSessionError,
     }),
@@ -151,6 +175,7 @@ export function FeedntSessionProvider({ children }: { children: ReactNode }) {
       feedntUsers,
       unlock,
       importKey,
+      generateKey,
       signOut,
       clearSessionError,
     ],

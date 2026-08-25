@@ -31,8 +31,8 @@ export function App() {
             >
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/invite/:token" element={<InvitePage />} />
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/invite/:token" element={<InvitePage />} />
                   <Route element={<FeedntLayout />}>
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/users" element={<FeedPage />} />
