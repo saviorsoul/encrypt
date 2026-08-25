@@ -25,18 +25,33 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            platform: linux
+            app: encrypt
+            workspace: '@encrypt/web'
             builder_args: --linux deb
-            artifact: electron-linux
+            artifact: electron-linux-encrypt
             artifact_path: apps/web/release/*.deb
           - os: windows-latest
-            platform: win
+            app: encrypt
+            workspace: '@encrypt/web'
             builder_args: --win nsis
-            artifact: electron-windows
+            artifact: electron-windows-encrypt
             artifact_path: apps/web/release/*.exe
+          - os: ubuntu-latest
+            app: feednt
+            workspace: '@feednt/local'
+            builder_args: --linux deb
+            artifact: electron-linux-feednt
+            artifact_path: apps/feednt/local/release/*.deb
+          - os: windows-latest
+            app: feednt
+            workspace: '@feednt/local'
+            builder_args: --win nsis
+            artifact: electron-windows-feednt
+            artifact_path: apps/feednt/local/release/*.exe
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false
+      VITE_API_URL: ${{ vars.VITE_API_URL }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -58,8 +73,8 @@ jobs:
 
       - name: Build and package Electron installer
         run: |
-          npm run build:electron -w @encrypt/web
-          npm run electron:package -w @encrypt/web -- ${{ matrix.builder_args }}
+          npm run build:electron -w ${{ matrix.workspace }}
+          npm run electron:package -w ${{ matrix.workspace }} -- ${{ matrix.builder_args }}
 
       - uses: actions/upload-artifact@v6
         with:
@@ -111,12 +126,12 @@ jobs:
           if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
             title="Electron release published"
             color=5763719
-            status="Linux (.deb) and Windows (.exe) installers are available on GitHub Releases."
+            status="Encrypt and Feednt Linux (.deb) and Windows (.exe) installers are available on GitHub Releases."
             status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
           elif [[ "$BUILD_RESULT" != "success" ]]; then
             title="Electron release build failed"
             color=15548997
-            status="One or both platform builds did not complete successfully."
+            status="One or more platform builds did not complete successfully."
           else
             title="Electron release publish failed"
             color=15548997
