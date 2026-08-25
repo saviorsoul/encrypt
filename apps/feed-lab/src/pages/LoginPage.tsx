@@ -91,6 +91,13 @@ export function LoginPage() {
           Sign in
         </Typography>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
+          <Alert severity="warning">
+            You&apos;re using Feed Lab. Keys you generate or load in the browser
+            should not be considered secure - they are by design kept as a
+            plaintext in your regular filesystem. Using the Feed API in a
+            browser is for demonstration only: to check what the app does before
+            installing native Desktop or Mobile Feedn't application.
+          </Alert>
           {protocolBridgeEnabled ? (
             <>
               <Typography variant="body2" color="text.secondary">

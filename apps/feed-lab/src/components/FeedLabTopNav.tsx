@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, IconButton, Stack, Tooltip } from '@mui/material';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
-import { FeedntText } from '@lab/components/FeedntText.tsx';
+import { FeedLabText } from '@lab/components/FeedLabText.tsx';
 import { FeedLabSettingsMenu } from '@lab/components/FeedLabSettingsMenu.tsx';
 import { TooltipIconWrap } from '@encrypt/ui';
 
@@ -25,7 +25,7 @@ export function FeedLabTopNav({
           width: '100%',
         }}
       >
-        <FeedntText />
+        <FeedLabText />
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
           <Tooltip title="Users">
             <TooltipIconWrap>
