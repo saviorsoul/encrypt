@@ -1,10 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import process from 'node:process';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+  resetFeedLabBridgeConfigForTests,
+} from '../../../electron/feedLabBridgeConfig.js';
 import {
   buildDeepLink,
   findDeepLinkInArgv,
   isBackgroundFeedBridgeDeepLinkAction,
   parseDeepLink,
 } from '../../../electron/deepLinks.js';
+
+const FEED_PAIR_URL =
+  'encrypt://feed-pair?origin=https%3A%2F%2Ffeednt.com&session=abc&callback=https%3A%2F%2Ffeednt.com%2F%23%2Fbridge-callback%2Fpair&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ';
+
+const FEED_OP_URL =
+  'encrypt://feed-op?session=s1&requestId=r1&op=ecdsa-sign&payload=eyJ0ZXN0IjoxfQ&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ';
 
 describe('parseDeepLink', () => {
   it('parses copy-public-key', () => {
@@ -63,12 +74,49 @@ describe('parseDeepLink', () => {
     expect(parseDeepLink('encrypt://encrypt?text=hi&extra=1').ok).toBe(false);
   });
 
-  it('parses feed-pair', () => {
+  it('rejects feed-pair when protocol bridge is disabled', () => {
+    expect(parseDeepLink(FEED_PAIR_URL)).toEqual({
+      ok: false,
+      error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+    });
+  });
+
+  it('rejects feed-op when protocol bridge is disabled', () => {
+    expect(parseDeepLink(FEED_OP_URL)).toEqual({
+      ok: false,
+      error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+    });
+  });
+
+  it('detects background op-quick feed-op actions', () => {
     expect(
-      parseDeepLink(
-        'encrypt://feed-pair?origin=https%3A%2F%2Ffeednt.com&session=abc&callback=https%3A%2F%2Ffeednt.com%2F%23%2Fbridge-callback%2Fpair&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ',
-      ),
-    ).toEqual({
+      isBackgroundFeedBridgeDeepLinkAction({
+        type: 'feed-op',
+        op: 'op-quick',
+      }),
+    ).toBe(true);
+    expect(
+      isBackgroundFeedBridgeDeepLinkAction({
+        type: 'feed-op',
+        op: 'ecdsa-sign',
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('parseDeepLink feed bridge (protocol bridge enabled)', () => {
+  beforeEach(() => {
+    process.env.VITE_FEED_LAB_PROTOCOL_BRIDGE = 'true';
+    resetFeedLabBridgeConfigForTests();
+  });
+
+  afterEach(() => {
+    delete process.env.VITE_FEED_LAB_PROTOCOL_BRIDGE;
+    resetFeedLabBridgeConfigForTests();
+  });
+
+  it('parses feed-pair', () => {
+    expect(parseDeepLink(FEED_PAIR_URL)).toEqual({
       ok: true,
       action: {
         type: 'feed-pair',
@@ -98,11 +146,7 @@ describe('parseDeepLink', () => {
   });
 
   it('parses feed-op', () => {
-    expect(
-      parseDeepLink(
-        'encrypt://feed-op?session=s1&requestId=r1&op=ecdsa-sign&payload=eyJ0ZXN0IjoxfQ&bridgeSessionKeyId=b1&bridgeSessionPublicJwk=eyJrMSI6InYifQ',
-      ),
-    ).toEqual({
+    expect(parseDeepLink(FEED_OP_URL)).toEqual({
       ok: true,
       action: {
         type: 'feed-op',
@@ -116,21 +160,6 @@ describe('parseDeepLink', () => {
         bridgeSessionPublicJwk: 'eyJrMSI6InYifQ',
       },
     });
-  });
-
-  it('detects background op-quick feed-op actions', () => {
-    expect(
-      isBackgroundFeedBridgeDeepLinkAction({
-        type: 'feed-op',
-        op: 'op-quick',
-      }),
-    ).toBe(true);
-    expect(
-      isBackgroundFeedBridgeDeepLinkAction({
-        type: 'feed-op',
-        op: 'ecdsa-sign',
-      }),
-    ).toBe(false);
   });
 });
 

@@ -9,6 +9,10 @@
  * - encrypt://feed-op?session=…&requestId=…&op=…&payload=…
  */
 
+import {
+  FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE,
+  isFeedLabProtocolBridgeEnabled,
+} from './feedLabBridgeConfig.js';
 import { validateFeedLabPairCallback } from './feedLabBridgeOpenExternal.js';
 
 /** Practical cap for decrypt JSON in a URL (OS argv / URL length limits). */
@@ -192,6 +196,12 @@ export function parseDeepLink(href) {
     }
 
     return { ok: true, action: { type: 'decrypt', text: textResult.text } };
+  }
+
+  if (action === 'feed-pair' || action === 'feed-op') {
+    if (!isFeedLabProtocolBridgeEnabled()) {
+      return { ok: false, error: FEED_LAB_PROTOCOL_BRIDGE_DISABLED_MESSAGE };
+    }
   }
 
   if (action === 'feed-pair') {
