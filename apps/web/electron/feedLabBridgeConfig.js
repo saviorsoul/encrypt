@@ -112,7 +112,6 @@ function buildConfig() {
     readEnv('VITE_FEED_LAB_DEV_HOSTNAME'),
     DEFAULT_DEV_HOSTNAME,
   );
-  const hashRouter = parseBoolean(readEnv('VITE_FEED_LAB_HASH_ROUTER'), true);
   const protocolBridge = parseBoolean(
     readEnv('VITE_FEED_LAB_PROTOCOL_BRIDGE'),
     false,
@@ -130,7 +129,6 @@ function buildConfig() {
   return {
     hostname: hostname.toLowerCase(),
     devHostname: devHostnamesList[0] ?? DEFAULT_DEV_HOSTNAME,
-    hashRouter,
     protocolBridge,
     allowedHostnames,
     devHostnames,

@@ -70,10 +70,10 @@ Feed Lab bridge callbacks are opened via `shell.openExternal` in the Electron ma
 - IPC sender must be the trusted main window (`assertPrivateKeyIpcSender`)
 - Only `http:` / `https:` URLs (no `file:`, custom schemes, or embedded credentials)
 - Hostname must match **`VITE_FEED_LAB_HOSTNAME`** (default `feednt.com`, `https` only) or **`VITE_FEED_LAB_DEV_HOSTNAME`** (default `localhost`, `http` only)
-- When **`VITE_FEED_LAB_HASH_ROUTER=true`** (default), production-host callbacks must use hash routes (`#/bridge-callback`); dev host uses pathname routes
+- When **`VITE_FEED_LAB_PROTOCOL_BRIDGE=true`**, production-host callbacks must use hash routes (`#/bridge-callback`); dev host uses pathname routes
 - `encrypt://feed-pair` rejects callbacks whose origin does not match the `origin` param (validated in `deepLinks.js` and again before opening)
 
-Validation lives in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts), [`feedLabBridgeOpenExternal.ts`](../../packages/core/src/feed/feedLabBridgeOpenExternal.ts) (renderer), and [`feedLabBridgeOpenExternal.js`](../../apps/web/electron/feedLabBridgeOpenExternal.js) (main / deep-link parser). Configure via `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, and `VITE_FEED_LAB_HASH_ROUTER` in repo-root `.env`.
+Validation lives in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts), [`feedLabBridgeOpenExternal.ts`](../../packages/core/src/feed/feedLabBridgeOpenExternal.ts) (renderer), and [`feedLabBridgeOpenExternal.js`](../../apps/web/electron/feedLabBridgeOpenExternal.js) (main / deep-link parser). Configure via `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, and `VITE_FEED_LAB_PROTOCOL_BRIDGE` in repo-root `.env`.
 
 ### 8. Protocol bridge feature flag (default off)
 
@@ -135,6 +135,15 @@ Flag is read in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabB
 - Initial implementation; superseded by thin oracles + local symmetric crypto to reduce round-trips and keep ciphertext handling in feed-lab
 
 ## Changes
+
+### 2026-08-25 — Hash-route validation tied to protocol bridge flag
+
+| Topic | As accepted | Current |
+| ----- | ----------- | ------- |
+| Production callback URL shape | Controlled by separate **`VITE_FEED_LAB_HASH_ROUTER`** (default `true` in `.env.example`) | Removed **`VITE_FEED_LAB_HASH_ROUTER`**; when **`VITE_FEED_LAB_PROTOCOL_BRIDGE=true`**, production-host callbacks must use hash routes (`#/bridge-callback`); when the bridge is off, hash-route rules are not applied |
+| Bridge env surface | `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, `VITE_FEED_LAB_HASH_ROUTER`, `VITE_FEED_LAB_PROTOCOL_BRIDGE` | `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, `VITE_FEED_LAB_PROTOCOL_BRIDGE` only (see §7–§8) |
+
+Rationale: hash-route validation is only relevant when the protocol bridge is enabled; a separate env var duplicated that gate and was listed in `.env.example` even for users who never enable the bridge.
 
 ### 2026-08-10 — Protocol bridge feature flag
 

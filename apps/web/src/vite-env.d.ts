@@ -5,7 +5,6 @@ interface ImportMetaEnv {
   readonly VITE_CAPACITOR?: string;
   readonly VITE_FEED_LAB_HOSTNAME?: string;
   readonly VITE_FEED_LAB_DEV_HOSTNAME?: string;
-  readonly VITE_FEED_LAB_HASH_ROUTER?: string;
   readonly VITE_FEED_LAB_PROTOCOL_BRIDGE?: string;
 }
 

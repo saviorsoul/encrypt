@@ -3,11 +3,10 @@ export type FeedLabBridgeConfig = {
   hostname: string;
   /** Additional dev hostname allowed for local feed-lab (e.g. localhost). */
   devHostname: string;
-  /** When true, callbacks on `hostname` must use hash routes (#/bridge-callback). */
-  hashRouter: boolean;
   /**
    * When true, feed-lab may use `encrypt://feed-pair` / `encrypt://feed-op` to
-   * reach the Electron / Capacitor system app. Off by default (clipboard/file
+   * reach the Electron / Capacitor system app. Production-host callbacks must
+   * then use hash routes (`#/bridge-callback`). Off by default (clipboard/file
    * key flows are safer).
    */
   protocolBridge: boolean;
@@ -75,7 +74,10 @@ function formatAllowedHostnameHint(config: FeedLabBridgeConfig): string {
 
 export { formatAllowedHostnameHint };
 
-function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+function parseBoolean(
+  value: string | undefined,
+  defaultValue: boolean,
+): boolean {
   if (value === undefined || value === '') {
     return defaultValue;
   }
@@ -84,7 +86,8 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
 
 function readEnv(name: string): string | undefined {
   if (typeof import.meta !== 'undefined') {
-    const env = (import.meta as { env?: Record<string, string | undefined> }).env;
+    const env = (import.meta as { env?: Record<string, string | undefined> })
+      .env;
     const fromVite = env?.[name];
     if (typeof fromVite === 'string' && fromVite) {
       return fromVite;
@@ -108,12 +111,12 @@ function parseHostnameList(
 }
 
 function buildConfig(): FeedLabBridgeConfig {
-  const hostname = readEnv('VITE_FEED_LAB_HOSTNAME')?.trim() || DEFAULT_HOSTNAME;
+  const hostname =
+    readEnv('VITE_FEED_LAB_HOSTNAME')?.trim() || DEFAULT_HOSTNAME;
   const devHostnamesList = parseHostnameList(
     readEnv('VITE_FEED_LAB_DEV_HOSTNAME'),
     DEFAULT_DEV_HOSTNAME,
   );
-  const hashRouter = parseBoolean(readEnv('VITE_FEED_LAB_HASH_ROUTER'), true);
   const protocolBridge = parseBoolean(
     readEnv('VITE_FEED_LAB_PROTOCOL_BRIDGE'),
     false,
@@ -131,7 +134,6 @@ function buildConfig(): FeedLabBridgeConfig {
   return {
     hostname: hostname.toLowerCase(),
     devHostname: devHostnamesList[0] ?? DEFAULT_DEV_HOSTNAME,
-    hashRouter,
     protocolBridge,
     allowedHostnames,
     devHostnames,

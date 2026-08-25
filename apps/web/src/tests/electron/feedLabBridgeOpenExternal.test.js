@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   feedLabBridgeCallbackRoutePath,
@@ -12,7 +13,7 @@ import {
 function useDefaultBridgeEnv() {
   process.env.VITE_FEED_LAB_HOSTNAME = 'feednt.com';
   process.env.VITE_FEED_LAB_DEV_HOSTNAME = 'localhost';
-  process.env.VITE_FEED_LAB_HASH_ROUTER = 'true';
+  process.env.VITE_FEED_LAB_PROTOCOL_BRIDGE = 'true';
   resetFeedLabBridgeConfigForTests();
 }
 
@@ -27,14 +28,12 @@ const LOCAL_PAIR_CALLBACK = 'http://localhost:5174/bridge-callback/pair';
 const LOCAL_OP_CALLBACK = 'http://localhost:5174/bridge-callback';
 
 describe('getFeedLabBridgeConfig', () => {
-  it('reads hostname and hash router from env', () => {
+  it('reads hostname from env', () => {
     process.env.VITE_FEED_LAB_HOSTNAME = 'custom.example';
-    process.env.VITE_FEED_LAB_HASH_ROUTER = 'false';
     resetFeedLabBridgeConfigForTests();
 
     const config = getFeedLabBridgeConfig();
     expect(config.hostname).toBe('custom.example');
-    expect(config.hashRouter).toBe(false);
   });
 });
 
@@ -65,10 +64,7 @@ describe('validateFeedLabPairCallback', () => {
 
   it('accepts localhost dev pair callbacks', () => {
     expect(
-      validateFeedLabPairCallback(
-        LOCAL_PAIR_CALLBACK,
-        'http://localhost:5174',
-      ),
+      validateFeedLabPairCallback(LOCAL_PAIR_CALLBACK, 'http://localhost:5174'),
     ).toBeNull();
   });
 
@@ -109,9 +105,9 @@ describe('validateFeedLabPairCallback', () => {
   });
 
   it('rejects non-pair callback paths', () => {
-    expect(
-      validateFeedLabPairCallback(PROD_OP_CALLBACK, PROD_ORIGIN),
-    ).toMatch(/pair route/);
+    expect(validateFeedLabPairCallback(PROD_OP_CALLBACK, PROD_ORIGIN)).toMatch(
+      /pair route/,
+    );
   });
 
   it('rejects http on production hostname', () => {
@@ -145,7 +141,7 @@ describe('validateFeedLabBridgeCallbackPath', () => {
     expect(path).toBe('/bridge-callback/pair');
   });
 
-  it('rejects production pathname routes when hash router is enabled', () => {
+  it('rejects production pathname routes when protocol bridge is enabled', () => {
     expect(
       validateFeedLabBridgeCallbackPath(
         `${PROD_ORIGIN}/bridge-callback/pair`,
@@ -154,8 +150,8 @@ describe('validateFeedLabBridgeCallbackPath', () => {
     ).toMatch(/hash routes/);
   });
 
-  it('allows production pathname routes when hash router is disabled', () => {
-    process.env.VITE_FEED_LAB_HASH_ROUTER = 'false';
+  it('allows production pathname routes when protocol bridge is disabled', () => {
+    delete process.env.VITE_FEED_LAB_PROTOCOL_BRIDGE;
     resetFeedLabBridgeConfigForTests();
 
     expect(

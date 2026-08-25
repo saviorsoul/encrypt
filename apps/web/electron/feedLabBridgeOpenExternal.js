@@ -89,11 +89,11 @@ export function validateFeedLabCallbackUrlShape(url) {
   const path = feedLabBridgeCallbackRoutePath(url);
 
   if (hostname === config.hostname) {
-    if (config.hashRouter && !url.hash.startsWith('#/')) {
+    if (config.protocolBridge && !url.hash.startsWith('#/')) {
       return 'Feed Lab production callbacks must use hash routes (#/bridge-callback).';
     }
 
-    if (config.hashRouter) {
+    if (config.protocolBridge) {
       const pathname = url.pathname.replace(/\/$/, '') || '';
       if (pathname && pathname !== '/') {
         return 'Feed Lab production callback URLs must be served from the site root.';
