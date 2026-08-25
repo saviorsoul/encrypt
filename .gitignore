@@ -18,6 +18,8 @@ playwright/.cache/
 dist/
 apps/web/release
 apps/feednt/local/release
+apps/feednt/local/electron/build-env.json
+apps/feednt/dist/feednt-build-env.json
 
 # misc
 .DS_Store

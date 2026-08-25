@@ -21,7 +21,6 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
    | `.env.example`  | Template for local `.env`                        |
    | `.env`          | Gitignored local dev (copy from `.env.example`)  |
    | `.env.docker`   | Docker stack (`POSTGRES_*`, API, feed-lab proxy) |
-   | `.env.electron` | Committed; `VITE_ELECTRON` for Electron builds   |
 
    `npm run dev:stack` passes `--env-file .env.docker` automatically.
 
@@ -54,7 +53,7 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
 
 The API container publishes `3000:3000` on the host. Phones and emulators must use your **machine's LAN IP** — they cannot reach `localhost` on your PC.
 
-Capacitor WebView origin is `http://localhost`; ensure `.env.docker` includes `http://localhost` in `CORS_ALLOWED_ORIGINS` (default stack already does).
+Capacitor WebView origin is `https://localhost` (or `http://localhost` when the API URL is plain HTTP). Native apps should use CapacitorHttp so API CORS does not need localhost origins. For feed-lab browser dev, `.env.docker` includes `http://localhost` in `CORS_ALLOWED_ORIGINS`.
 
 Phone and PC must be on the same Wi‑Fi.
 

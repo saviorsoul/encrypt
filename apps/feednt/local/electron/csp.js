@@ -1,8 +1,6 @@
-const META_INCOMPATIBLE_DIRECTIVES = new Set([
-  'frame-ancestors',
-  'report-uri',
-  'report-to',
-]);
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const GOOGLE_FONTS_STYLE = 'https://fonts.googleapis.com';
 const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';
@@ -89,7 +87,26 @@ export function buildNetworkAppCsp(options) {
   return serializeDirectives(buildDirectives(options));
 }
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+function readBuildApiUrl() {
+  const buildEnvPath = path.join(moduleDir, 'build-env.json');
+  if (existsSync(buildEnvPath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(buildEnvPath, 'utf8'));
+      const apiUrl = parsed.apiUrl?.trim();
+      if (apiUrl) {
+        return apiUrl;
+      }
+    } catch {
+      // fall through to process.env
+    }
+  }
+
+  return process.env.VITE_API_URL ?? '';
+}
+
 export function getFeedntElectronCsp(isDevServer) {
-  const apiUrl = process.env.VITE_API_URL ?? '';
+  const apiUrl = readBuildApiUrl();
   return buildNetworkAppCsp({ isDevServer, apiUrl });
 }

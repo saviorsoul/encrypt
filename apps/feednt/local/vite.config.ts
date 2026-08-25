@@ -1,14 +1,15 @@
 import path from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { feedntNativeBuildEnvPlugin } from '../vite/feedntNativeBuildEnvPlugin.ts';
 import { contentSecurityPolicyPlugin } from './vite/contentSecurityPolicyPlugin.ts';
 
 const repoRoot = path.resolve(__dirname, '../../..');
 const feedntRoot = path.resolve(__dirname, '..');
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const isDevServer = command === 'serve';
-  const env = loadEnv(command, repoRoot, '');
+  const env = loadEnv(mode, repoRoot, '');
   const apiProxyTarget = env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
 
   return {
@@ -25,6 +26,13 @@ export default defineConfig(({ command }) => {
       contentSecurityPolicyPlugin({
         isDevServer,
         apiUrl: env.VITE_API_URL,
+      }),
+      feedntNativeBuildEnvPlugin({
+        apiUrl: env.VITE_API_URL,
+        electronBuildEnvPath: path.resolve(
+          __dirname,
+          'electron/build-env.json',
+        ),
       }),
     ],
     resolve: {

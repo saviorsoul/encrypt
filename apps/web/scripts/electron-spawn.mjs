@@ -14,7 +14,6 @@ const projectRoot = path.join(
 const repoRoot = path.join(projectRoot, '../..');
 
 dotenv.config({ path: path.join(repoRoot, '.env') });
-dotenv.config({ path: path.join(repoRoot, '.env.electron') });
 
 /** @param {string[]} forwardedArgs */
 export function runElectron(forwardedArgs = []) {
