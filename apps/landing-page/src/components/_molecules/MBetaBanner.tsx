@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { DISCORD_INVITE_URL, FEEDNT_TEST_URL } from '@/lib/links.ts';
+import {
+  DISCORD_INVITE_URL,
+  FEEDNT_TEST_URL,
+  GITHUB_RELEASES_URL,
+} from '@/lib/links.ts';
 import { cn } from '@/lib/cn.ts';
 import { FeedntText } from '@/components/_molecules/MFeedntText.tsx';
 
@@ -40,6 +44,15 @@ export function BetaBanner() {
             or just ask your friend for an invitation.
           </p>
           <p className="mt-3">
+            <a
+              className={linkClassName}
+              href={GITHUB_RELEASES_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Download
+            </a>{' '}
+            system app or check how it works on{' '}
             <a
               className={linkClassName}
               href={FEEDNT_TEST_URL}
