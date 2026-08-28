@@ -27,9 +27,11 @@ jobs:
           - os: ubuntu-latest
             app: encrypt
             workspace: '@encrypt/web'
-            builder_args: --linux deb
+            builder_args: --linux deb AppImage
             artifact: electron-linux-encrypt
-            artifact_path: apps/web/release/*.deb
+            artifact_path: |
+              apps/web/release/*.deb
+              apps/web/release/*.AppImage
           - os: windows-latest
             app: encrypt
             workspace: '@encrypt/web'
@@ -39,9 +41,11 @@ jobs:
           - os: ubuntu-latest
             app: feednt
             workspace: '@feednt/local'
-            builder_args: --linux deb
+            builder_args: --linux deb AppImage
             artifact: electron-linux-feednt
-            artifact_path: apps/feednt/local/release/*.deb
+            artifact_path: |
+              apps/feednt/local/release/*.deb
+              apps/feednt/local/release/*.AppImage
           - os: windows-latest
             app: feednt
             workspace: '@feednt/local'
@@ -99,6 +103,7 @@ jobs:
           generate_release_notes: true
           files: |
             release-artifacts/**/*.deb
+            release-artifacts/**/*.AppImage
             release-artifacts/**/*.exe
           fail_on_unmatched_files: false
           draft: false
@@ -126,7 +131,7 @@ jobs:
           if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
             title="Electron release published"
             color=5763719
-            status="Encrypt and Feednt Linux (.deb) and Windows (.exe) installers are available on GitHub Releases."
+            status="Encrypt and Feednt Linux (.deb, AppImage) and Windows (.exe) installers are available on GitHub Releases."
             status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
           elif [[ "$BUILD_RESULT" != "success" ]]; then
             title="Electron release build failed"

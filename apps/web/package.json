@@ -85,7 +85,8 @@
     ],
     "linux": {
       "target": [
-        "deb"
+        "deb",
+        "AppImage"
       ],
       "category": "Utility",
       "syncDesktopName": true,

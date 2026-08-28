@@ -77,7 +77,8 @@
     "icon": "electron/icons",
     "linux": {
       "target": [
-        "deb"
+        "deb",
+        "AppImage"
       ],
       "category": "Network",
       "syncDesktopName": true,
