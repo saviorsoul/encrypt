@@ -1,6 +1,6 @@
 {
   "name": "@feednt/mobile",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Capacitor shell for Feednt",
   "type": "module",
