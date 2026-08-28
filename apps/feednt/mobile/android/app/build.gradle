@@ -5,6 +5,7 @@ def hasReleaseKeystore =
         releaseKeystorePath != null &&
         !releaseKeystorePath.trim().isEmpty() &&
         file(releaseKeystorePath).exists()
+def allowUnsignedRelease = System.getenv("ALLOW_UNSIGNED_RELEASE") == "true"
 
 android {
     namespace = "com.feednt.app"
@@ -24,19 +25,15 @@ android {
     }
     signingConfigs {
         release {
-            if (hasReleaseKeystore) {
-                storeFile file(releaseKeystorePath)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-            }
+            keyAlias System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            storeFile hasReleaseKeystore ? file(releaseKeystorePath) : null
+            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
         }
     }
     buildTypes {
         release {
-            if (hasReleaseKeystore) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig hasReleaseKeystore ? signingConfigs.release : null
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -46,9 +43,9 @@ android {
 afterEvaluate {
     tasks.named("assembleRelease").configure {
         doFirst {
-            if (!hasReleaseKeystore) {
+            if (!hasReleaseKeystore && !allowUnsignedRelease) {
                 throw new GradleException(
-                    "Release APK must be signed. Set ANDROID_KEYSTORE_PATH and signing env vars."
+                    "Release APK must be signed. Set ANDROID_KEYSTORE_PATH and related env vars, or ALLOW_UNSIGNED_RELEASE=true for CI unsigned builds."
                 )
             }
         }

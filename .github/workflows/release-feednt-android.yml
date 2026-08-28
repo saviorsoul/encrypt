@@ -8,23 +8,29 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-
 concurrency:
   group: release-feednt-android-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   build-android:
+    if: github.repository == 'saviorsoul/encrypt'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
-      VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
-      ANDROID_KEYSTORE_PATH: /tmp/feednt.keystore
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      VITE_API_URL: ${{ vars.VITE_API_URL }}
+      ALLOW_UNSIGNED_RELEASE: 'true'
     steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [[ ! "$TAG" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-.+)?|feednt-android-v[0-9]+\.[0-9]+\.[0-9]+(-.+)?)$ ]]; then
+            echo "Unsupported tag format: $TAG" >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
@@ -60,36 +66,90 @@ jobs:
           echo "ANDROID_VERSION_CODE=${ANDROID_VERSION_CODE}" >> "$GITHUB_ENV"
           echo "ANDROID_VERSION_NAME=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Decode release keystore
-        run: |
-          if [[ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
-            echo "ANDROID_KEYSTORE_BASE64 secret is missing." >&2
-            exit 1
-          fi
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_KEYSTORE_PATH"
-          if [[ ! -s "$ANDROID_KEYSTORE_PATH" ]]; then
-            echo "Decoded keystore is empty. Re-encode with: base64 -w0 feednt-release.keystore" >&2
-            exit 1
-          fi
-          keytool -list \
-            -keystore "$ANDROID_KEYSTORE_PATH" \
-            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-            -alias "$ANDROID_KEY_ALIAS" >/dev/null
-
-      - name: Build and package Feednt Android APK
+      - name: Build unsigned Feednt Android APK
         run: |
           npm run feednt:mobile:sync
           cd apps/feednt/mobile/android
           ./gradlew assembleRelease --no-daemon
-          APK="app/build/outputs/apk/release/app-release.apk"
-          if [[ ! -f "$APK" ]]; then
-            echo "Signed release APK not found. Refusing to publish an unsigned build." >&2
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          if [[ ! -f "$UNSIGNED" ]]; then
+            echo "Unsigned release APK not found." >&2
             ls -la app/build/outputs/apk/release/ >&2 || true
             exit 1
           fi
+          cp "$UNSIGNED" "$RUNNER_TEMP/feednt-android-unsigned.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: feednt-android-unsigned
+          path: ${{ runner.temp }}/feednt-android-unsigned.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  sign-android:
+    if: github.repository == 'saviorsoul/encrypt'
+    needs: build-android
+    runs-on: ubuntu-latest
+    environment: feednt-android-release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: feednt-android-unsigned
+          path: unsigned
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Sign Feednt Android APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_PATH: ${{ runner.temp }}/feednt.keystore
+          UNSIGNED_APK: unsigned/feednt-android-unsigned.apk
+          SIGNED_APK: ${{ runner.temp }}/feednt-android.apk
+        run: |
+          set -euo pipefail
+          cleanup() {
+            rm -f "$KEYSTORE_PATH"
+          }
+          trap cleanup EXIT
+
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" ]]; then
+            echo "ANDROID_KEYSTORE_BASE64 is missing from the feednt-android-release environment." >&2
+            exit 1
+          fi
+          if [[ ! -f "$UNSIGNED_APK" ]]; then
+            echo "Unsigned APK artifact not found." >&2
+            ls -la unsigned >&2 || true
+            exit 1
+          fi
+
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+
+          keytool -list \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" >/dev/null
+
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
-          "$APKSIGNER" verify --verbose "$APK"
-          cp "$APK" "$RUNNER_TEMP/feednt-android.apk"
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
+            --key-pass "env:ANDROID_KEY_PASSWORD" \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+          "$APKSIGNER" verify --verbose "$SIGNED_APK"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -99,8 +159,11 @@ jobs:
           retention-days: 7
 
   release:
-    needs: build-android
+    if: github.repository == 'saviorsoul/encrypt'
+    needs: sign-android
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -118,9 +181,9 @@ jobs:
           make_latest: true
 
   notify:
-    needs: [build-android, release]
+    needs: [build-android, sign-android, release]
     runs-on: ubuntu-latest
-    if: always() && !cancelled()
+    if: always() && !cancelled() && github.repository == 'saviorsoul/encrypt'
     permissions:
       contents: read
     steps:
@@ -130,25 +193,26 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           BUILD_RESULT: ${{ needs.build-android.result }}
+          SIGN_RESULT: ${{ needs.sign-android.result }}
           RELEASE_RESULT: ${{ needs.release.result }}
           TAG: ${{ inputs.tag }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.tag }}
         run: |
-          if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
+          if [[ "$BUILD_RESULT" == "success" && "$SIGN_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
             title="Feednt Android release published"
             color=5763719
             status="feednt-android.apk is available on GitHub Releases."
             status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
-          elif [[ "$BUILD_RESULT" != "success" ]]; then
+          elif [[ "$BUILD_RESULT" != "success" || "$SIGN_RESULT" != "success" ]]; then
             title="Feednt Android release build failed"
             color=15548997
-            status="The Android APK build did not complete successfully."
+            status="The Android APK build or signing step did not complete successfully."
           else
             title="Feednt Android release publish failed"
             color=15548997
-            status="Build succeeded, but uploading to GitHub Releases failed."
+            status="Build and signing succeeded, but uploading to GitHub Releases failed."
           fi
 
           description=$(printf '**Tag:** `%s`\n**Workflow:** [View run](%s)\n\n%s' \
