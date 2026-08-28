@@ -77,8 +77,7 @@
     "icon": "electron/icons",
     "linux": {
       "target": [
-        "deb",
-        "snap"
+        "deb"
       ],
       "category": "Network",
       "syncDesktopName": true,
@@ -86,34 +85,6 @@
         "entry": {
           "StartupWMClass": "feednt"
         }
-      },
-      "executableArgs": [
-        "--ozone-platform=x11"
-      ]
-    },
-    "snap": {
-      "summary": "Feedn't - Desktop app",
-      "description": "E2EE social network.",
-      "grade": "stable",
-      "confinement": "strict",
-      "base": "core22",
-      "allowNativeWayland": false,
-      "stagePackages": [
-        "default",
-        "libtinfo5",
-        "libvulkan1"
-      ],
-      "plugs": [
-        "default",
-        "password-manager-service",
-        "removable-media",
-        "gpu"
-      ],
-      "publish": {
-        "provider": "snapStore",
-        "channels": [
-          "stable"
-        ]
       }
     },
     "win": {

@@ -39,9 +39,9 @@ jobs:
           - os: ubuntu-latest
             app: feednt
             workspace: '@feednt/local'
-            builder_args: --linux deb snap
+            builder_args: --linux deb
             artifact: electron-linux-feednt
-            artifact_path: apps/feednt/local/release/*
+            artifact_path: apps/feednt/local/release/*.deb
           - os: windows-latest
             app: feednt
             workspace: '@feednt/local'
@@ -52,7 +52,6 @@ jobs:
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false
       VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
-      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -72,24 +71,10 @@ jobs:
           TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
           npm pkg set "version=${TAG#v}" -ws --include-workspace-root
 
-      - name: Install Snapcraft
-        if: contains(matrix.builder_args, 'snap')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y snapd
-          sudo snap install snapcraft --classic
-
       - name: Build and package Electron installer
-        shell: bash
-        env:
-          SNAPCRAFT_BUILD_ENVIRONMENT: destructive
         run: |
           npm run build:electron -w ${{ matrix.workspace }}
-          PUBLISH_FLAG=never
-          if [[ "${{ matrix.app }}" == "feednt" && "${{ matrix.builder_args }}" == *snap* && -n "${SNAPCRAFT_STORE_CREDENTIALS:-}" ]]; then
-            PUBLISH_FLAG=always
-          fi
-          npm run electron:package -w ${{ matrix.workspace }} -- ${{ matrix.builder_args }} --publish "$PUBLISH_FLAG"
+          npm run electron:package -w ${{ matrix.workspace }} -- ${{ matrix.builder_args }}
 
       - uses: actions/upload-artifact@v6
         with:
@@ -114,7 +99,6 @@ jobs:
           generate_release_notes: true
           files: |
             release-artifacts/**/*.deb
-            release-artifacts/**/*.snap
             release-artifacts/**/*.exe
           fail_on_unmatched_files: false
           draft: false
@@ -142,7 +126,7 @@ jobs:
           if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
             title="Electron release published"
             color=5763719
-            status="Encrypt and Feednt Linux (.deb), Feednt Snap, and Windows (.exe) installers are on GitHub Releases. Feednt is also published to the Snap Store when SNAPCRAFT_STORE_CREDENTIALS is configured."
+            status="Encrypt and Feednt Linux (.deb) and Windows (.exe) installers are available on GitHub Releases."
             status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
           elif [[ "$BUILD_RESULT" != "success" ]]; then
             title="Electron release build failed"
