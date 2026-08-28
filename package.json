@@ -56,6 +56,7 @@
     "dev:feednt:mobile": "npm run dev -w @feednt/mobile",
     "build:feednt": "npm run build -w @feednt/app && npm run build -w @feednt/local && npm run build -w @feednt/mobile",
     "feednt:mobile:sync": "npm run build -w @feednt/mobile && npm run cap:sync -w @feednt/mobile",
+    "feednt:mobile:build:android": "npm run cap:build:android -w @feednt/mobile",
     "feednt:mobile:open:android": "npm run cap:open:android -w @feednt/mobile",
     "feednt:mobile:open:ios": "npm run cap:open:ios -w @feednt/mobile",
     "dev:landing": "npm run dev -w @encrypt/landing-page",

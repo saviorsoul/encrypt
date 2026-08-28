@@ -1,0 +1,141 @@
+name: Release Feednt Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and publish (e.g. v0.5.3 or feednt-android-v0.5.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-feednt-android-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
+      ANDROID_KEYSTORE_PATH: /tmp/feednt.keystore
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v4
+
+      - run: node -v && npm -v
+      - run: npm ci
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag }}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION#feednt-android-v}"
+          npm pkg set "version=${VERSION}" -ws --include-workspace-root
+          IFS='.' read -r major minor patch <<< "${VERSION%%-*}"
+          major="${major:-0}"
+          minor="${minor:-0}"
+          patch="${patch:-0}"
+          patch="${patch%%-*}"
+          ANDROID_VERSION_CODE=$(( major * 10000 + minor * 100 + patch ))
+          echo "ANDROID_VERSION_CODE=${ANDROID_VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "ANDROID_VERSION_NAME=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Decode release keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+
+      - name: Build and package Feednt Android APK
+        run: |
+          npm run feednt:mobile:sync
+          cd apps/feednt/mobile/android
+          ./gradlew assembleRelease --no-daemon
+          APK="$(ls app/build/outputs/apk/release/app-release*.apk | head -1)"
+          cp "$APK" "$RUNNER_TEMP/feednt-android.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: feednt-android
+          path: ${{ runner.temp }}/feednt-android.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: feednt-android
+          path: release-artifacts
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.tag }}
+          files: release-artifacts/feednt-android.apk
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: ${{ contains(inputs.tag, '-') }}
+          make_latest: true
+
+  notify:
+    needs: [build-android, release]
+    runs-on: ubuntu-latest
+    if: always() && !cancelled()
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Notify Discord — Feednt Android release result
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BUILD_RESULT: ${{ needs.build-android.result }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.tag }}
+        run: |
+          if [[ "$BUILD_RESULT" == "success" && "$RELEASE_RESULT" == "success" ]]; then
+            title="Feednt Android release published"
+            color=5763719
+            status="feednt-android.apk is available on GitHub Releases."
+            status="$(printf '%s\n\n**Release:** [%s](%s)' "$status" "$TAG" "$RELEASE_URL")"
+          elif [[ "$BUILD_RESULT" != "success" ]]; then
+            title="Feednt Android release build failed"
+            color=15548997
+            status="The Android APK build did not complete successfully."
+          else
+            title="Feednt Android release publish failed"
+            color=15548997
+            status="Build succeeded, but uploading to GitHub Releases failed."
+          fi
+
+          description=$(printf '**Tag:** `%s`\n**Workflow:** [View run](%s)\n\n%s' \
+            "$TAG" "$RUN_URL" "$status")
+
+          bash .github/scripts/discord-notify.sh \
+            "$title · ${REPO}" \
+            "$description" \
+            "$color" \
+            "GitHub Actions · Feednt Android release"
