@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     env:
-      VITE_API_URL: ${{ vars.VITE_API_URL }}
+      VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
       ALLOW_UNSIGNED_RELEASE: 'true'
     steps:
       - name: Validate release tag
@@ -28,6 +28,24 @@ jobs:
           TAG="${{ inputs.tag }}"
           if [[ ! "$TAG" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-.+)?|feednt-android-v[0-9]+\.[0-9]+\.[0-9]+(-.+)?)$ ]]; then
             echo "Unsupported tag format: $TAG" >&2
+            exit 1
+          fi
+
+      - name: Validate API URL for mobile build
+        run: |
+          if [[ -z "${VITE_API_URL}" ]]; then
+            echo "VITE_API_URL is missing." >&2
+            echo "Set it as a repository variable or secret (Settings → Secrets and variables → Actions)." >&2
+            echo "Use the API origin only, without a /api path. Example: https://test.feednt.com" >&2
+            exit 1
+          fi
+          if [[ ! "${VITE_API_URL}" =~ ^https?:// ]]; then
+            echo "VITE_API_URL must start with http:// or https:// (got: ${VITE_API_URL})" >&2
+            exit 1
+          fi
+          if [[ "${VITE_API_URL}" =~ /api/?$ ]]; then
+            echo "VITE_API_URL must be the origin only, not include /api (got: ${VITE_API_URL})" >&2
+            echo "The app appends /api/... paths automatically." >&2
             exit 1
           fi
 

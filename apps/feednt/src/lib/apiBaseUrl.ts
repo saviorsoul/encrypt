@@ -10,6 +10,12 @@ function resolveApiBaseUrl(): string {
     return configured.replace(/\/$/, '');
   }
 
+  if (isCapacitor) {
+    throw new Error(
+      'This app was built without VITE_API_URL. API requests cannot reach the server.',
+    );
+  }
+
   return '';
 }
 
