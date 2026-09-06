@@ -69,4 +69,11 @@ test.describe('landing page rendering', () => {
       'An ethical answer to predatory social networks monetization.',
     );
   });
+
+  test('links to docs from footer', async ({ page }) => {
+    const docsLink = page.getByRole('link', { name: 'docs' });
+
+    await expect(docsLink).toBeVisible();
+    await expect(docsLink).toHaveAttribute('href', '/docs/');
+  });
 });

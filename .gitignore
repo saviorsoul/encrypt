@@ -16,6 +16,10 @@ playwright/.cache/
 /build
 /release
 dist/
+apps/landing-page/public/docs/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/.vitepress/.temp/
 apps/web/release
 apps/feednt/local/release
 apps/feednt/local/electron/build-env.json

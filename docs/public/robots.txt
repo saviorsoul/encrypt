@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /docs/
+
+Sitemap: https://feednt.com/docs/sitemap.xml

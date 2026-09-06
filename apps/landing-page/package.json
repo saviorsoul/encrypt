@@ -23,8 +23,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "@types/node": "^24.13.3",
     "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.0",
