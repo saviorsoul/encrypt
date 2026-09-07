@@ -41,7 +41,9 @@ import {
   loadFeedLabUserByUsername,
   saveFeedLabUser,
 } from '@lab/services/db/storedUsers.ts';
+import { clearFriendshipsCache } from '@lab/services/friendshipsCache.ts';
 import { InviteSuccessView } from '@lab/components/InviteSuccessView.tsx';
+import { useBackendShareMessageHistory } from '@lab/hooks/useBackendShareMessageHistory.ts';
 import { loadFeedLabBridgePairing } from '@lab/crypto/systemAppPairingStorage.ts';
 import { isFeedLabProtocolBridgeEnabled } from '@encrypt/core/feed/feedLabBridgeConfig';
 import type { FriendInvitationPublic } from '@encrypt/core/api/feedApi';
@@ -127,6 +129,7 @@ export function InvitePage() {
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const [successVariant, setSuccessVariant] =
     useState<InviteSuccessVariant>('accepted');
+  const [inviteHistoryShared, setInviteHistoryShared] = useState(false);
   const inviteFlowFinishedRef = useRef(false);
 
   const friendshipsRefresh = useCallback(async () => {
@@ -134,6 +137,7 @@ export function InvitePage() {
   }, []);
 
   const friendInvitations = useBackendFriendInvitations(friendshipsRefresh);
+  const shareMessageHistory = useBackendShareMessageHistory(keys, keys.keyId);
   const generateUser = useBackendGenerateUser((user) => {
     addLocalUser({ keyId: user.keyId, username: user.username });
   });
@@ -145,6 +149,21 @@ export function InvitePage() {
   const inviterDisplayLabel =
     inviterName.trim() ||
     (invitation ? `${invitation.inviterKeyId.slice(0, 12)}…` : 'inviter');
+
+  const handleShareHistoryWithInviter = useCallback(async () => {
+    if (!invitation) {
+      return;
+    }
+
+    shareMessageHistory.clearError();
+    const shared = await shareMessageHistory.shareHistoryWithFriend({
+      keyId: invitation.inviterKeyId,
+      publicKey: invitation.inviterPublicKey,
+    });
+    if (shared) {
+      setInviteHistoryShared(true);
+    }
+  }, [invitation, shareMessageHistory]);
 
   useEffect(() => {
     if (inviteFlowFinishedRef.current) {
@@ -306,8 +325,11 @@ export function InvitePage() {
         }
         await refreshFeedLabUsers(keyId);
 
-        await api.acceptFriendInvitation(invitation.token);
-        await finishInviteSuccess('accepted');
+        const result = await api.acceptFriendInvitation(invitation.token);
+        clearFriendshipsCache(keyId);
+        await finishInviteSuccess(
+          result.status === 'alreadyFriends' ? 'alreadyFriends' : 'accepted',
+        );
       } catch (e) {
         const message =
           e instanceof Error ? e.message : 'Could not accept invitation.';
@@ -450,6 +472,10 @@ export function InvitePage() {
           publicKeyText={publicKeyText}
           variant={successVariant}
           onOpenFeed={() => navigate('/feed')}
+          onShareHistory={handleShareHistoryWithInviter}
+          shareHistoryBusy={shareMessageHistory.busy}
+          shareHistoryError={shareMessageHistory.error}
+          historyShared={inviteHistoryShared}
         />
       </InvitePageShell>
     );

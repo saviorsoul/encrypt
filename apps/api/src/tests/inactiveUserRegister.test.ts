@@ -26,7 +26,9 @@ describe('userRepository inactive accounts', () => {
   it('does not return public keys for inactive users', async () => {
     prismaMocks.user.findMany.mockResolvedValue([]);
 
-    const result = await userRepository.findPublicKeysByKeyIds(['inactive-key']);
+    const result = await userRepository.findPublicKeysByKeyIds([
+      'inactive-key',
+    ]);
 
     expect(result.size).toBe(0);
     expect(prismaMocks.user.findMany).toHaveBeenCalledWith({

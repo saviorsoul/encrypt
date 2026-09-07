@@ -24,11 +24,13 @@ export type FriendshipWithPublicKey = {
   publicKey: EcPublicKey;
   createdAt: Date;
   invitationToken: string | null;
+  messageHistorySharedAt: Date | null;
 };
 
 export interface FriendshipRepository {
   hasFriends(ownerKeyId: string): Promise<boolean>;
   areFriends(keyIdA: string, keyIdB: string): Promise<boolean>;
+  areMutualFriends(keyIdA: string, keyIdB: string): Promise<boolean>;
   listFriendshipsWithPublicKeys(
     ownerKeyId: string,
   ): Promise<FriendshipWithPublicKey[]>;
@@ -66,22 +68,19 @@ export interface FriendshipRepository {
   ): SerializedFriendshipRequest[];
 
   establishMutualFriendship(
-    inviterKeyId: string,
-    inviteeKeyId: string,
-    invitationToken: string,
-  ): Promise<void>;
-  clearPendingAndConsumeInvitation(
     keyIdA: string,
     keyIdB: string,
     invitationToken: string,
     inviteeKeyId: string,
   ): Promise<void>;
   deleteFriendship(ownerKeyId: string, friendKeyId: string): Promise<void>;
-  acceptFriendInvitationEstablishingFriendship(
-    inviterKeyId: string,
-    inviteeKeyId: string,
-    token: string,
-  ): Promise<void>;
+  markMessageHistoryShared(
+    ownerKeyId: string,
+    friendKeyId: string,
+  ): Promise<{
+    friendKeyId: string;
+    messageHistorySharedAt: Date;
+  } | null>;
   deleteFriendshipRequestsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
   deleteFriendshipsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
 }

@@ -33,10 +33,16 @@ export async function handleAcceptFriendInvitation(
     throw badRequest('Invitation inviter is not registered.');
   }
 
-  await friendshipRepository.acceptFriendInvitationEstablishingFriendship(
+  const alreadyFriends = await friendshipRepository.areMutualFriends(
+    row.inviterKeyId,
+    inviteeKeyId,
+  );
+
+  await friendshipRepository.establishMutualFriendship(
     row.inviterKeyId,
     inviteeKeyId,
     token,
+    inviteeKeyId,
   );
 
   const inviterPublicKeys = await userRepository.findPublicKeysByKeyIds([
@@ -55,6 +61,10 @@ export async function handleAcceptFriendInvitation(
     row.inviterKeyId,
     inviterPublicKey,
   );
+
+  if (alreadyFriends) {
+    return { status: 'alreadyFriends' as const };
+  }
 
   return { status: 'accepted' as const };
 }

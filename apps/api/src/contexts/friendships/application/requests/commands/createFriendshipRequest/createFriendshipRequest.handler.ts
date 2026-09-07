@@ -66,9 +66,10 @@ export async function handleCreateFriendshipRequest(
     reversePending.invitationToken
   ) {
     await friendshipRepository.establishMutualFriendship(
-      reversePending.requesterKeyId,
+      targetKeyId,
       requesterKeyId,
       reversePending.invitationToken,
+      requesterKeyId,
     );
 
     const targetPublicKeys = await userRepository.findPublicKeysByKeyIds([

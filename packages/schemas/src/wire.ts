@@ -24,6 +24,7 @@ import {
   DEFAULT_INBOX_LIMIT,
   MAX_BASE64_FIELD_LENGTH,
   MAX_INBOX_LIMIT,
+  MAX_SHARE_BATCH_SIZE,
 } from './constants.ts';
 
 /** Standard base64 length for a 12-byte auth nonce (no padding). */
@@ -192,6 +193,20 @@ export const createShareRequestSchema = {
   },
 } as const;
 
+export const createShareBatchRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['shares'],
+  properties: {
+    shares: {
+      type: 'array',
+      minItems: 1,
+      maxItems: MAX_SHARE_BATCH_SIZE,
+      items: createShareRequestSchema,
+    },
+  },
+} as const;
+
 const publicKeyWireSchema = {
   oneOf: [
     { type: 'string', minLength: 1, maxLength: 512 },
@@ -310,6 +325,55 @@ export const inboxQuerySchema = {
       enum: ['asc', 'desc'],
       default: 'desc',
     },
+  },
+} as const;
+
+export const authoredMessagesQueryWireSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    limit: {
+      type: 'string',
+      pattern: '^(?:100|[1-9]\\d?)$',
+    },
+    cursor: { type: 'string', format: 'uuid' },
+    sort: { type: 'string', enum: ['date'] },
+    order: {
+      type: 'string',
+      enum: ['asc', 'desc', 'ascending', 'descending'],
+    },
+    before: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+export const authoredMessagesQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    limit: {
+      type: 'integer',
+      minimum: 1,
+      maximum: MAX_INBOX_LIMIT,
+      default: DEFAULT_INBOX_LIMIT,
+    },
+    cursor: { type: 'string', format: 'uuid' },
+    sort: { type: 'string', enum: ['date'], default: 'date' },
+    order: {
+      type: 'string',
+      enumAliases: { ascending: 'asc', descending: 'desc' },
+      enum: ['asc', 'desc'],
+      default: 'desc',
+    },
+    before: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+export const markMessageHistorySharedBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['friendKeyId'],
+  properties: {
+    friendKeyId: keyIdProperty,
   },
 } as const;
 

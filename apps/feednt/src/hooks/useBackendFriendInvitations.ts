@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
+import { clearFriendshipsCache } from '@feednt/services/friendshipsCache.ts';
 import { saveSentInvitation } from '@feednt/services/db/sentInvitations.ts';
 
 export function useBackendFriendInvitations(
@@ -55,6 +56,9 @@ export function useBackendFriendInvitations(
 
       try {
         await api.acceptFriendInvitation(token);
+        if (keys.keyId) {
+          clearFriendshipsCache(keys.keyId);
+        }
 
         await onChanged?.();
         return true;
@@ -67,7 +71,7 @@ export function useBackendFriendInvitations(
         setBusy(false);
       }
     },
-    [api, onChanged],
+    [api, keys.keyId, onChanged],
   );
 
   const clearError = useCallback(() => {

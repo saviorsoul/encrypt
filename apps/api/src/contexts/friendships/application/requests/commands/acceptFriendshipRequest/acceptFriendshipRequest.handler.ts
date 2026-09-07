@@ -40,20 +40,11 @@ export async function handleAcceptFriendshipRequest(
     throw badRequest('Friendship requester is not registered.');
   }
 
-  if (await friendshipRepository.areFriends(requesterKeyId, targetKeyId)) {
-    await friendshipRepository.clearPendingAndConsumeInvitation(
-      requesterKeyId,
-      targetKeyId,
-      invitationToken,
-      targetKeyId,
-    );
-    return { status: 'accepted' as const };
-  }
-
   await friendshipRepository.establishMutualFriendship(
     requesterKeyId,
     targetKeyId,
     invitationToken,
+    targetKeyId,
   );
 
   await ensureRegisteredAfterFriendshipPair(

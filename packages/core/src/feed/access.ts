@@ -1,4 +1,7 @@
-import type { KeyManifestRecipientPayload } from '../types/manifest.ts';
+import type {
+  KeyManifestRecipientPayload,
+  ManifestRecipientKeys,
+} from '../types/manifest.ts';
 import type { StoredFeedDelivery, StoredMessage } from './types.ts';
 import { isShareDelivery } from '../crypto/manifestShare.ts';
 
@@ -90,6 +93,67 @@ export async function recipientHasAccessToParentFromFeed(
       lookup,
     )) !== null
   );
+}
+
+export async function filterRecipientsNeedingShareAccess(
+  messageId: string,
+  recipients: ManifestRecipientKeys[],
+  deliveries: StoredFeedDelivery[],
+  lookup: KeyManifestLookup,
+): Promise<ManifestRecipientKeys[]> {
+  const needingShare: ManifestRecipientKeys[] = [];
+
+  for (const recipient of recipients) {
+    if (
+      await recipientHasAccessToParentFromFeed(
+        messageId,
+        recipient.keyId,
+        deliveries,
+        lookup,
+      )
+    ) {
+      continue;
+    }
+    needingShare.push(recipient);
+  }
+
+  return needingShare;
+}
+
+export type ShareableMessage = {
+  access: ParentMessageAccess;
+  recipients: ManifestRecipientKeys[];
+};
+
+/** Returns null when the owner cannot share or every recipient already has access. */
+export async function resolveShareableMessage(
+  messageId: string,
+  ownerKeyId: string,
+  recipients: ManifestRecipientKeys[],
+  deliveries: StoredFeedDelivery[],
+  lookup: KeyManifestLookup,
+): Promise<ShareableMessage | null> {
+  const access = await resolveParentMessageAccessFromFeed(
+    messageId,
+    ownerKeyId,
+    deliveries,
+    lookup,
+  );
+  if (!access) {
+    return null;
+  }
+
+  const needingShare = await filterRecipientsNeedingShareAccess(
+    messageId,
+    recipients,
+    deliveries,
+    lookup,
+  );
+  if (needingShare.length === 0) {
+    return null;
+  }
+
+  return { access, recipients: needingShare };
 }
 
 export async function getManifestEntryOrThrow(

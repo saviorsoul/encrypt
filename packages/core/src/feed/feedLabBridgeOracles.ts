@@ -22,9 +22,15 @@ export async function executeFeedLabBridgeOracle(
 ): Promise<FeedLabBridgeEcdhAgreeResult | FeedLabBridgeEcdsaSignResult> {
   switch (op) {
     case 'ecdh-agree':
-      return executeEcdhAgree(material, payload as FeedLabBridgeEcdhAgreePayload);
+      return executeEcdhAgree(
+        material,
+        payload as FeedLabBridgeEcdhAgreePayload,
+      );
     case 'ecdsa-sign':
-      return executeEcdsaSign(material, payload as FeedLabBridgeEcdsaSignPayload);
+      return executeEcdsaSign(
+        material,
+        payload as FeedLabBridgeEcdsaSignPayload,
+      );
     case 'op-quick':
       return executeOpQuick(material, payload);
     default: {
@@ -66,7 +72,9 @@ async function executeOpQuick(
     throw new Error('Invalid op-quick payload.');
   }
   if (parsed.auth.keyId !== material.keyId) {
-    throw new Error('op-quick keyId does not match the paired Encrypt identity.');
+    throw new Error(
+      'op-quick keyId does not match the paired Encrypt identity.',
+    );
   }
 
   const signature = await signCanonicalBody(

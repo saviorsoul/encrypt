@@ -24,6 +24,7 @@ export type FeedntFriend = {
   keyId: string;
   label: string;
   publicKey: { x: string; y: string };
+  messageHistorySharedAt: string | null;
 };
 
 export type RefreshFriendshipsOptions = {
@@ -50,6 +51,7 @@ export type FeedntFriendshipsValue = {
   ) => Promise<void>;
   refresh: (refreshOptions?: RefreshFriendshipsOptions) => Promise<void>;
   updateInvitationLabel: (token: string, label: string) => void;
+  markMessageHistorySharedLocally: (friendKeyId: string) => void;
 };
 
 function labelForFriend(
@@ -87,6 +89,7 @@ function mapFriendshipsToFriends(
       invitationLabelByToken,
     ),
     publicKey: friendship.publicKey,
+    messageHistorySharedAt: friendship.messageHistorySharedAt,
   }));
 }
 
@@ -415,6 +418,30 @@ export function useFeedntFriendshipsState(
     [ownerKeyId],
   );
 
+  const markMessageHistorySharedLocally = useCallback(
+    (friendKeyId: string) => {
+      const sharedAt = new Date().toISOString();
+      setRawFriendships((current) => {
+        const next = current.map((friendship) =>
+          friendship.friendKeyId === friendKeyId
+            ? { ...friendship, messageHistorySharedAt: sharedAt }
+            : friendship,
+        );
+        if (ownerKeyId) {
+          const cached = getFriendshipsCache(ownerKeyId);
+          if (cached) {
+            setFriendshipsCache(ownerKeyId, {
+              ...cached,
+              friendships: next,
+            });
+          }
+        }
+        return next;
+      });
+    },
+    [ownerKeyId],
+  );
+
   useEffect(() => {
     if (!ownerKeyId || !addLocalUser || rawFriendships.length === 0) {
       return;
@@ -493,6 +520,7 @@ export function useFeedntFriendshipsState(
       ensureUsersLoaded,
       refresh,
       updateInvitationLabel,
+      markMessageHistorySharedLocally,
     }),
     [
       ensureFriendshipsLoaded,
@@ -504,6 +532,7 @@ export function useFeedntFriendshipsState(
       friendshipsLoading,
       incomingRequests,
       invitationLabelByToken,
+      markMessageHistorySharedLocally,
       outgoingRequests,
       pendingInvitations,
       refresh,

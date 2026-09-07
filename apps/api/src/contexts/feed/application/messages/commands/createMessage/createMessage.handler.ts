@@ -31,6 +31,7 @@ export async function handleCreateMessage(
     messageId,
     corePayloadJson,
     keyManifest,
+    command.senderKeyId,
   );
 
   return { id: messageId };

@@ -9,9 +9,10 @@ export async function insertMessage(
   tx: PrismaTx,
   id: string,
   payload: string,
+  senderKeyId: string,
 ): Promise<StoredMessage> {
   const row = await tx.message.create({
-    data: { id, payload },
+    data: { id, payload, senderKeyId },
   });
 
   return {
@@ -58,10 +59,11 @@ export const messageRepository: MessageRepository = {
     id: string,
     payload: string,
     keyManifest: KeyManifestMap,
+    senderKeyId: string,
   ): Promise<StoredMessage> {
     try {
       return await prisma.$transaction(async (tx) => {
-        const message = await insertMessage(tx, id, payload);
+        const message = await insertMessage(tx, id, payload, senderKeyId);
         await insertManifestShards(tx, id, keyManifest);
         return message;
       });

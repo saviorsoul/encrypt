@@ -5,7 +5,10 @@ import type {
   InboxSort,
   StoredComment,
 } from '../feed/types.ts';
-import type { CreateShareResponse } from '../feed/shareAccess.ts';
+import type {
+  CreateShareResponse,
+  CreateShareBatchResponse,
+} from '../feed/shareAccess.ts';
 import {
   type FeedApiAuthProvider,
   type FeedApiPerRequestAuth,
@@ -46,13 +49,17 @@ export type FeedApiRequestOptions = {
   auth?: FeedApiPerRequestAuth;
 };
 
-export type { CreateShareResponse } from '../feed/shareAccess.ts';
+export type { CreateShareResponse, CreateShareBatchResponse };
 
 export type CreateShareRequest = {
   share: Record<string, unknown>;
   keyManifest: KeyManifestMap;
   messageId?: string;
   parentMessage?: Record<string, unknown>;
+};
+
+export type CreateShareBatchRequest = {
+  shares: CreateShareRequest[];
 };
 
 export type CreateMessageRequest = {
@@ -79,6 +86,7 @@ export type Friendship = {
   friendKeyId: string;
   publicKey: { x: string; y: string };
   invitationToken: string | null;
+  messageHistorySharedAt: string | null;
   createdAt: string;
 };
 
@@ -129,6 +137,16 @@ export type GetInboxOptions = {
   cursor?: string | null;
   sort?: InboxSort;
   order?: InboxOrder;
+};
+
+export type GetAuthoredMessagesOptions = GetInboxOptions & {
+  /** ISO timestamp — only messages created strictly before this time. */
+  before?: string;
+};
+
+export type MarkMessageHistorySharedResult = {
+  friendKeyId: string;
+  messageHistorySharedAt: string;
 };
 
 export function createFeedApi(config: FeedApiConfig) {
@@ -240,6 +258,36 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as InboxPageResponse;
     },
 
+    async getAuthoredMessages(
+      options?: GetAuthoredMessagesOptions,
+    ): Promise<InboxPageResponse> {
+      const params = new URLSearchParams();
+      if (options?.limit != null) {
+        params.set('limit', String(options.limit));
+      }
+      if (options?.cursor) {
+        params.set('cursor', options.cursor);
+      }
+      if (options?.sort) {
+        params.set('sort', options.sort);
+      }
+      if (options?.order) {
+        params.set('order', options.order);
+      }
+      if (options?.before) {
+        params.set('before', options.before);
+      }
+      const query = params.toString();
+      const response = await authorizedFetchUrl(
+        joinUrl(baseUrl, `/api/messages/authored${query ? `?${query}` : ''}`),
+        {},
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as InboxPageResponse;
+    },
+
     async postMessage(body: CreateMessageRequest): Promise<{ id: string }> {
       const response = await authorizedFetch('/api/messages', {
         method: 'POST',
@@ -262,6 +310,20 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
       return (await response.json()) as CreateShareResponse;
+    },
+
+    async postShareBatch(
+      body: CreateShareBatchRequest,
+    ): Promise<CreateShareBatchResponse> {
+      const response = await authorizedFetch('/api/shares/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as CreateShareBatchResponse;
     },
 
     /** POST raw JSON text without client-side parsing (feed-lab / API testing). */
@@ -400,6 +462,23 @@ export function createFeedApi(config: FeedApiConfig) {
       }
     },
 
+    async markMessageHistoryShared(body: {
+      friendKeyId: string;
+    }): Promise<MarkMessageHistorySharedResult> {
+      const response = await authorizedFetch(
+        '/api/friendships/history-shared',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as MarkMessageHistorySharedResult;
+    },
+
     async deleteAccount(): Promise<void> {
       const response = await authorizedFetch('/api/account', {
         method: 'DELETE',
@@ -449,7 +528,7 @@ export function createFeedApi(config: FeedApiConfig) {
 
     async acceptFriendInvitation(
       token: string,
-    ): Promise<{ status: 'accepted' }> {
+    ): Promise<{ status: 'accepted' | 'alreadyFriends' }> {
       const response = await authorizedFetch(
         `/api/friend-invitations/${encodeURIComponent(token)}/accept`,
         {
@@ -461,7 +540,9 @@ export function createFeedApi(config: FeedApiConfig) {
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
-      return (await response.json()) as { status: 'accepted' };
+      return (await response.json()) as {
+        status: 'accepted' | 'alreadyFriends';
+      };
     },
   };
 }

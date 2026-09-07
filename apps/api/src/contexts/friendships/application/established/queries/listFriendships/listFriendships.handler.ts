@@ -8,10 +8,19 @@ export async function handleListFriendships(query: ListFriendshipsQuery) {
   const { ownerKeyId } = query;
   const rows =
     await friendshipRepository.listFriendshipsWithPublicKeys(ownerKeyId);
-  return rows.map(({ friendKeyId, publicKey, createdAt, invitationToken }) => ({
-    friendKeyId,
-    publicKey,
-    invitationToken,
-    createdAt: createdAt.toISOString(),
-  }));
+  return rows.map(
+    ({
+      friendKeyId,
+      publicKey,
+      createdAt,
+      invitationToken,
+      messageHistorySharedAt,
+    }) => ({
+      friendKeyId,
+      publicKey,
+      invitationToken,
+      createdAt: createdAt.toISOString(),
+      messageHistorySharedAt: messageHistorySharedAt?.toISOString() ?? null,
+    }),
+  );
 }

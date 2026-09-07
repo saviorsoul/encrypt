@@ -1,16 +1,23 @@
 import { useCallback, useState } from 'react';
 import { buildManifestShareWithAccess } from '@encrypt/core/crypto/manifestShare';
-import { assertUploadedPrivateKeyMatchesKeyId } from '@encrypt/core/crypto/privateKeyMaterial';
 import {
-  recipientHasAccessToParentFromFeed,
+  assertUploadedPrivateKeyMatchesKeyId,
+  type UploadedPrivateKeyMaterial,
+} from '@encrypt/core/crypto/privateKeyMaterial';
+import {
+  filterRecipientsNeedingShareAccess,
   resolveParentMessageAccessFromFeed,
+  resolveShareableMessage,
+  type ShareableMessage,
 } from '@encrypt/core/feed/access';
+import type { CreateShareRequest } from '@encrypt/core/api/feedApi';
 import {
   isCreateShareAlreadyComplete,
   isShareRecipientsAlreadyHaveAccessMessage,
 } from '@encrypt/core/feed/shareAccess';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import { jwkWithoutKeyOps } from '@encrypt/core/crypto/ecdhKeys';
+import { MAX_SHARE_BATCH_SIZE } from '@encrypt/core/constants/shareLimits';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import type { usePrivateKeySession } from '@lab/hooks/usePrivateKeySession.ts';
 import {
@@ -25,7 +32,188 @@ type ShareContext = {
   manifestLookup: Parameters<typeof resolveParentMessageAccessFromFeed>[3];
 };
 
-export function useBackendShare(keys: KeysSession, expectedKeyId: string | null) {
+type ShareSigner =
+  | { kind: 'system'; keys: KeysSession; ownerKeyId: string }
+  | {
+      kind: 'uploaded';
+      material: UploadedPrivateKeyMaterial;
+      ownerKeyId: string;
+    };
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function buildShareRequestsForOwner(
+  messageIds: string[],
+  ownerKeyId: string,
+  recipients: ManifestRecipientKeys[],
+  { allDeliveries, manifestLookup }: ShareContext,
+  encryptShareable: (
+    messageId: string,
+    shareable: ShareableMessage,
+  ) => Promise<CreateShareRequest>,
+): Promise<CreateShareRequest[]> {
+  const shares: CreateShareRequest[] = [];
+
+  for (const messageId of messageIds) {
+    const shareable = await resolveShareableMessage(
+      messageId,
+      ownerKeyId,
+      recipients,
+      allDeliveries,
+      manifestLookup,
+    );
+    if (!shareable) {
+      continue;
+    }
+
+    shares.push(await encryptShareable(messageId, shareable));
+  }
+
+  return shares;
+}
+
+async function encryptSystemShareable(
+  keys: KeysSession,
+  ownerKeyId: string,
+  messageId: string,
+  { access, recipients }: ShareableMessage,
+  manifestLookup: ShareContext['manifestLookup'],
+): Promise<CreateShareRequest> {
+  const recipientKeyIds = [
+    ownerKeyId,
+    ...recipients.map((recipient) => recipient.keyId),
+  ];
+  const manifestEntries = await serializeManifestLookup(
+    manifestLookup,
+    collectManifestMessageIds(messageId, access.parentMessageId),
+    recipientKeyIds,
+  );
+
+  const encrypted = await keys.systemEncryptShare({
+    access,
+    recipients: await Promise.all(
+      recipients.map(async (recipient) => ({
+        keyId: recipient.keyId,
+        publicJwk: jwkWithoutKeyOps(
+          await crypto.subtle.exportKey('jwk', recipient.publicKey),
+        ),
+      })),
+    ),
+    manifestEntries,
+  });
+
+  return {
+    share: JSON.parse(encrypted.shareCoreJson) as Record<string, unknown>,
+    keyManifest: encrypted.keyManifest as CreateShareRequest['keyManifest'],
+  };
+}
+
+async function encryptUploadedKeyShareable(
+  material: UploadedPrivateKeyMaterial,
+  shareable: ShareableMessage,
+  manifestLookup: ShareContext['manifestLookup'],
+): Promise<CreateShareRequest> {
+  const { shareCoreJson, keyManifest } = await buildManifestShareWithAccess(
+    shareable.access,
+    material.keyId,
+    material.ecdhPrivateKey,
+    material.senderPublicKey,
+    material.ecdsaSignPrivateKey,
+    shareable.recipients,
+    manifestLookup,
+  );
+
+  return {
+    share: JSON.parse(shareCoreJson) as Record<string, unknown>,
+    keyManifest,
+  };
+}
+
+async function encryptShareableForSigner(
+  signer: ShareSigner,
+  messageId: string,
+  shareable: ShareableMessage,
+  manifestLookup: ShareContext['manifestLookup'],
+): Promise<CreateShareRequest> {
+  if (signer.kind === 'system') {
+    return encryptSystemShareable(
+      signer.keys,
+      signer.ownerKeyId,
+      messageId,
+      shareable,
+      manifestLookup,
+    );
+  }
+
+  return encryptUploadedKeyShareable(
+    signer.material,
+    shareable,
+    manifestLookup,
+  );
+}
+
+async function withShareSigner<T>(
+  keys: KeysSession,
+  expectedKeyId: string | null,
+  run: (signer: ShareSigner) => Promise<T>,
+): Promise<T | null> {
+  if (keys.isSystemAppSession) {
+    return run({ kind: 'system', keys, ownerKeyId: keys.keyId! });
+  }
+
+  return keys.withPrivateKey(async (material) => {
+    if (expectedKeyId) {
+      assertUploadedPrivateKeyMatchesKeyId(
+        material,
+        expectedKeyId,
+        'Uploaded private key does not match your keyId.',
+      );
+    }
+
+    return run({
+      kind: 'uploaded',
+      material,
+      ownerKeyId: material.keyId,
+    });
+  });
+}
+
+async function buildBatchShareRequests(
+  keys: KeysSession,
+  expectedKeyId: string | null,
+  messageIds: string[],
+  recipients: ManifestRecipientKeys[],
+  context: ShareContext,
+): Promise<CreateShareRequest[]> {
+  const shares = await withShareSigner(keys, expectedKeyId, (signer) =>
+    buildShareRequestsForOwner(
+      messageIds,
+      signer.ownerKeyId,
+      recipients,
+      context,
+      (messageId, shareable) =>
+        encryptShareableForSigner(
+          signer,
+          messageId,
+          shareable,
+          context.manifestLookup,
+        ),
+    ),
+  );
+
+  return shares ?? [];
+}
+
+export function useBackendShare(
+  keys: KeysSession,
+  expectedKeyId: string | null,
+) {
   const api = useFeedApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,50 +258,27 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
             throw new Error('You cannot share this message.');
           }
 
-          const filteredRecipients: ManifestRecipientKeys[] = [];
-          for (const recipient of recipients) {
-            if (
-              await recipientHasAccessToParentFromFeed(
-                messageId,
-                recipient.keyId,
-                allDeliveries,
-                manifestLookup,
-              )
-            ) {
-              continue;
-            }
-            filteredRecipients.push(recipient);
-          }
+          const filteredRecipients = await filterRecipientsNeedingShareAccess(
+            messageId,
+            recipients,
+            allDeliveries,
+            manifestLookup,
+          );
 
           if (filteredRecipients.length === 0) {
             return messageId;
           }
 
-          const recipientKeyIds = [
+          const encrypted = await encryptSystemShareable(
+            keys,
             keys.keyId!,
-            ...filteredRecipients.map((recipient) => recipient.keyId),
-          ];
-          const manifestEntries = await serializeManifestLookup(
+            messageId,
+            { access, recipients: filteredRecipients },
             manifestLookup,
-            collectManifestMessageIds(messageId, access.parentMessageId),
-            recipientKeyIds,
           );
 
-          const encrypted = await keys.systemEncryptShare({
-            access,
-            recipients: await Promise.all(
-              filteredRecipients.map(async (recipient) => ({
-                keyId: recipient.keyId,
-                publicJwk: jwkWithoutKeyOps(
-                  await crypto.subtle.exportKey('jwk', recipient.publicKey),
-                ),
-              })),
-            ),
-            manifestEntries,
-          });
-
           const result = await api.postShare({
-            share: JSON.parse(encrypted.shareCoreJson) as Record<string, unknown>,
+            share: encrypted.share,
             keyManifest: encrypted.keyManifest as Parameters<
               typeof api.postShare
             >[0]['keyManifest'],
@@ -144,40 +309,24 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
             throw new Error('You cannot share this message.');
           }
 
-          const filteredRecipients: ManifestRecipientKeys[] = [];
-          for (const recipient of recipients) {
-            if (
-              await recipientHasAccessToParentFromFeed(
-                messageId,
-                recipient.keyId,
-                allDeliveries,
-                manifestLookup,
-              )
-            ) {
-              continue;
-            }
-            filteredRecipients.push(recipient);
-          }
+          const filteredRecipients = await filterRecipientsNeedingShareAccess(
+            messageId,
+            recipients,
+            allDeliveries,
+            manifestLookup,
+          );
 
           if (filteredRecipients.length === 0) {
             return messageId;
           }
 
-          const { shareCoreJson, keyManifest } =
-            await buildManifestShareWithAccess(
-              access,
-              material.keyId,
-              material.ecdhPrivateKey,
-              material.senderPublicKey,
-              material.ecdsaSignPrivateKey,
-              filteredRecipients,
-              manifestLookup,
-            );
+          const shareRequest = await encryptUploadedKeyShareable(
+            material,
+            { access, recipients: filteredRecipients },
+            manifestLookup,
+          );
 
-          const result = await api.postShare({
-            share: JSON.parse(shareCoreJson) as Record<string, unknown>,
-            keyManifest,
-          });
+          const result = await api.postShare(shareRequest);
           if (isCreateShareAlreadyComplete(result)) {
             return messageId;
           }
@@ -206,6 +355,66 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
     [api, expectedKeyId, keys],
   );
 
+  const shareMessagesBatch = useCallback(
+    async ({
+      messageIds,
+      recipients,
+      allDeliveries,
+      manifestLookup,
+      onProgress,
+    }: ShareContext & {
+      messageIds: string[];
+      recipients: ManifestRecipientKeys[];
+      onProgress?: (done: number, total: number) => void;
+    }) => {
+      setError(null);
+      setLastShare(null);
+
+      if (messageIds.length === 0) {
+        return;
+      }
+
+      if (recipients.length === 0) {
+        setError('Select at least one recipient.');
+        return;
+      }
+
+      setBusy(true);
+      try {
+        const shares = await buildBatchShareRequests(
+          keys,
+          expectedKeyId,
+          messageIds,
+          recipients,
+          { allDeliveries, manifestLookup },
+        );
+
+        if (shares.length === 0) {
+          onProgress?.(messageIds.length, messageIds.length);
+          return;
+        }
+
+        const batches = chunkArray(shares, MAX_SHARE_BATCH_SIZE);
+        let uploaded = 0;
+        for (const batch of batches) {
+          await api.postShareBatch({ shares: batch });
+          uploaded += batch.length;
+          onProgress?.(uploaded, messageIds.length);
+        }
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : 'Failed to share messages.';
+        if (!isShareRecipientsAlreadyHaveAccessMessage(message)) {
+          setError(message);
+          throw e;
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [api, expectedKeyId, keys],
+  );
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -219,6 +428,7 @@ export function useBackendShare(keys: KeysSession, expectedKeyId: string | null)
     error,
     lastShare,
     shareMessage,
+    shareMessagesBatch,
     clearError,
     clearLastShare,
   };

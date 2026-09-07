@@ -1,7 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import {
   Alert,
@@ -11,6 +13,7 @@ import {
   IconButton,
   Paper,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
@@ -40,6 +43,8 @@ import {
   formatFriendListEntry,
 } from '@lab/lib/formatCommentAuthorLabel.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
+import { ShareMessageHistoryDialog } from '@encrypt/ui/ShareMessageHistoryDialog';
+import { useBackendShareMessageHistory } from '@lab/hooks/useBackendShareMessageHistory.ts';
 
 export function UsersPage() {
   const navigate = useNavigate();
@@ -67,10 +72,16 @@ export function UsersPage() {
     label: string;
   } | null>(null);
   const [unfriendError, setUnfriendError] = useState<string | null>(null);
+  const [shareHistoryTarget, setShareHistoryTarget] = useState<{
+    keyId: string;
+    name: string | null;
+    publicKey: { x: string; y: string };
+  } | null>(null);
   const unfriendSucceededRef = useRef(false);
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const friendships = useFeedLabFriendships();
+  const shareMessageHistory = useBackendShareMessageHistory(keys, keys.keyId);
 
   const refreshFriendData = useCallback(async () => {
     await friendships.refresh({ force: true });
@@ -86,7 +97,7 @@ export function UsersPage() {
   );
 
   const handleAcceptFriendWithName = useCallback(
-    async (username: string) => {
+    async (username: string, shareHistory: boolean) => {
       if (!acceptFriendRequest || !keys.keyId || acceptFriendBusy) {
         return;
       }
@@ -131,6 +142,19 @@ export function UsersPage() {
         try {
           await saveFeedLabUser(keys.keyId, username, publicJwk);
           addLocalUser({ keyId: requesterKeyId, username });
+          if (shareHistory) {
+            const shared = await shareMessageHistory.shareHistoryWithFriend({
+              keyId: requesterKeyId,
+              publicKey: {
+                x: String(publicJwk.x),
+                y: String(publicJwk.y),
+              },
+            });
+            if (!shared && shareMessageHistory.error) {
+              setAcceptFriendError(shareMessageHistory.error);
+              return;
+            }
+          }
           setAcceptFriendRequest(null);
         } catch (e) {
           setAcceptFriendError(
@@ -151,6 +175,7 @@ export function UsersPage() {
       friendshipRequests,
       keys.keyId,
       refreshFriendData,
+      shareMessageHistory,
     ],
   );
 
@@ -496,28 +521,61 @@ export function UsersPage() {
                           {friend.keyId}
                         </Typography>
                       </Box>
-                      <Button
-                        size="small"
-                        color="error"
-                        disabled={friendshipRequests.busy || !keys.keyId}
-                        sx={{ flexShrink: 0 }}
-                        onClick={() => {
-                          if (!keys.keyId) {
-                            return;
-                          }
-                          setUnfriendError(null);
-                          friendshipRequests.clearError();
-                          setUnfriendTarget({
-                            keyId: friend.keyId,
-                            label:
-                              usernameByKeyId[friend.keyId]?.trim() ||
-                              friend.label,
-                          });
-                          setUnfriendDialogOpen(true);
-                        }}
-                      >
-                        Unfriend
-                      </Button>
+                      {friend.messageHistorySharedAt ? null : (
+                        <Tooltip title="Share history">
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label="Share history"
+                              disabled={
+                                friendshipRequests.busy ||
+                                !keys.keyId ||
+                                shareMessageHistory.busy
+                              }
+                              sx={{ flexShrink: 0 }}
+                              onClick={() => {
+                                setShareHistoryTarget({
+                                  keyId: friend.keyId,
+                                  name:
+                                    usernameByKeyId[friend.keyId]?.trim() ||
+                                    null,
+                                  publicKey: friend.publicKey,
+                                });
+                                shareMessageHistory.clearError();
+                              }}
+                            >
+                              <HistoryOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Unfriend">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label="Unfriend"
+                            disabled={friendshipRequests.busy || !keys.keyId}
+                            sx={{ flexShrink: 0 }}
+                            onClick={() => {
+                              if (!keys.keyId) {
+                                return;
+                              }
+                              setUnfriendError(null);
+                              friendshipRequests.clearError();
+                              setUnfriendTarget({
+                                keyId: friend.keyId,
+                                label:
+                                  usernameByKeyId[friend.keyId]?.trim() ||
+                                  friend.label,
+                              });
+                              setUnfriendDialogOpen(true);
+                            }}
+                          >
+                            <PersonRemoveOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Stack>
                   );
                 })
@@ -577,10 +635,18 @@ export function UsersPage() {
             : ''
         }
         existingUsernames={usernames}
-        busy={friendshipRequests.busy || acceptFriendBusy}
+        busy={
+          friendshipRequests.busy ||
+          acceptFriendBusy ||
+          shareMessageHistory.busy
+        }
         error={acceptFriendError}
         onClose={() => {
-          if (!friendshipRequests.busy && !acceptFriendBusy) {
+          if (
+            !friendshipRequests.busy &&
+            !acceptFriendBusy &&
+            !shareMessageHistory.busy
+          ) {
             setAcceptFriendRequest(null);
             setAcceptFriendError(null);
           }
@@ -639,6 +705,37 @@ export function UsersPage() {
           onClose={() => setQrCodeToken(null)}
         />
       ) : null}
+
+      <ShareMessageHistoryDialog
+        open={shareHistoryTarget != null}
+        friendName={shareHistoryTarget?.name}
+        friendKeyId={shareHistoryTarget?.keyId ?? ''}
+        busy={shareMessageHistory.busy}
+        error={shareMessageHistory.error}
+        progress={shareMessageHistory.progress}
+        onClose={() => {
+          if (!shareMessageHistory.busy) {
+            setShareHistoryTarget(null);
+          }
+        }}
+        onClearError={shareMessageHistory.clearError}
+        onClearProgress={shareMessageHistory.clearProgress}
+        onConfirm={async () => {
+          if (!shareHistoryTarget) {
+            return false;
+          }
+          const shared =
+            await shareMessageHistory.shareHistoryWithFriend(
+              shareHistoryTarget,
+            );
+          if (shared) {
+            friendships.markMessageHistorySharedLocally(
+              shareHistoryTarget.keyId,
+            );
+          }
+          return shared;
+        }}
+      />
     </>
   );
 }

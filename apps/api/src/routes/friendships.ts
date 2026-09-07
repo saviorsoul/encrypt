@@ -4,6 +4,7 @@ import type {
   DeleteFriendshipBody,
   FriendshipRequesterBody,
   FriendshipTargetBody,
+  MarkMessageHistorySharedBody,
 } from '@/schemas/common.js';
 import { validateBody } from '@/middleware/validateBody.js';
 import { unauthorized } from '@/lib/httpError.js';
@@ -13,6 +14,7 @@ import {
   handleDeleteFriendship,
   handleListFriendshipRequests,
   handleListFriendships,
+  handleMarkMessageHistoryShared,
   handleRejectFriendshipRequest,
 } from '@/contexts/friendships/index.js';
 
@@ -111,6 +113,19 @@ export function createFriendshipsRouter(): Router {
       const { friendKeyId } = ctx.request.body as DeleteFriendshipBody;
       await handleDeleteFriendship({ ownerKeyId, friendKeyId });
       ctx.status = 204;
+    },
+  );
+
+  router.post(
+    '/friendships/history-shared',
+    validateBody('markMessageHistorySharedBody'),
+    async (ctx) => {
+      const ownerKeyId = readAuthenticatedKeyId(ctx);
+      const { friendKeyId } = ctx.request.body as MarkMessageHistorySharedBody;
+      ctx.body = await handleMarkMessageHistoryShared({
+        ownerKeyId,
+        friendKeyId,
+      });
     },
   );
 

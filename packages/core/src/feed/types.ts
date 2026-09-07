@@ -23,7 +23,7 @@ export type StoredComment = {
 /** Paginated inbox API response. */
 export type InboxPageResponse = {
   items: InboxApiItem[];
-  total: number;
+  total?: number;
   nextCursor: string | null;
 };
 

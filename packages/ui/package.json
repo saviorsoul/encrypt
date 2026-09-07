@@ -32,6 +32,8 @@
     "./FeedntText": "./src/components/FeedntText.tsx",
     "./SendMessageDialog": "./src/components/SendMessageDialog.tsx",
     "./ShareMessageDialog": "./src/components/ShareMessageDialog.tsx",
+    "./ShareMessageHistoryDialog": "./src/components/ShareMessageHistoryDialog.tsx",
+    "./useShareMessageHistory": "./src/hooks/useShareMessageHistory.ts",
     "./SendMessagePanel": "./src/components/SendMessagePanel.tsx",
     "./SendMessageDependenciesContext": "./src/components/SendMessageDependenciesContext.tsx",
     "./useBackendSendMessage": "./src/hooks/useBackendSendMessage.ts",

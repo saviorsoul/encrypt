@@ -103,6 +103,18 @@ async function consumeFriendInvitation(
   });
 }
 
+async function finalizeMutualFriendship(
+  tx: PrismaTx,
+  keyIdA: string,
+  keyIdB: string,
+  invitationToken: string,
+  inviteeKeyId: string,
+): Promise<void> {
+  await deletePendingRequestsBetween(tx, keyIdA, keyIdB);
+  await insertFriendshipPair(tx, keyIdA, keyIdB, invitationToken);
+  await consumeFriendInvitation(tx, invitationToken, inviteeKeyId);
+}
+
 export const friendshipRepository: FriendshipRepository = {
   async hasFriends(ownerKeyId: string): Promise<boolean> {
     const row = await prisma.userFriendship.findFirst({
@@ -122,6 +134,14 @@ export const friendshipRepository: FriendshipRepository = {
     return row != null;
   },
 
+  async areMutualFriends(keyIdA: string, keyIdB: string): Promise<boolean> {
+    const [forward, reverse] = await Promise.all([
+      this.areFriends(keyIdA, keyIdB),
+      this.areFriends(keyIdB, keyIdA),
+    ]);
+    return forward && reverse;
+  },
+
   async listFriendshipsWithPublicKeys(
     ownerKeyId: string,
   ): Promise<FriendshipWithPublicKey[]> {
@@ -131,6 +151,7 @@ export const friendshipRepository: FriendshipRepository = {
         friendKeyId: true,
         createdAt: true,
         invitationToken: true,
+        messageHistorySharedAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -153,6 +174,7 @@ export const friendshipRepository: FriendshipRepository = {
           publicKey,
           createdAt: friendship.createdAt,
           invitationToken: friendship.invitationToken,
+          messageHistorySharedAt: friendship.messageHistorySharedAt,
         };
       })
       .filter((row): row is FriendshipWithPublicKey => row !== null);
@@ -286,31 +308,19 @@ export const friendshipRepository: FriendshipRepository = {
   },
 
   async establishMutualFriendship(
-    inviterKeyId: string,
-    inviteeKeyId: string,
-    invitationToken: string,
-  ): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      await deletePendingRequestsBetween(tx, inviterKeyId, inviteeKeyId);
-      await insertFriendshipPair(
-        tx,
-        inviterKeyId,
-        inviteeKeyId,
-        invitationToken,
-      );
-      await consumeFriendInvitation(tx, invitationToken, inviteeKeyId);
-    });
-  },
-
-  async clearPendingAndConsumeInvitation(
     keyIdA: string,
     keyIdB: string,
     invitationToken: string,
     inviteeKeyId: string,
   ): Promise<void> {
     await prisma.$transaction(async (tx) => {
-      await deletePendingRequestsBetween(tx, keyIdA, keyIdB);
-      await consumeFriendInvitation(tx, invitationToken, inviteeKeyId);
+      await finalizeMutualFriendship(
+        tx,
+        keyIdA,
+        keyIdB,
+        invitationToken,
+        inviteeKeyId,
+      );
     });
   },
 
@@ -323,22 +333,36 @@ export const friendshipRepository: FriendshipRepository = {
     });
   },
 
-  async acceptFriendInvitationEstablishingFriendship(
-    inviterKeyId: string,
-    inviteeKeyId: string,
-    token: string,
-  ): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      // Matches prior behavior: friendship check uses the default client (not tx).
-      if (
-        !(await friendshipRepository.areFriends(inviterKeyId, inviteeKeyId))
-      ) {
-        await deletePendingRequestsBetween(tx, inviterKeyId, inviteeKeyId);
-        await insertFriendshipPair(tx, inviterKeyId, inviteeKeyId, token);
-      }
-
-      await consumeFriendInvitation(tx, token, inviteeKeyId);
+  async markMessageHistoryShared(
+    ownerKeyId: string,
+    friendKeyId: string,
+  ): Promise<{
+    friendKeyId: string;
+    messageHistorySharedAt: Date;
+  } | null> {
+    const friendship = await prisma.userFriendship.findUnique({
+      where: {
+        ownerKeyId_friendKeyId: { ownerKeyId, friendKeyId },
+      },
     });
+    if (!friendship) {
+      return null;
+    }
+
+    const sharedAt = friendship.messageHistorySharedAt ?? new Date();
+    const updated = await prisma.userFriendship.update({
+      where: {
+        ownerKeyId_friendKeyId: { ownerKeyId, friendKeyId },
+      },
+      data: {
+        messageHistorySharedAt: sharedAt,
+      },
+    });
+
+    return {
+      friendKeyId: updated.friendKeyId,
+      messageHistorySharedAt: updated.messageHistorySharedAt!,
+    };
   },
 
   async deleteFriendshipRequestsForKeyId(

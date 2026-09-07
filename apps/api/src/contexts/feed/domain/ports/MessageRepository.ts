@@ -8,5 +8,6 @@ export interface MessageRepository {
     id: string,
     payload: string,
     keyManifest: KeyManifestMap,
+    senderKeyId: string,
   ): Promise<StoredMessage>;
 }

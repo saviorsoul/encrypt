@@ -33,11 +33,13 @@ import {
 } from '@feednt/lib/registerFeedntRecipient.ts';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import { InviteSuccessView } from '@feednt/components/InviteSuccessView.tsx';
+import { useBackendShareMessageHistory } from '@feednt/hooks/useBackendShareMessageHistory.ts';
 import {
   loadFeedntUserByKeyId,
   loadFeedntUserByUsername,
   saveFeedntUser,
 } from '@feednt/services/db/storedUsers.ts';
+import { clearFriendshipsCache } from '@feednt/services/friendshipsCache.ts';
 import type { FriendInvitationPublic } from '@encrypt/core/api/feedApi';
 
 type InviteStep =
@@ -110,6 +112,7 @@ export function InvitePage() {
     useFeedntSession();
   const { addLocalUser, refresh: refreshFeedntUsers } = feedntUsers;
   const keyId = session?.keyId ?? keys.keyId;
+  const shareMessageHistory = useBackendShareMessageHistory(keys, keyId);
   const publicKey = session?.publicKey;
 
   const [step, setStep] = useState<InviteStep>('loading');
@@ -122,6 +125,7 @@ export function InvitePage() {
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const [successVariant, setSuccessVariant] =
     useState<InviteSuccessVariant>('accepted');
+  const [inviteHistoryShared, setInviteHistoryShared] = useState(false);
   const inviteFlowFinishedRef = useRef(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [gdprConsent, setGdprConsent] = useState(false);
@@ -130,6 +134,21 @@ export function InvitePage() {
   const inviterDisplayLabel =
     inviterName.trim() ||
     (invitation ? `${invitation.inviterKeyId.slice(0, 12)}…` : 'inviter');
+
+  const handleShareHistoryWithInviter = useCallback(async () => {
+    if (!invitation) {
+      return;
+    }
+
+    shareMessageHistory.clearError();
+    const shared = await shareMessageHistory.shareHistoryWithFriend({
+      keyId: invitation.inviterKeyId,
+      publicKey: invitation.inviterPublicKey,
+    });
+    if (shared) {
+      setInviteHistoryShared(true);
+    }
+  }, [invitation, shareMessageHistory]);
 
   useEffect(() => {
     if (inviteFlowFinishedRef.current) {
@@ -289,8 +308,11 @@ export function InvitePage() {
       }
       await refreshFeedntUsers(keyId);
 
-      await api.acceptFriendInvitation(invitation.token);
-      await finishInviteSuccess('accepted');
+      const result = await api.acceptFriendInvitation(invitation.token);
+      clearFriendshipsCache(keyId);
+      await finishInviteSuccess(
+        result.status === 'alreadyFriends' ? 'alreadyFriends' : 'accepted',
+      );
     } catch (e) {
       const message =
         e instanceof Error ? e.message : 'Could not accept invitation.';
@@ -380,6 +402,10 @@ export function InvitePage() {
           publicKeyText={publicKeyText}
           variant={successVariant}
           onOpenFeed={() => navigate('/feed')}
+          onShareHistory={handleShareHistoryWithInviter}
+          shareHistoryBusy={shareMessageHistory.busy}
+          shareHistoryError={shareMessageHistory.error}
+          historyShared={inviteHistoryShared}
         />
       </InvitePageShell>
     );

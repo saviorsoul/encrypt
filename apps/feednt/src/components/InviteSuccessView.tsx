@@ -15,6 +15,10 @@ type InviteSuccessViewProps = {
   publicKeyText: string;
   variant?: 'accepted' | 'alreadyFriends';
   onOpenFeed: () => void;
+  onShareHistory?: () => Promise<void>;
+  shareHistoryBusy?: boolean;
+  shareHistoryError?: string | null;
+  historyShared?: boolean;
 };
 
 export function InviteSuccessView({
@@ -22,17 +26,21 @@ export function InviteSuccessView({
   publicKeyText,
   variant = 'accepted',
   onOpenFeed,
+  onShareHistory,
+  shareHistoryBusy = false,
+  shareHistoryError = null,
+  historyShared = false,
 }: InviteSuccessViewProps) {
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
   const handleCopyPublicKey = () => {
-    if (!publicKeyText) {
-      return;
-    }
+    if (!publicKeyText) return;
     void copyAndNotify(publicKeyText);
   };
 
   const isAlreadyFriends = variant === 'alreadyFriends';
+  const canShareHistory =
+    !isAlreadyFriends && onShareHistory != null && !historyShared;
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -53,6 +61,11 @@ export function InviteSuccessView({
             ? `You are already friends with ${inviterName}.`
             : `You are now friends with ${inviterName}. This invitation is closed and cannot be used again.`}
         </Alert>
+        {shareHistoryError ? (
+          <Alert severity="error" sx={{ width: '100%' }}>
+            {shareHistoryError}
+          </Alert>
+        ) : null}
         <Typography
           variant="body2"
           color="text.secondary"
@@ -81,6 +94,19 @@ export function InviteSuccessView({
         />
         <Box sx={{ width: '100%' }}>
           <Stack spacing={1}>
+            {canShareHistory ? (
+              <Button
+                data-testid="invite-share-history"
+                variant="contained"
+                fullWidth
+                disabled={shareHistoryBusy}
+                onClick={() => void onShareHistory()}
+              >
+                {shareHistoryBusy
+                  ? 'Sharing history…'
+                  : 'Share my past messages'}
+              </Button>
+            ) : null}
             <Button
               variant="outlined"
               fullWidth

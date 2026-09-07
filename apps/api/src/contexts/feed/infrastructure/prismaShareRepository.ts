@@ -1,4 +1,5 @@
 import type { StoredShare } from '@encrypt/core/feed/types';
+import { getSenderKeyIdFromCorePayload } from '@encrypt/core/crypto/manifestDecrypt';
 import { prisma, type PrismaTx } from '@/lib/prisma.js';
 import { badRequest, notFound } from '@/lib/httpError.js';
 import { verifyManifestSignature } from '@/crypto/signatures.js';
@@ -89,7 +90,15 @@ export const shareRepository: ShareRepository = {
           );
         }
 
-        await insertMessage(tx, parentId, JSON.stringify(parentMessage));
+        const parentPayload = JSON.stringify(parentMessage);
+        const senderKeyId = await getSenderKeyIdFromCorePayload(parentPayload);
+        if (!senderKeyId) {
+          throw badRequest(
+            'Parent message payload is missing senderPublicJwk.',
+          );
+        }
+
+        await insertMessage(tx, parentId, parentPayload, senderKeyId);
       }
 
       const newRecipientKeyIds = await filterRecipientsWithoutMessageAccess(

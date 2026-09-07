@@ -14,6 +14,10 @@ export type CreateShareRequest = {
   parentMessage?: Record<string, unknown>;
 };
 
+export type CreateShareBatchRequest = {
+  shares: CreateShareRequest[];
+};
+
 export type RegisterUserRequest = {
   publicKey: string | Record<string, unknown>;
 };
@@ -40,6 +44,10 @@ export type FriendshipRequesterBody = {
 };
 
 export type DeleteFriendshipBody = {
+  friendKeyId: string;
+};
+
+export type MarkMessageHistorySharedBody = {
   friendKeyId: string;
 };
 

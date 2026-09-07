@@ -25,13 +25,16 @@ model User {
 }
 
 model Message {
-  id        String   @id @db.Uuid
-  payload   String
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @db.Uuid
+  payload     String
+  senderKeyId String?  @map("sender_key_id")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  shares   Share[]
-  comments Comment[]
+  shares          Share[]
+  comments        Comment[]
+  manifestShards  MessageKeyManifestShard[]
 
+  @@index([senderKeyId, createdAt])
   @@map("messages")
 }
 
@@ -65,6 +68,8 @@ model MessageKeyManifestShard {
   shareId        String? @map("share_id") @db.Uuid // null = original message shard; set = share delivery shard
   entryJson      String  @map("entry_json")
 
+  message Message @relation(fields: [messageId], references: [id], onDelete: Restrict)
+
   @@id([messageId, recipientKeyId])
   @@index([recipientKeyId])
   @@index([shareId])
@@ -89,10 +94,11 @@ model FriendshipRequest {
 }
 
 model UserFriendship {
-  ownerKeyId      String   @map("owner_key_id")
-  friendKeyId     String   @map("friend_key_id")
-  invitationToken String?  @map("invitation_token")
-  createdAt       DateTime @default(now()) @map("created_at")
+  ownerKeyId             String    @map("owner_key_id")
+  friendKeyId            String    @map("friend_key_id")
+  invitationToken        String?   @map("invitation_token")
+  messageHistorySharedAt DateTime? @map("message_history_shared_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
 
   // No DB FKs: Citus distributed table → users reference table. Prisma-only joins.
   owner  User @relation("FriendshipOwner", fields: [ownerKeyId], references: [keyId])

@@ -10,6 +10,8 @@ export { handleDeleteFriendship } from './application/established/commands/delet
 export type { DeleteFriendshipCommand } from './application/established/commands/deleteFriendship/deleteFriendship.handler.js';
 export { handleListFriendships } from './application/established/queries/listFriendships/listFriendships.handler.js';
 export type { ListFriendshipsQuery } from './application/established/queries/listFriendships/listFriendships.handler.js';
+export { handleMarkMessageHistoryShared } from './application/established/commands/markMessageHistoryShared/markMessageHistoryShared.handler.js';
+export type { MarkMessageHistorySharedCommand } from './application/established/commands/markMessageHistoryShared/markMessageHistoryShared.handler.js';
 export { handleCreateFriendInvitation } from './application/invitations/commands/createFriendInvitation/createFriendInvitation.handler.js';
 export type { CreateFriendInvitationCommand } from './application/invitations/commands/createFriendInvitation/createFriendInvitation.handler.js';
 export { handleAcceptFriendInvitation } from './application/invitations/commands/acceptFriendInvitation/acceptFriendInvitation.handler.js';

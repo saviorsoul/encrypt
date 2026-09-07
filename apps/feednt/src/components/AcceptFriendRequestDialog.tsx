@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import {
   Alert,
   Button,
+  Checkbox,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Stack,
   TextField,
   Typography,
@@ -26,7 +28,7 @@ type AcceptFriendRequestDialogProps = {
   busy: boolean;
   error: string | null;
   onClose: () => void;
-  onAccept: (username: string) => Promise<void>;
+  onAccept: (username: string, shareHistory: boolean) => Promise<void>;
   onClearError: () => void;
 };
 
@@ -44,6 +46,7 @@ export function AcceptFriendRequestDialog({
   onClearError,
 }: AcceptFriendRequestDialogProps) {
   const [username, setUsername] = useState('');
+  const [shareHistory, setShareHistory] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevSuggestedUsername, setPrevSuggestedUsername] =
     useState(suggestedUsername);
@@ -52,6 +55,7 @@ export function AcceptFriendRequestDialog({
     setPrevOpen(open);
     if (open) {
       setUsername(suggestedUsername);
+      setShareHistory(false);
     }
   }
 
@@ -115,7 +119,7 @@ export function AcceptFriendRequestDialog({
             onKeyDown={(event) => {
               if (event.key === 'Enter' && canAccept) {
                 event.preventDefault();
-                void onAccept(trimmedUsername);
+                void onAccept(trimmedUsername, shareHistory);
               }
             }}
           />
@@ -125,6 +129,16 @@ export function AcceptFriendRequestDialog({
           {!duplicateError && error ? (
             <Alert severity="error">{error}</Alert>
           ) : null}
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={shareHistory}
+                onChange={(event) => setShareHistory(event.target.checked)}
+                disabled={busy}
+              />
+            }
+            label="Share my past messages with them"
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -134,7 +148,7 @@ export function AcceptFriendRequestDialog({
         <Button
           variant="contained"
           disabled={!canAccept}
-          onClick={() => void onAccept(trimmedUsername)}
+          onClick={() => void onAccept(trimmedUsername, shareHistory)}
         >
           {busy ? 'Accepting…' : 'Accept'}
         </Button>
