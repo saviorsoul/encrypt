@@ -26,17 +26,6 @@
   }
 
   function goBackFromGdpr() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var returnUrl = params.get('return');
-      if (returnUrl) {
-        window.location.assign(returnUrl);
-        return;
-      }
-    } catch {
-      // Fall through to history or index.html.
-    }
-
     if (window.history.length > 1) {
       window.history.back();
       return;
@@ -46,6 +35,15 @@
   }
 
   function wireBackButton() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('standalone') === '1') {
+      var backButton = document.getElementById('gdpr-back-button');
+      if (backButton) {
+        backButton.hidden = true;
+      }
+      return;
+    }
+
     var backButton = document.getElementById('gdpr-back-button');
     if (backButton) {
       backButton.addEventListener('click', goBackFromGdpr);

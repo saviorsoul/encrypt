@@ -10,6 +10,8 @@ export type GdprConsentCheckboxProps = {
   disabled?: boolean;
   /** `login` — open-mode sign-in; `invite` — invitation accept (default). */
   purpose?: 'invite' | 'login';
+  /** Open the personal data notice in a new tab so the current page stays loaded. */
+  openGdprInNewTab?: boolean;
 };
 
 const PURPOSE_SUFFIX: Record<
@@ -25,6 +27,7 @@ export function GdprConsentCheckbox({
   onChange,
   disabled = false,
   purpose = 'invite',
+  openGdprInNewTab = false,
 }: GdprConsentCheckboxProps) {
   return (
     <FormControlLabel
@@ -54,7 +57,9 @@ export function GdprConsentCheckbox({
           </Typography>
           I have read the{' '}
           <Link
-            href={gdprPageHref({ withReturnUrl: true })}
+            href={gdprPageHref(openGdprInNewTab ? { newTab: true } : {})}
+            target={openGdprInNewTab ? '_blank' : undefined}
+            rel={openGdprInNewTab ? 'noopener noreferrer' : undefined}
             underline="always"
             variant="body2"
           >

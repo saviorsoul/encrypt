@@ -70,8 +70,14 @@ export function useBackendFeedData(
   const loadIdRef = useRef(0);
 
   const applyInboxPage = useCallback(
-    (pageItems: InboxApiItem[], pageTotal: number, replace: boolean) => {
-      setTotal(pageTotal);
+    (
+      pageItems: InboxApiItem[],
+      pageTotal: number | undefined,
+      replace: boolean,
+    ) => {
+      if (pageTotal !== undefined) {
+        setTotal(pageTotal);
+      }
       setRawItems((current) => {
         const merged = replace
           ? pageItems

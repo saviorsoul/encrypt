@@ -4,7 +4,7 @@ import {
   GDPR_DATA_PAGE_TITLE,
   GDPR_DATA_SECTIONS,
 } from './gdprDataContent.ts';
-import { GDPR_RETURN_QUERY_PARAM } from '../utils/gdprPageHref.ts';
+import { GDPR_STANDALONE_QUERY_PARAM } from '../utils/gdprPageHref.ts';
 
 function escapeHtml(text: string): string {
   return text
@@ -143,17 +143,6 @@ export function renderGdprPageScript(): string {
   }
 
   function goBackFromGdpr() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var returnUrl = params.get('${GDPR_RETURN_QUERY_PARAM}');
-      if (returnUrl) {
-        window.location.assign(returnUrl);
-        return;
-      }
-    } catch {
-      // Fall through to history or index.html.
-    }
-
     if (window.history.length > 1) {
       window.history.back();
       return;
@@ -163,6 +152,15 @@ export function renderGdprPageScript(): string {
   }
 
   function wireBackButton() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('${GDPR_STANDALONE_QUERY_PARAM}') === '1') {
+      var backButton = document.getElementById('gdpr-back-button');
+      if (backButton) {
+        backButton.hidden = true;
+      }
+      return;
+    }
+
     var backButton = document.getElementById('gdpr-back-button');
     if (backButton) {
       backButton.addEventListener('click', goBackFromGdpr);

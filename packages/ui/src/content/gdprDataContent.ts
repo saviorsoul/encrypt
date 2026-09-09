@@ -5,7 +5,7 @@ export type GdprDataSection = {
   bullets?: string[];
 };
 
-export const GDPR_DATA_PAGE_TITLE = 'Personal data in this app';
+export const GDPR_DATA_PAGE_TITLE = 'Personal data management';
 
 export const GDPR_DATA_PAGE_INTRO =
   'This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).';

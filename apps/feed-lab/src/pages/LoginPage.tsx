@@ -183,6 +183,7 @@ export function LoginPage() {
               checked={gdprConsent}
               onChange={setGdprConsent}
               disabled={actionBusy}
+              openGdprInNewTab
             />
           ) : null}
           <Typography variant="body2">

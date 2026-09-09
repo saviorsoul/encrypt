@@ -150,7 +150,7 @@ export function FeedLabSettingsMenu() {
 
   const handleOpenGdpr = useCallback(() => {
     handleClose();
-    openGdprPage();
+    openGdprPage({ newTab: true });
   }, [handleClose]);
 
   return (

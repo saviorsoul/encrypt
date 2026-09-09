@@ -133,10 +133,11 @@ export {
   renderGdprPageScript,
 } from './content/renderGdprHtml.ts';
 export {
-  GDPR_RETURN_QUERY_PARAM,
+  GDPR_STANDALONE_QUERY_PARAM,
   gdprPageHref,
   openGdprPage,
   type GdprPageHrefOptions,
+  type OpenGdprPageOptions,
 } from './utils/gdprPageHref.ts';
 export {
   InvitationQrScanDialog,
