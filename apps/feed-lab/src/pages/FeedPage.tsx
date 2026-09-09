@@ -37,6 +37,10 @@ import {
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import { cancelPendingSystemOps } from '@lab/crypto/systemAppSigner.ts';
+import { AddFriendDialog } from '@lab/components/AddFriendDialog.tsx';
+import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
+import { useBackendFriendshipRequests } from '@lab/hooks/useBackendFriendshipRequests.ts';
+import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
 
 export function FeedPage() {
   const navigate = useNavigate();
@@ -57,9 +61,22 @@ export function FeedPage() {
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
   const [qrScanOpen, setQrScanOpen] = useState(false);
+  const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);
   const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
 
   const friendships = useFeedLabFriendships();
+  const refreshFriendData = useCallback(async () => {
+    await friendships.refresh({ force: true });
+  }, [friendships]);
+  const friendInvitations = useBackendFriendInvitations(refreshFriendData);
+  const friendshipRequests = useBackendFriendshipRequests(refreshFriendData);
+  const isRegistered =
+    keys.keyId != null &&
+    (!feedInvitationalOnly ||
+      !(
+        friendships.friendshipsError &&
+        isUnknownUserKeyIdError(friendships.friendshipsError, keys.keyId)
+      ));
   const { ensureFriendshipsLoaded } = friendships;
   const ensureFriendshipsLoadedRef = useRef(ensureFriendshipsLoaded);
 
@@ -275,6 +292,30 @@ export function FeedPage() {
     [navigate],
   );
 
+  const openAddFriendDialog = useCallback(() => {
+    friendInvitations.clearError();
+    friendInvitations.clearLastInvitationId();
+    friendshipRequests.clearError();
+    friendshipRequests.clearInfo();
+    setAddFriendDialogOpen(true);
+  }, [friendInvitations, friendshipRequests]);
+
+  const handleSendRequestByPublicKey = useCallback(
+    async (publicKeyText: string, name: string) => {
+      if (!keys.keyId) {
+        return { ok: false };
+      }
+      return friendshipRequests.sendRequestByPublicKey(
+        keys.keyId,
+        publicKeyText,
+        name,
+        usernames,
+        usernameByKeyId,
+      );
+    },
+    [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
+  );
+
   return (
     <>
       <Stack
@@ -333,6 +374,15 @@ export function FeedPage() {
           }
           onAcceptInvite={() => setAcceptInvitationOpen(true)}
           acceptInviteDisabled={!keys.keyId}
+          onInviteFriend={
+            feedInvitationalOnly ? undefined : openAddFriendDialog
+          }
+          inviteFriendDisabled={
+            !keys.keyId ||
+            friendships.usersLoading ||
+            friendInvitations.busy ||
+            !isRegistered
+          }
         />
       ) : null}
 
@@ -453,6 +503,27 @@ export function FeedPage() {
       />
 
       <IdentityDialog {...identity.dialogProps} />
+
+      <AddFriendDialog
+        open={addFriendDialogOpen}
+        authenticated={keys.keyId != null}
+        isRegistered={isRegistered}
+        hasFriends={friendships.friends.length > 0}
+        invitationBusy={friendInvitations.busy}
+        invitationError={friendInvitations.error}
+        invitationId={friendInvitations.lastInvitationId}
+        requestBusy={friendshipRequests.busy}
+        requestError={friendshipRequests.error}
+        requestInfo={friendshipRequests.info}
+        onClose={() => setAddFriendDialogOpen(false)}
+        onClearInvitationError={friendInvitations.clearError}
+        onClearRequestError={friendshipRequests.clearError}
+        onCancelInFlight={friendshipRequests.cancelInFlight}
+        onCreateInvitation={(name) =>
+          void friendInvitations.createInvitation(name)
+        }
+        onSendRequestByPublicKey={handleSendRequestByPublicKey}
+      />
 
       <AcceptInvitationDialog
         open={acceptInvitationOpen}

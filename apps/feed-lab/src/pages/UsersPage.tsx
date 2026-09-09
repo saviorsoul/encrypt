@@ -281,7 +281,7 @@ export function UsersPage() {
               disabled={!keys.keyId || friendships.usersLoading}
               onClick={() => setAcceptInvitationOpen(true)}
             >
-              Accept invite
+              Enter code
             </Button>
             <Button
               data-testid="users-add-friend"

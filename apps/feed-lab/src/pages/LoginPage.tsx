@@ -11,7 +11,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { generatePrivateKeyDownloadFile } from '@encrypt/core/crypto/privateKeyDownload';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { GdprConsentCheckbox } from '@encrypt/ui/GdprConsentCheckbox';
 import { LazyInvitationQrScanDialog } from '@encrypt/ui/LazyInvitationQrScanDialog';
+import { isFeedInvitationalOnlyEnabled } from '@encrypt/ui';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { resolveDefaultInviteUsername } from '@lab/lib/defaultInviteUsername.ts';
 import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
@@ -21,7 +23,10 @@ const protocolBridgeEnabled = isFeedLabProtocolBridgeEnabled();
 
 export function LoginPage() {
   const { keys } = useFeedLabSession();
+  const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
+  const requiresGdprConsent = !feedInvitationalOnly;
   const navigate = useNavigate();
+  const [gdprConsent, setGdprConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pairBusy, setPairBusy] = useState(false);
   const [generateBusy, setGenerateBusy] = useState(false);
@@ -35,6 +40,7 @@ export function LoginPage() {
   >('success');
   const [downloadSnackbarKey, setDownloadSnackbarKey] = useState(0);
   const actionBusy = busy || pairBusy || generateBusy;
+  const signInBlocked = requiresGdprConsent && !gdprConsent;
 
   const handleChooseFile = useCallback(async () => {
     keys.clearSessionError();
@@ -147,7 +153,7 @@ export function LoginPage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={actionBusy}
+                disabled={actionBusy || signInBlocked}
                 onClick={() => void handleConnectEncryptApp()}
                 startIcon={
                   pairBusy ? (
@@ -171,6 +177,14 @@ export function LoginPage() {
           {generateError ? (
             <Alert severity="error">{generateError}</Alert>
           ) : null}
+          {requiresGdprConsent ? (
+            <GdprConsentCheckbox
+              purpose="login"
+              checked={gdprConsent}
+              onChange={setGdprConsent}
+              disabled={actionBusy}
+            />
+          ) : null}
           <Typography variant="body2">
             Choose a <strong>.jwk</strong> or <strong>.json</strong> private key
             file to sign in with a browser-loaded key.
@@ -180,7 +194,7 @@ export function LoginPage() {
             variant={protocolBridgeEnabled ? 'outlined' : 'contained'}
             size="large"
             fullWidth
-            disabled={actionBusy}
+            disabled={actionBusy || signInBlocked}
             onClick={() => void handleChooseFile()}
             startIcon={
               busy ? <CircularProgress size={18} color="inherit" /> : null
@@ -212,7 +226,7 @@ export function LoginPage() {
             disabled={actionBusy}
             onClick={() => setAcceptInvitationOpen(true)}
           >
-            Accept invitation
+            Enter code
           </Button>
         </Stack>
       </Paper>

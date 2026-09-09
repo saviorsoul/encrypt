@@ -11,7 +11,7 @@ export const GDPR_DATA_PAGE_INTRO =
   'This notice describes what personal data this app stores and processes when you use the Feed API companion apps (Feednt / Feed Lab).';
 
 export const GDPR_DATA_PAGE_NOTICE =
-  'This page describes the rules for open tests (beta version) of the application. All data will be removed on 06.09.26 (DD.MM.YY).';
+  'This page describes the rules for open tests (beta version) of the application. All data will be removed on 12.09.26 (DD.MM.YY).';
 
 export const GDPR_DATA_SECTIONS: GdprDataSection[] = [
   {
@@ -76,7 +76,7 @@ export const GDPR_DATA_SECTIONS: GdprDataSection[] = [
     paragraphs: [
       'You can clear your account from Settings → Clear account data while signed in. That is a self-service erasure request (GDPR Art. 17) for friendships, friendship requests, your decryption shards, and ciphertext that nobody else can still decrypt. Your users row is kept with status inactive (keyId and public key remain) so the same key cannot register a new account. It also removes local friend labels for this account and signs you out.',
       'Friend invitation records are not deleted when you clear your account. The Feed API is invite-only: those rows are how the operator knows who was invited into the app (invitation token, inviter keyId, invitee keyId, status, and timestamps). They do not include message content.',
-      'Friends keep their own copies of messages. Encrypted payloads on threads others still hold will remain, those copies also relate to the remaining recipients. During this open test (beta), all server-held test data — including retained invitations — will be removed on 06.09.26.',
+      'Friends keep their own copies of messages. Encrypted payloads on threads others still hold will remain, those copies also relate to the remaining recipients. During this open test (beta), all server-held test data — including retained invitations — will be removed on 12.09.26.',
       'For any concerns around data retency mechanisms contact support@feednt.com',
     ],
   },

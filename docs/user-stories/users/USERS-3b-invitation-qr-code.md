@@ -14,7 +14,7 @@
 
 ### Scanning a QR code (invitee — Feednt)
 
-- On Users, **Accept invite** opens a dialog with **Invitation ID** (default) and **QR code** tabs.
+- On Users, **Enter code** opens a dialog with **Invitation ID** (default) and **QR code** tabs.
 - **QR code** tab → **Scan QR code** opens the camera scanner (native on mobile Capacitor, web camera in browser).
 - Scanner accepts only a valid invitation UUID from the QR payload; invalid codes show an error and do not navigate away.
 - On success, app navigates to the in-app invitation accept page (`/invite/:token`) for the scanned ID.
@@ -23,7 +23,7 @@
 ### Feed Lab
 
 - Inviter can **Show QR code** when sharing an invitation (same UUID-only encoding).
-- **Accept invite** dialog includes a **QR code** tab with an info message that scanning is **not available in Feed Lab yet**; invitee uses the **Invitation ID** tab or `/invite/:token` in the browser.
+- **Enter code** dialog includes a **QR code** tab with an info message that scanning is **not available in Feed Lab yet**; invitee uses the **Invitation ID** tab or `/invite/:token` in the browser.
 
 ## Related
 

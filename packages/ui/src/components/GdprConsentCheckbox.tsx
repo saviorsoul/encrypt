@@ -8,19 +8,32 @@ export type GdprConsentCheckboxProps = {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  /** `login` — open-mode sign-in; `invite` — invitation accept (default). */
+  purpose?: 'invite' | 'login';
+};
+
+const PURPOSE_SUFFIX: Record<
+  NonNullable<GdprConsentCheckboxProps['purpose']>,
+  string
+> = {
+  invite: 'before accepting this invitation',
+  login: 'before signing in to the app',
 };
 
 export function GdprConsentCheckbox({
   checked,
   onChange,
   disabled = false,
+  purpose = 'invite',
 }: GdprConsentCheckboxProps) {
   return (
     <FormControlLabel
       disabled={disabled}
       control={
         <Checkbox
-          data-testid="invite-gdpr-consent"
+          data-testid={
+            purpose === 'login' ? 'login-gdpr-consent' : 'invite-gdpr-consent'
+          }
           checked={checked}
           onChange={(_, next) => onChange(next)}
           slotProps={{
@@ -47,7 +60,7 @@ export function GdprConsentCheckbox({
           >
             personal data notice
           </Link>{' '}
-          and understand how my data is stored before accepting this invitation.
+          and understand how my data is stored {PURPOSE_SUFFIX[purpose]}.
         </Typography>
       }
       sx={{ alignItems: 'flex-start', mx: 0 }}

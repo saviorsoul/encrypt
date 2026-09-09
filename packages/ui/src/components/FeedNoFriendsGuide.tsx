@@ -14,6 +14,8 @@ export type FeedNoFriendsGuideProps = {
   invitationalOnly?: boolean;
   onAcceptInvite?: () => void;
   acceptInviteDisabled?: boolean;
+  onInviteFriend?: () => void;
+  inviteFriendDisabled?: boolean;
 };
 
 export function FeedNoFriendsGuide({
@@ -22,6 +24,8 @@ export function FeedNoFriendsGuide({
   invitationalOnly = true,
   onAcceptInvite,
   acceptInviteDisabled = false,
+  onInviteFriend,
+  inviteFriendDisabled = false,
 }: FeedNoFriendsGuideProps) {
   if (loading) {
     return (
@@ -47,6 +51,7 @@ export function FeedNoFriendsGuide({
   }
 
   const showAcceptInvite = onAcceptInvite != null;
+  const showInviteFriend = !invitationalOnly && onInviteFriend != null;
 
   return (
     <Paper
@@ -65,18 +70,36 @@ export function FeedNoFriendsGuide({
             ? 'You need at least one friend before you can create messages or share with your network. Ask someone already on the network to send you an invitation ID.'
             : 'Ask someone to send you an invitation, or add friends from the Users page to start messaging and sharing with your network.'}
         </Typography>
-        {showAcceptInvite ? (
-          <Box>
-            <Button
-              data-testid="feed-accept-invitation"
-              variant="outlined"
-              size="small"
-              disabled={acceptInviteDisabled}
-              onClick={onAcceptInvite}
-            >
-              Accept invite
-            </Button>
-          </Box>
+        {showAcceptInvite || showInviteFriend ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: 'wrap' }}
+          >
+            {showAcceptInvite ? (
+              <Button
+                data-testid="feed-accept-invitation"
+                variant="outlined"
+                size="small"
+                disabled={acceptInviteDisabled}
+                onClick={onAcceptInvite}
+              >
+                Enter code
+              </Button>
+            ) : null}
+            {showInviteFriend ? (
+              <Button
+                data-testid="feed-invite-friend"
+                variant="outlined"
+                size="small"
+                disabled={inviteFriendDisabled}
+                onClick={onInviteFriend}
+              >
+                Invite friend
+              </Button>
+            ) : null}
+          </Stack>
         ) : null}
       </Stack>
     </Paper>

@@ -9,7 +9,7 @@
 - Inviter (**registered**) creates an invitation via `POST /friend-invitations` and receives a one-time **invitation ID** (UUID).
 - Inviter shares the ID with one person (copy from **Invite friend**, or share the ID shown on pending invitations).
 - Invitee opens the invitation accept page with that ID:
-  - **Feed Lab / Feednt:** **Accept invite** on Users → **Invitation ID** tab → enter ID → **Open invitation**.
+  - **Feed Lab / Feednt:** **Enter code** on Users → **Invitation ID** tab → enter ID → **Open invitation**.
   - **Feed Lab (browser):** open `/invite/:token` directly (e.g. after receiving the ID out of band).
 - Invitee loads or generates a key pair and accepts via `POST /friend-invitations/:token/accept`.
 - Mutual friendship is created.

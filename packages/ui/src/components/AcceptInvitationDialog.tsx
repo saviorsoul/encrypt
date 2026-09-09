@@ -64,7 +64,7 @@ export function AcceptInvitationDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Accept invite</DialogTitle>
+      <DialogTitle>Enter code</DialogTitle>
       <DialogContent>
         <Tabs
           value={tab}

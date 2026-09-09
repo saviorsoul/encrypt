@@ -13,7 +13,9 @@ import { generatePrivateKeyDownloadFile } from '@encrypt/core/crypto/privateKeyD
 import { hasStoredPrivateKeyInSafeStorage } from '@encrypt/platform/feednt';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
+import { GdprConsentCheckbox } from '@encrypt/ui/GdprConsentCheckbox';
 import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
+import { isFeedInvitationalOnlyEnabled } from '@encrypt/ui';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 
@@ -21,7 +23,10 @@ const DEFAULT_KEY_USERNAME = 'my';
 
 export function LoginPage() {
   const { session, sessionError, unlock, importKey } = useFeedntSession();
+  const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
+  const requiresGdprConsent = !feedInvitationalOnly;
   const navigate = useNavigate();
+  const [gdprConsent, setGdprConsent] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [generateBusy, setGenerateBusy] = useState(false);
@@ -125,6 +130,7 @@ export function LoginPage() {
   }
 
   const busy = unlockBusy || importBusy || generateBusy;
+  const signInBlocked = requiresGdprConsent && !gdprConsent;
 
   return (
     <Box
@@ -175,6 +181,14 @@ export function LoginPage() {
           ) : null}
           {hasStoredKey === false ? (
             <>
+              {requiresGdprConsent ? (
+                <GdprConsentCheckbox
+                  purpose="login"
+                  checked={gdprConsent}
+                  onChange={setGdprConsent}
+                  disabled={busy}
+                />
+              ) : null}
               <Typography variant="body2">
                 Choose a <strong>.jwk</strong> or <strong>.json</strong> private
                 key file to import into secure storage on this device.
@@ -184,7 +198,7 @@ export function LoginPage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={busy}
+                disabled={busy || signInBlocked}
                 onClick={() => void handleImport()}
                 startIcon={
                   importBusy ? (
@@ -220,7 +234,7 @@ export function LoginPage() {
                 disabled={busy}
                 onClick={() => setAcceptInvitationOpen(true)}
               >
-                Accept invite
+                Enter code
               </Button>
             </>
           ) : null}

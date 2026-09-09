@@ -56,7 +56,7 @@ export function InvitationQrCodeDialog({
           sx={{ mb: 2 }}
         >
           Show this QR code to your friend to accept the invitation. Let your
-          friend click on the "Accept invite" button and use "QR code" scan.
+          friend click on the "Enter code" button and use "QR code" scan.
         </Typography>
         <Typography
           variant="caption"

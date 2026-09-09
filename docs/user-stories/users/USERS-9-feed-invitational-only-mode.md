@@ -19,6 +19,7 @@
 - Any authenticated key is **auto-registered** (`registerIfAbsent`) on the first protected API request.
 - No invitation is required before using inbox, messages, shares, or comments.
 - Accept-invite UI (login, Users, feed onboarding) remains available as an onboarding path and way to add friends.
+- Login screens require GDPR consent (personal data notice link) before sign-in actions; invitation accept keeps its own consent on the invite page.
 - API **logs a warning at startup** that it is running in open mode.
 - Manifest recipient checks unchanged: recipients must still be registered keys.
 

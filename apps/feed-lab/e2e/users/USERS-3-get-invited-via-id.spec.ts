@@ -56,7 +56,7 @@ test.describe('USERS-3 — Get invited via invitation ID', () => {
       const inviteePage = await inviteeContext.newPage();
 
       await inviteePage.goto(`/invite/${invitationToken}`);
-      await expect(inviteePage.getByText('Accept invite')).toBeVisible({
+      await expect(inviteePage.getByText('Enter code')).toBeVisible({
         timeout: 15_000,
       });
 

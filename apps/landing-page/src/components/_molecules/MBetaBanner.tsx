@@ -1,20 +1,11 @@
 import { useState } from 'react';
-import {
-  DISCORD_INVITE_URL,
-  FEEDNT_TEST_URL,
-  GITHUB_RELEASES_URL,
-} from '@/lib/links.ts';
+import { FEEDNT_TEST_URL, GITHUB_RELEASES_URL } from '@/lib/links.ts';
+import { BETA_END_DATE_LABEL, isBetaPeriodActive } from '@/lib/betaTest.ts';
 import { cn } from '@/lib/cn.ts';
 import { FeedntText } from '@/components/_molecules/MFeedntText.tsx';
 
-const BETA_END_DATE = new Date('2026-09-06T23:59:59');
-
 const linkClassName =
   'font-semibold text-brand underline-offset-4 transition-colors hover:text-brand/80 underline';
-
-function isBetaPeriodActive() {
-  return Date.now() <= BETA_END_DATE.getTime();
-}
 
 export function BetaBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -32,16 +23,7 @@ export function BetaBanner() {
       <div className="mx-auto flex max-w-4xl items-start gap-3 sm:items-center">
         <div className="flex-1 text-center leading-snug">
           <p>
-            <FeedntText /> is in beta tests until 06.09.2026 — join us on{' '}
-            <a
-              className={linkClassName}
-              href={DISCORD_INVITE_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Discord
-            </a>{' '}
-            or just ask your friend for an invitation.
+            <FeedntText /> is in open beta until {BETA_END_DATE_LABEL}.
           </p>
           <p className="mt-3">
             <a
