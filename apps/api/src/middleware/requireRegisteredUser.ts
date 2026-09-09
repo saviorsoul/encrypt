@@ -1,14 +1,24 @@
 import type { Middleware } from 'koa';
-import { assertCurrentUserRegistered } from '@/contexts/users/index.js';
+import {
+  assertCurrentUserRegistered,
+  userRepository,
+} from '@/contexts/users/index.js';
 import { unauthorized } from '@/lib/httpError.js';
 
-export function requireRegisteredUser(): Middleware {
+export function requireRegisteredUser(
+  feedInvitationalOnly: boolean,
+): Middleware {
   return async (ctx, next) => {
     const keyId = ctx.state.authenticatedKeyId;
-    if (!keyId) {
+    const publicKey = ctx.state.authenticatedPublicKey;
+    if (!keyId || !publicKey) {
       throw unauthorized('Authentication is required.');
     }
-    await assertCurrentUserRegistered(keyId);
+    if (feedInvitationalOnly) {
+      await assertCurrentUserRegistered(keyId);
+    } else {
+      await userRepository.registerIfAbsent({ keyId, publicKey });
+    }
     await next();
   };
 }

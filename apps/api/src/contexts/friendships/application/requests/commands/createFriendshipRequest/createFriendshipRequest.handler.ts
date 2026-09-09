@@ -11,6 +11,7 @@ import {
 } from '@/contexts/friendships/application/services/friendshipAssertions.js';
 import { ensureRegisteredAfterFriendshipPair } from '@/contexts/users/index.js';
 import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
+import { readConfig } from '@/config.js';
 
 export type CreateFriendshipRequestCommand = {
   requesterKeyId: string;
@@ -27,7 +28,11 @@ export async function handleCreateFriendshipRequest(
 
   assertDistinctKeyIds(requesterKeyId, targetKeyId);
 
-  if (!(await friendshipRepository.hasFriends(requesterKeyId))) {
+  const { feedInvitationalOnly } = readConfig();
+  if (
+    feedInvitationalOnly &&
+    !(await friendshipRepository.hasFriends(requesterKeyId))
+  ) {
     throw badRequest('Add or accept a friend before sending invitations.');
   }
   await assertUsersRegistered([targetKeyId]);

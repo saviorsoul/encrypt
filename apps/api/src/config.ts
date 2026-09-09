@@ -8,6 +8,23 @@ export const FRIEND_INVITATIONS_PATH_PREFIX = `${API_PATH}${FRIEND_INVITATIONS_P
 
 const DEFAULT_CORS_PREFLIGHT_MAX_AGE_SECONDS = 86_400;
 
+function parseBooleanEnv(
+  raw: string | undefined,
+  defaultValue: boolean,
+): boolean {
+  const trimmed = raw?.trim().toLowerCase();
+  if (!trimmed) {
+    return defaultValue;
+  }
+  if (trimmed === 'true' || trimmed === '1') {
+    return true;
+  }
+  if (trimmed === 'false' || trimmed === '0') {
+    return false;
+  }
+  throw new Error(`Invalid VITE_FEED_INVITATIONAL_ONLY: ${raw ?? ''}`);
+}
+
 export type CrossOriginResourcePolicy =
   | 'same-origin'
   | 'same-site'
@@ -78,6 +95,10 @@ export function readConfig() {
     crossOriginResourcePolicy: parseCrossOriginResourcePolicy(
       process.env.CROSS_ORIGIN_RESOURCE_POLICY,
       process.env.NODE_ENV !== 'production',
+    ),
+    feedInvitationalOnly: parseBooleanEnv(
+      process.env.VITE_FEED_INVITATIONAL_ONLY,
+      true,
     ),
   } as const;
 }

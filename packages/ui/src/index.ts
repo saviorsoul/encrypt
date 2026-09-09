@@ -83,6 +83,7 @@ export {
   useCreateMessageRecipientsLoading,
   CREATE_MESSAGE_RECIPIENTS_LOADING_MIN_MS,
 } from './hooks/useCreateMessageRecipientsLoading.ts';
+export { isFeedInvitationalOnlyEnabled } from '@encrypt/core';
 export {
   SendMessageDialogActions,
   SendMessagePanel,

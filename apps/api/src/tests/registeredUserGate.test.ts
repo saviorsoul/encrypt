@@ -49,12 +49,14 @@ async function createTestMaterial() {
   return importUploadedPrivateKeyMaterial(privateJwk);
 }
 
-function createRegisteredGateProbeApp(): Koa {
+function createRegisteredGateProbeApp(feedInvitationalOnly = true): Koa {
   const app = new Koa();
   app.use(errorHandler());
   app.use(bodyParser());
   app.use(authenticate());
-  app.use(registeredApiUnlessPublic(requireRegisteredUser()));
+  app.use(
+    registeredApiUnlessPublic(requireRegisteredUser(feedInvitationalOnly)),
+  );
   app.use((ctx) => {
     ctx.body = { ok: true };
   });
@@ -118,6 +120,23 @@ describe('registered user gate middleware', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toContain(`Unknown user keyId: ${material.keyId}`);
+  });
+
+  it('auto-registers authenticated key when feed is not invitational-only', async () => {
+    const app = createRegisteredGateProbeApp(false);
+    const material = await createTestMaterial();
+    userRepoMocks.registerIfAbsent.mockResolvedValue(undefined);
+    const nonce = await mintNonce(material.keyId);
+
+    const response = await authorizedGet(app, '/api/inbox', material, nonce);
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({ ok: true });
+    expect(userRepoMocks.registerIfAbsent).toHaveBeenCalledWith({
+      keyId: material.keyId,
+      publicKey: material.publicKey,
+    });
+    expect(userRepoMocks.findStatuses).not.toHaveBeenCalled();
   });
 
   it('returns 403 for authenticated but inactive key on protected routes', async () => {

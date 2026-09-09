@@ -25,6 +25,7 @@ import {
   FeedNoFriendsGuide,
   AcceptInvitationDialog,
   useCreateMessageRecipientsLoading,
+  isFeedInvitationalOnlyEnabled,
 } from '@encrypt/ui';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
@@ -49,6 +50,7 @@ export function FeedPage() {
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
   const [qrScanOpen, setQrScanOpen] = useState(false);
+  const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
 
   const friendships = useFeedntFriendships();
   const { ensureFriendshipsLoaded } = friendships;
@@ -137,7 +139,8 @@ export function FeedPage() {
     !feed.notRegistered &&
     feed.messages.length === 0;
   const showOnboardingGuide =
-    feed.notRegistered || (inboxIsEmpty && friendships.friends.length === 0);
+    (feedInvitationalOnly && feed.notRegistered) ||
+    (inboxIsEmpty && friendships.friends.length === 0);
   const loadMorePreparing = preparingFeed && visibleMessages.length > 0;
   const showLoadMore =
     feed.hasMore && (feed.loadingMore || loadMorePreparing || !feedBusy);
@@ -219,7 +222,7 @@ export function FeedPage() {
 
   const handleOpenShare = useCallback(
     (messageId: string) => {
-      if (feed.notRegistered) {
+      if (feedInvitationalOnly && feed.notRegistered) {
         return;
       }
       setLastInteractedMessageId(messageId);
@@ -228,7 +231,12 @@ export function FeedPage() {
       setShareTargetMessageId(messageId);
       setShareDialogOpen(true);
     },
-    [clearShareError, ensureFriendshipsLoaded, feed.notRegistered],
+    [
+      clearShareError,
+      ensureFriendshipsLoaded,
+      feed.notRegistered,
+      feedInvitationalOnly,
+    ],
   );
 
   const handleCloseShareDialog = useCallback(() => {
@@ -298,7 +306,7 @@ export function FeedPage() {
               <SendOutlinedIcon />
             </ButtonIconSlot>
           }
-          disabled={!keys.keyId || feed.notRegistered}
+          disabled={!keys.keyId || (feedInvitationalOnly && feed.notRegistered)}
           onClick={() => setCreateMessageDialogOpen(true)}
         >
           Create message
@@ -307,14 +315,23 @@ export function FeedPage() {
 
       {showOnboardingGuide ? (
         <FeedNoFriendsGuide
-          loading={friendships.friendshipsLoading && !feed.notRegistered}
-          error={feed.notRegistered ? null : friendships.friendshipsError}
+          invitationalOnly={feedInvitationalOnly}
+          loading={
+            feedInvitationalOnly && feed.notRegistered
+              ? feed.loading
+              : friendships.friendshipsLoading
+          }
+          error={
+            feedInvitationalOnly && feed.notRegistered
+              ? null
+              : friendships.friendshipsError
+          }
           onAcceptInvite={() => setAcceptInvitationOpen(true)}
           acceptInviteDisabled={!keys.keyId}
         />
       ) : null}
 
-      {feed.error && !feed.notRegistered ? (
+      {feed.error && !(feedInvitationalOnly && feed.notRegistered) ? (
         <Typography color="error" variant="body2">
           {feed.error}
         </Typography>

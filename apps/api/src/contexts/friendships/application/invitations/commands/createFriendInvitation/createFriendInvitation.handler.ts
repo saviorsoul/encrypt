@@ -1,6 +1,6 @@
+import { userRepository } from '@/contexts/users/index.js';
 import { badRequest } from '@/lib/httpError.js';
 import { friendInvitationRepository } from '@/contexts/friendships/infrastructure/prismaFriendInvitationRepository.js';
-import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
 
 export type CreateFriendInvitationCommand = {
   inviterKeyId: string;
@@ -12,8 +12,8 @@ export async function handleCreateFriendInvitation(
 ) {
   const { inviterKeyId } = command;
 
-  if (!(await friendshipRepository.hasFriends(inviterKeyId))) {
-    throw badRequest('Add or accept a friend before sending invitations.');
+  if (!(await userRepository.exists(inviterKeyId))) {
+    throw badRequest('You must be registered before sending invitations.');
   }
 
   return friendInvitationRepository.createInvitation(inviterKeyId);

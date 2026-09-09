@@ -15,3 +15,4 @@
 
 - E2E: `apps/feed-lab/e2e/users/USERS-2-authenticated-but-not-registered.spec.ts`
 - API: `apps/api/src/tests/registeredUserGate.test.ts`
+- Deployment mode (open vs invitational-only): `docs/user-stories/users/USERS-9-feed-invitational-only-mode.md`

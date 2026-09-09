@@ -1,5 +1,7 @@
 export * from './access.ts';
 export * from './exportWire.ts';
+export * from './feedClientEnvConfig.ts';
+export * from './feedInvitationalOnlyConfig.ts';
 export * from './messageCopyPayload.ts';
 export * from './parseImportPayloadText.ts';
 export * from './postImportJsonToBackend.ts';

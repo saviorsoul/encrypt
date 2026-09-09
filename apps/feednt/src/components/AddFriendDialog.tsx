@@ -15,12 +15,14 @@ import Typography from '@mui/material/Typography';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
+import { isFeedInvitationalOnlyEnabled } from '@encrypt/ui';
 
 type AddFriendTab = 'id' | 'publicKey';
 
 type AddFriendDialogProps = {
   open: boolean;
   authenticated: boolean;
+  isRegistered: boolean;
   hasFriends: boolean;
   invitationBusy: boolean;
   invitationError: string | null;
@@ -42,6 +44,7 @@ type AddFriendDialogProps = {
 export function AddFriendDialog({
   open,
   authenticated,
+  isRegistered,
   hasFriends,
   invitationBusy,
   invitationError,
@@ -80,7 +83,10 @@ export function AddFriendDialog({
   }
 
   const busy = invitationBusy || requestBusy;
-  const canInvite = authenticated && hasFriends;
+  const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
+  const canCreateInvitation = authenticated && isRegistered;
+  const canSendByPublicKey =
+    authenticated && isRegistered && (!feedInvitationalOnly || hasFriends);
 
   const handleCopyId = useCallback(() => {
     if (!invitationId) {
@@ -126,10 +132,9 @@ export function AddFriendDialog({
       <DialogTitle>Add friend</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          {!hasFriends ? (
+          {!isRegistered ? (
             <Alert severity="info">
-              Add or accept a friend before sending invitations. You can still
-              accept an invitation from someone else to get your first friend.
+              Accept an invitation to register before inviting others.
             </Alert>
           ) : null}
 
@@ -138,8 +143,16 @@ export function AddFriendDialog({
             onChange={(_, next: AddFriendTab) => setTab(next)}
             variant="fullWidth"
           >
-            <Tab label="Invitation ID" value="id" disabled={!canInvite} />
-            <Tab label="Public key" value="publicKey" disabled={!canInvite} />
+            <Tab
+              label="Invitation ID"
+              value="id"
+              disabled={!canCreateInvitation}
+            />
+            <Tab
+              label="Public key"
+              value="publicKey"
+              disabled={!canSendByPublicKey}
+            />
           </Tabs>
 
           {tab === 'id' ? (
@@ -184,7 +197,7 @@ export function AddFriendDialog({
                     onClearInvitationError();
                   }}
                   fullWidth
-                  disabled={busy || !canInvite}
+                  disabled={busy || !canCreateInvitation}
                   error={invitationNameError != null}
                 />
               )}
@@ -199,6 +212,11 @@ export function AddFriendDialog({
                 invitation is created on the backend and a friend request is
                 sent.
               </Typography>
+              {feedInvitationalOnly && !hasFriends ? (
+                <Alert severity="info">
+                  Add or accept a friend before sending requests by public key.
+                </Alert>
+              ) : null}
               <Alert severity="info">
                 This public key must already be registered in the system. Ask
                 your friend to join via an invitation first if they have not
@@ -209,7 +227,7 @@ export function AddFriendDialog({
                 label="Name"
                 placeholder="Friend name"
                 value={friendName}
-                disabled={busy || !canInvite}
+                disabled={busy || !canSendByPublicKey}
                 onChange={(event) => {
                   setFriendName(event.target.value);
                   onClearRequestError();
@@ -222,7 +240,7 @@ export function AddFriendDialog({
                 label="Public key"
                 placeholder='x;y or {"kty":"EC","crv":"P-256","x":"…","y":"…"}'
                 value={publicKey}
-                disabled={busy || !canInvite}
+                disabled={busy || !canSendByPublicKey}
                 onChange={(event) => {
                   setPublicKey(event.target.value);
                   onClearRequestError();
@@ -268,7 +286,7 @@ export function AddFriendDialog({
               <Button
                 variant="contained"
                 onClick={handleCreateInvitation}
-                disabled={busy || !canInvite}
+                disabled={busy || !canCreateInvitation}
               >
                 {invitationBusy ? 'Creating…' : 'Create invitation'}
               </Button>
@@ -278,7 +296,7 @@ export function AddFriendDialog({
               variant="contained"
               disabled={
                 busy ||
-                !canInvite ||
+                !canSendByPublicKey ||
                 !publicKey.trim() ||
                 !friendName.trim() ||
                 Boolean(requestError)

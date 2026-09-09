@@ -6,7 +6,7 @@
 
 ## Acceptance criteria
 
-- Inviter (registered, has friends) creates an invitation via `POST /friend-invitations` and receives a one-time **invitation ID** (UUID).
+- Inviter (**registered**) creates an invitation via `POST /friend-invitations` and receives a one-time **invitation ID** (UUID).
 - Inviter shares the ID with one person (copy from **Invite friend**, or share the ID shown on pending invitations).
 - Invitee opens the invitation accept page with that ID:
   - **Feed Lab / Feednt:** **Accept invite** on Users → **Invitation ID** tab → enter ID → **Open invitation**.

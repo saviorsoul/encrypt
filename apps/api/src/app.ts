@@ -27,6 +27,7 @@ export function createApp(): Koa {
     corsAllowedOrigins,
     corsPreflightMaxAgeSeconds,
     crossOriginResourcePolicy,
+    feedInvitationalOnly,
   } = readConfig();
 
   app.use(async (ctx, next) => {
@@ -76,7 +77,9 @@ export function createApp(): Koa {
     }),
   );
   app.use(authenticateApiUnlessPublic(authenticate()));
-  app.use(registeredApiUnlessPublic(requireRegisteredUser()));
+  app.use(
+    registeredApiUnlessPublic(requireRegisteredUser(feedInvitationalOnly)),
+  );
 
   const healthRouter = createHealthRouter();
   app.use(healthRouter.routes()).use(healthRouter.allowedMethods());

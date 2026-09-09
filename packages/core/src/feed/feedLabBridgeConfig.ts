@@ -1,3 +1,5 @@
+import { readViteEnv, readViteEnvBoolean } from '../env/viteEnv.ts';
+
 export type FeedLabBridgeConfig = {
   /** Canonical production Feed Lab hostname (e.g. feednt.com). */
   hostname: string;
@@ -74,31 +76,6 @@ function formatAllowedHostnameHint(config: FeedLabBridgeConfig): string {
 
 export { formatAllowedHostnameHint };
 
-function parseBoolean(
-  value: string | undefined,
-  defaultValue: boolean,
-): boolean {
-  if (value === undefined || value === '') {
-    return defaultValue;
-  }
-  return value === 'true' || value === '1';
-}
-
-function readEnv(name: string): string | undefined {
-  if (typeof import.meta !== 'undefined') {
-    const env = (import.meta as { env?: Record<string, string | undefined> })
-      .env;
-    const fromVite = env?.[name];
-    if (typeof fromVite === 'string' && fromVite) {
-      return fromVite;
-    }
-  }
-  if (typeof process !== 'undefined' && process.env?.[name]) {
-    return process.env[name];
-  }
-  return undefined;
-}
-
 function parseHostnameList(
   raw: string | undefined,
   fallback: string,
@@ -112,13 +89,13 @@ function parseHostnameList(
 
 function buildConfig(): FeedLabBridgeConfig {
   const hostname =
-    readEnv('VITE_FEED_LAB_HOSTNAME')?.trim() || DEFAULT_HOSTNAME;
+    readViteEnv('VITE_FEED_LAB_HOSTNAME')?.trim() || DEFAULT_HOSTNAME;
   const devHostnamesList = parseHostnameList(
-    readEnv('VITE_FEED_LAB_DEV_HOSTNAME'),
+    readViteEnv('VITE_FEED_LAB_DEV_HOSTNAME'),
     DEFAULT_DEV_HOSTNAME,
   );
-  const protocolBridge = parseBoolean(
-    readEnv('VITE_FEED_LAB_PROTOCOL_BRIDGE'),
+  const protocolBridge = readViteEnvBoolean(
+    'VITE_FEED_LAB_PROTOCOL_BRIDGE',
     false,
   );
 

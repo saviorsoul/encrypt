@@ -9,20 +9,32 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { generatePrivateKeyDownloadFile } from '@encrypt/core/crypto/privateKeyDownload';
 import { hasStoredPrivateKeyInSafeStorage } from '@encrypt/platform/feednt';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
+import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { feedAppBackgroundSx } from '@encrypt/ui/feedTheme';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
+
+const DEFAULT_KEY_USERNAME = 'my';
 
 export function LoginPage() {
   const { session, sessionError, unlock, importKey } = useFeedntSession();
   const navigate = useNavigate();
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
+  const [generateBusy, setGenerateBusy] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [hasStoredKey, setHasStoredKey] = useState<boolean | null>(null);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
   const [qrScanOpen, setQrScanOpen] = useState(false);
+  const [downloadSnackbarOpen, setDownloadSnackbarOpen] = useState(false);
+  const [downloadSnackbarMessage, setDownloadSnackbarMessage] = useState('');
+  const [downloadSnackbarSeverity, setDownloadSnackbarSeverity] = useState<
+    'success' | 'warning'
+  >('success');
+  const [downloadSnackbarKey, setDownloadSnackbarKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +74,31 @@ export function LoginPage() {
     }
   }, [importKey, navigate]);
 
+  const handleGenerateKey = useCallback(async () => {
+    setGenerateError(null);
+    setGenerateBusy(true);
+    try {
+      const result = await generatePrivateKeyDownloadFile(DEFAULT_KEY_USERNAME);
+      setDownloadSnackbarMessage(result.message);
+      setDownloadSnackbarSeverity(
+        result.outcome === 'saved' ? 'success' : 'warning',
+      );
+      setDownloadSnackbarKey((key) => key + 1);
+      setDownloadSnackbarOpen(true);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Save cancelled.') {
+        return;
+      }
+      setGenerateError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate private key.',
+      );
+    } finally {
+      setGenerateBusy(false);
+    }
+  }, []);
+
   const handleQrTokenScanned = useCallback(
     (token: string) => {
       setQrScanOpen(false);
@@ -87,7 +124,7 @@ export function LoginPage() {
     return <Navigate to="/feed" replace />;
   }
 
-  const busy = unlockBusy || importBusy;
+  const busy = unlockBusy || importBusy || generateBusy;
 
   return (
     <Box
@@ -107,8 +144,8 @@ export function LoginPage() {
         <Stack spacing={2.5} sx={{ mt: 1 }}>
           {hasStoredKey === false ? (
             <Typography variant="body2" color="text.secondary">
-              Import a private key or accept an invitation to get started on
-              this device.
+              Import a private key to sign in, or use the options below to
+              generate a key file or accept an invitation.
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -117,6 +154,9 @@ export function LoginPage() {
             </Typography>
           )}
           {sessionError ? <Alert severity="error">{sessionError}</Alert> : null}
+          {generateError ? (
+            <Alert severity="error">{generateError}</Alert>
+          ) : null}
           {hasStoredKey === true ? (
             <Button
               variant="contained"
@@ -140,7 +180,8 @@ export function LoginPage() {
                 key file to import into secure storage on this device.
               </Typography>
               <Button
-                variant="outlined"
+                data-testid="login-choose-private-key-file"
+                variant="contained"
                 size="large"
                 fullWidth
                 disabled={busy}
@@ -156,6 +197,21 @@ export function LoginPage() {
                 {importBusy ? 'Opening file picker…' : 'Import private key'}
               </Button>
               <Divider>or</Divider>
+              <Button
+                data-testid="login-generate-key-pair"
+                variant="outlined"
+                size="large"
+                fullWidth
+                disabled={busy}
+                onClick={() => void handleGenerateKey()}
+                startIcon={
+                  generateBusy ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : null
+                }
+              >
+                {generateBusy ? 'Generating…' : 'Generate new key pair'}
+              </Button>
               <Button
                 data-testid="login-accept-invitation"
                 variant="outlined"
@@ -181,6 +237,14 @@ export function LoginPage() {
         open={qrScanOpen}
         onClose={() => setQrScanOpen(false)}
         onTokenScanned={handleQrTokenScanned}
+      />
+      <CopiedToClipboardSnackbar
+        open={downloadSnackbarOpen}
+        severity={downloadSnackbarSeverity}
+        onClose={() => setDownloadSnackbarOpen(false)}
+        snackbarKey={downloadSnackbarKey}
+        successMessage={downloadSnackbarMessage}
+        errorMessage={downloadSnackbarMessage}
       />
     </Box>
   );

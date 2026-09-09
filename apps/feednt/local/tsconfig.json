@@ -7,5 +7,11 @@
     },
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts", "vite", "../src/vite-env.d.ts"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vite",
+    "../src/vite-env.d.ts",
+    "../../../packages/platform/src/global.d.ts"
+  ]
 }

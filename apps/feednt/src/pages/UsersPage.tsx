@@ -45,6 +45,8 @@ import {
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import { ShareMessageHistoryDialog } from '@encrypt/ui/ShareMessageHistoryDialog';
 import { useBackendShareMessageHistory } from '@feednt/hooks/useBackendShareMessageHistory.ts';
+import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
+import { isFeedInvitationalOnlyEnabled } from '@encrypt/ui';
 
 export function UsersPage() {
   const navigate = useNavigate();
@@ -82,6 +84,14 @@ export function UsersPage() {
 
   const friendships = useFeedntFriendships();
   const shareMessageHistory = useBackendShareMessageHistory(keys, keys.keyId);
+  const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
+  const isRegistered =
+    keys.keyId != null &&
+    (!feedInvitationalOnly ||
+      !(
+        friendships.friendshipsError &&
+        isUnknownUserKeyIdError(friendships.friendshipsError, keys.keyId)
+      ));
 
   const refreshFriendData = useCallback(async () => {
     await friendships.refresh({ force: true });
@@ -281,7 +291,7 @@ export function UsersPage() {
                 !keys.keyId ||
                 friendships.usersLoading ||
                 friendInvitations.busy ||
-                friendships.friends.length === 0
+                !isRegistered
               }
               onClick={openAddFriendDialog}
             >
@@ -595,6 +605,7 @@ export function UsersPage() {
       <AddFriendDialog
         open={addFriendDialogOpen}
         authenticated={keys.keyId != null}
+        isRegistered={isRegistered}
         hasFriends={friendships.friends.length > 0}
         invitationBusy={friendInvitations.busy}
         invitationError={friendInvitations.error}

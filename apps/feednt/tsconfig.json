@@ -15,5 +15,5 @@
     "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/platform/src/global.d.ts"]
 }

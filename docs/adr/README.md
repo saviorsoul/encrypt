@@ -30,6 +30,7 @@ An ADR captures **why** a decision was made, not only **what** was implemented. 
 | [0020](./0020-feednt-standalone-native-app.md) | Feednt standalone native app | Accepted |
 | [0021](./0021-auth-nonce-consume-and-rotate-with-redis-pipeline.md) | Auth nonce consume-and-rotate | Accepted |
 | [0022](./0022-registration-via-friendship.md) | Registration via friendship (`users` row after first friendship) | Accepted |
+| [0023](./0023-feed-invitational-only-deployment-mode.md) | Feed invitational-only deployment mode (`VITE_FEED_INVITATIONAL_ONLY`) | Accepted |
 
 ## When to write an ADR
 
@@ -102,7 +103,7 @@ What we chose to do.
 
 ## Changes
 
-(optional — append when later ADRs refine this one; do not rewrite **Decision** above)
+(optional — append when later ADRs refine this one. **Apply updates in Decision and Consequences above**; this section records what changed.)
 
 ### YYYY-MM-DD — [NNNN](./NNNN-short-title.md)
 
@@ -121,4 +122,4 @@ What we chose to do.
 1. Copy the template into `docs/adr/NNNN-your-title.md`.
 2. Set status to **Proposed** while reviewing.
 3. After implementation (or explicit agreement), set status to **Accepted** and add a row to the index table above.
-4. To change a past decision, add a new ADR. Append a dated **`## Changes`** subsection on the older ADR (minimal edits to the original text). Mark **Superseded by NNNN** only when the old ADR is fully replaced.
+4. To change a past decision, add a new ADR. **Update the older ADR’s Decision and Consequences to reflect current behavior**, then append a dated **`## Changes`** subsection with an **As accepted | Current** table for the delta. Mark **Superseded by NNNN** only when the old ADR is fully replaced.
