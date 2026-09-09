@@ -20,3 +20,5 @@ export { handleGetFriendInvitation } from './application/invitations/queries/get
 export type { GetFriendInvitationQuery } from './application/invitations/queries/getFriendInvitation/getFriendInvitation.handler.js';
 export { handleListFriendInvitations } from './application/invitations/queries/listFriendInvitations/listFriendInvitations.handler.js';
 export type { ListFriendInvitationsQuery } from './application/invitations/queries/listFriendInvitations/listFriendInvitations.handler.js';
+export { handleRemoveFriendInvitation } from './application/invitations/commands/removeFriendInvitation/removeFriendInvitation.handler.js';
+export type { RemoveFriendInvitationCommand } from './application/invitations/commands/removeFriendInvitation/removeFriendInvitation.handler.js';

@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
@@ -29,8 +30,11 @@ import { UnfriendConfirmDialog } from '@feednt/components/UnfriendConfirmDialog.
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { InvitationQrCodeDialog } from '@encrypt/ui/InvitationQrCodeDialog';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
+import { RemoveInvitationConfirmDialog } from '@encrypt/ui';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useBackendFriendInvitations } from '@feednt/hooks/useBackendFriendInvitations.ts';
+import { useIdentityDialog } from '@feednt/hooks/useIdentityDialog.ts';
+import { IdentityDialog } from '@feednt/components/IdentityDialog.tsx';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
   saveFeedntUser,
@@ -66,6 +70,10 @@ export function UsersPage() {
     y: string;
   } | null>(null);
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
+  const [removeInvitationTarget, setRemoveInvitationTarget] = useState<{
+    token: string;
+    label: string | null;
+  } | null>(null);
   const [qrScanOpen, setQrScanOpen] = useState(false);
   const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
   const [unfriendDialogOpen, setUnfriendDialogOpen] = useState(false);
@@ -105,6 +113,20 @@ export function UsersPage() {
       addLocalUser(user);
     },
   );
+
+  const identity = useIdentityDialog({
+    keyId: keys.keyId,
+    usernameByKeyId,
+    usernames,
+    addLocalUser,
+    friendKeyIds: friendships.friendKeyIds,
+    friendshipsLoading: friendships.friendshipsLoading,
+    friendshipsError: friendships.friendshipsError,
+    onFriendshipsChanged: refreshFriendData,
+    onOpen: () => {
+      void friendships.ensureFriendshipsLoaded();
+    },
+  });
 
   const handleAcceptFriendWithName = useCallback(
     async (username: string, shareHistory: boolean) => {
@@ -248,6 +270,18 @@ export function UsersPage() {
     },
     [navigate],
   );
+
+  const handleRemoveInvitationConfirm = useCallback(async () => {
+    if (!removeInvitationTarget) {
+      return;
+    }
+    const removed = await friendInvitations.removeInvitation(
+      removeInvitationTarget.token,
+    );
+    if (removed) {
+      setRemoveInvitationTarget(null);
+    }
+  }, [friendInvitations, removeInvitationTarget]);
 
   const outgoingInvitationTokens = new Set(
     friendships.outgoingRequests.map((request) => request.invitationToken),
@@ -464,22 +498,46 @@ export function UsersPage() {
                         {invitation.token}
                       </Typography>
                     </Box>
-                    <IconButton
-                      size="small"
-                      aria-label="Show invitation QR code"
-                      onClick={() => setQrCodeToken(invitation.token)}
-                      sx={{ flexShrink: 0 }}
-                    >
-                      <QrCode2OutlinedIcon fontSize="inherit" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      aria-label="Copy invitation ID"
-                      onClick={() => void copyAndNotify(invitation.token)}
-                      sx={{ flexShrink: 0 }}
-                    >
-                      <ContentCopyOutlinedIcon fontSize="inherit" />
-                    </IconButton>
+                    <Tooltip title="Show invitation QR code">
+                      <IconButton
+                        size="small"
+                        aria-label="Show invitation QR code"
+                        onClick={() => setQrCodeToken(invitation.token)}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        <QrCode2OutlinedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Copy invitation ID">
+                      <IconButton
+                        size="small"
+                        aria-label="Copy invitation ID"
+                        onClick={() => void copyAndNotify(invitation.token)}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        <ContentCopyOutlinedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Remove invitation">
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          aria-label="Remove invitation"
+                          data-testid="users-remove-invitation"
+                          disabled={friendInvitations.busy}
+                          onClick={() =>
+                            setRemoveInvitationTarget({
+                              token: invitation.token,
+                              label: invitation.label,
+                            })
+                          }
+                          sx={{ flexShrink: 0 }}
+                        >
+                          <CloseOutlinedIcon fontSize="inherit" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Stack>
                 ))}
               </Stack>
@@ -530,6 +588,28 @@ export function UsersPage() {
                           {friend.keyId}
                         </Typography>
                       </Box>
+                      <Tooltip title="Show key info">
+                        <span>
+                          <IconButton
+                            size="small"
+                            aria-label="Show key info"
+                            disabled={friendshipRequests.busy}
+                            sx={{ flexShrink: 0 }}
+                            onClick={() =>
+                              identity.openIdentity({
+                                keyId: friend.keyId,
+                                publicKey: friend.publicKey,
+                                label:
+                                  usernameByKeyId[friend.keyId]?.trim() ||
+                                  friend.label ||
+                                  friend.keyId,
+                              })
+                            }
+                          >
+                            <KeyOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       {friend.messageHistorySharedAt ? null : (
                         <Tooltip title="Share history">
                           <span>
@@ -695,6 +775,8 @@ export function UsersPage() {
         onClose={() => setViewPublicKey(null)}
       />
 
+      <IdentityDialog {...identity.dialogProps} />
+
       {qrCodeToken ? (
         <InvitationQrCodeDialog
           open={qrCodeToken != null}
@@ -702,6 +784,16 @@ export function UsersPage() {
           onClose={() => setQrCodeToken(null)}
         />
       ) : null}
+
+      <RemoveInvitationConfirmDialog
+        open={removeInvitationTarget != null}
+        invitationLabel={removeInvitationTarget?.label ?? null}
+        busy={friendInvitations.busy}
+        error={friendInvitations.error}
+        onClose={() => setRemoveInvitationTarget(null)}
+        onConfirm={() => void handleRemoveInvitationConfirm()}
+        onClearError={friendInvitations.clearError}
+      />
 
       <AcceptInvitationDialog
         open={acceptInvitationOpen}

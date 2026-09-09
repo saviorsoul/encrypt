@@ -122,6 +122,12 @@ export async function buildSentInvitationLabelByToken(
   );
 }
 
+export async function deleteSentInvitation(token: string): Promise<void> {
+  writeStoredInvitations(
+    readStoredInvitations().filter((invitation) => invitation.token !== token),
+  );
+}
+
 export function clearSentInvitationsForInviter(inviterKeyId: string): void {
   writeStoredInvitations(
     readStoredInvitations().filter(

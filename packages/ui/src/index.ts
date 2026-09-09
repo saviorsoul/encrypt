@@ -110,6 +110,10 @@ export {
   type AcceptInvitationDialogProps,
 } from './components/AcceptInvitationDialog.tsx';
 export {
+  RemoveInvitationConfirmDialog,
+  type RemoveInvitationConfirmDialogProps,
+} from './components/RemoveInvitationConfirmDialog.tsx';
+export {
   GdprConsentCheckbox,
   type GdprConsentCheckboxProps,
 } from './components/GdprConsentCheckbox.tsx';

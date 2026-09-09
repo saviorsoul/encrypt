@@ -2,7 +2,10 @@ import { useCallback, useState } from 'react';
 import { useFeedApi } from '@lab/providers/FeedApiProvider.tsx';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { clearFriendshipsCache } from '@lab/services/friendshipsCache.ts';
-import { saveSentInvitation } from '@lab/services/db/sentInvitations.ts';
+import {
+  deleteSentInvitation,
+  saveSentInvitation,
+} from '@lab/services/db/sentInvitations.ts';
 
 export function useBackendFriendInvitations(
   onChanged?: () => void | Promise<void>,
@@ -82,12 +85,43 @@ export function useBackendFriendInvitations(
     setLastInvitationId(null);
   }, []);
 
+  const removeInvitation = useCallback(
+    async (token: string): Promise<boolean> => {
+      if (!keys.keyId) {
+        setError('Authenticate with your private key first.');
+        return false;
+      }
+
+      setBusy(true);
+      setError(null);
+
+      try {
+        await api.deleteFriendInvitation(token);
+        await deleteSentInvitation(token);
+        if (lastInvitationId === token) {
+          setLastInvitationId(null);
+        }
+        await onChanged?.();
+        return true;
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : 'Could not remove invitation.',
+        );
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [api, keys.keyId, lastInvitationId, onChanged],
+  );
+
   return {
     busy,
     error,
     lastInvitationId,
     createInvitation,
     acceptInvitation,
+    removeInvitation,
     clearError,
     clearLastInvitationId,
   };

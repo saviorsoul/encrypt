@@ -101,6 +101,20 @@ export const friendInvitationRepository: FriendInvitationRepository = {
     return rows.map(toRecord);
   },
 
+  async deletePendingForInviter(
+    token: string,
+    inviterKeyId: string,
+  ): Promise<boolean> {
+    const result = await prisma.friendInvitation.deleteMany({
+      where: {
+        token,
+        inviterKeyId,
+        status: FRIEND_INVITATION_PENDING,
+      },
+    });
+    return result.count > 0;
+  },
+
   serialize(row: FriendInvitationRecord): SerializedFriendInvitation {
     return serializeFriendInvitation(row);
   },

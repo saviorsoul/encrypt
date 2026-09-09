@@ -513,6 +513,23 @@ export function createFeedApi(config: FeedApiConfig) {
       return (await response.json()) as FriendInvitation[];
     },
 
+    async deleteFriendInvitation(
+      token: string,
+    ): Promise<{ status: 'removed' }> {
+      const response = await authorizedFetch(
+        `/api/friend-invitations/${encodeURIComponent(token)}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        },
+      );
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as { status: 'removed' };
+    },
+
     async getFriendInvitation(token: string): Promise<FriendInvitationPublic> {
       const response = await http(
         joinUrl(

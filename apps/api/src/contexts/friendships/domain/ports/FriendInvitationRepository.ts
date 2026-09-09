@@ -27,5 +27,9 @@ export interface FriendInvitationRepository {
   listPendingForInviter(
     inviterKeyId: string,
   ): Promise<FriendInvitationRecord[]>;
+  deletePendingForInviter(
+    token: string,
+    inviterKeyId: string,
+  ): Promise<boolean>;
   serialize(row: FriendInvitationRecord): SerializedFriendInvitation;
 }
