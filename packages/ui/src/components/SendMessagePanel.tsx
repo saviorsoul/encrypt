@@ -22,7 +22,10 @@ import {
   type SendMessageKeysSession,
 } from '../hooks/useBackendSendMessage.ts';
 import { useSendImportToBackend } from '../hooks/useSendImportToBackend.ts';
+import { isFeedInvitationalOnlyEnabled } from '@encrypt/core/feed/feedInvitationalOnlyConfig';
 import { validateJsonSyntaxText } from '../utils/validateJsonSyntaxText.ts';
+
+const allowSelfOnlyMessage = !isFeedInvitationalOnlyEnabled();
 
 export type SendMode = 'message' | 'json';
 
@@ -259,7 +262,7 @@ export function useSendMessageForm<
     !recipientsLoading &&
     status.hasText &&
     !status.overLimit &&
-    recipients.recipients.length > 0;
+    (recipients.recipients.length > 0 || allowSelfOnlyMessage);
   const canSendImport = !busy && importHasText;
 
   return {
@@ -324,6 +327,8 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
     canSendImport,
     recipientsLoading,
   } = form;
+  const hasFriendsForPolicy =
+    recipients.recipientOptions.length > 0 || allowSelfOnlyMessage;
 
   const actionButtons =
     sendMode === 'message' ? (
@@ -420,7 +425,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
             loading={
               recipients.loadingFriends || recipients.loadingRecipientKeys
             }
-            hasFriends={recipients.recipientOptions.length > 0}
+            hasFriends={hasFriendsForPolicy}
             noFriendsMessage="No friends yet. Add or accept a friend in Users before messaging."
             mode="create"
           />

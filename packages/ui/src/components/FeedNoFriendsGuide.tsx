@@ -68,7 +68,7 @@ export function FeedNoFriendsGuide({
         <Typography variant="body2" color="text.secondary">
           {invitationalOnly
             ? 'You need at least one friend before you can create messages or share with your network. Ask someone already on the network to send you an invitation ID.'
-            : 'Ask someone to send you an invitation, or add friends from the Users page to start messaging and sharing with your network.'}
+            : 'You can create messages for yourself now. To reach others, ask someone for an invitation or add friends from the Users page.'}
         </Typography>
         {showAcceptInvite || showInviteFriend ? (
           <Stack

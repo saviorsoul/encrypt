@@ -65,11 +65,6 @@ export function useBackendSendMessage(
         return null;
       }
 
-      if (recipients.length === 0) {
-        setError('Select at least one recipient.');
-        return null;
-      }
-
       setBusy(true);
       try {
         if (keys.isSystemAppSession) {
