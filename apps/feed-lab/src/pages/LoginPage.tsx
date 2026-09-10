@@ -143,7 +143,7 @@ export function LoginPage() {
             browser is for demonstration only: to check what the app does before
             installing native Desktop or Mobile Feedn't application.
           </Alert>
-          {protocolBridgeEnabled ? (
+          {protocolBridgeEnabled && (
             <>
               <Typography variant="body2" color="text.secondary">
                 Connect via the Encrypt system app or choose a private key file
@@ -165,11 +165,6 @@ export function LoginPage() {
               </Button>
               <Divider>or</Divider>
             </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Choose a private key file to sign in. Connect via the Encrypt
-              system app is disabled in this build.
-            </Typography>
           )}
           {keys.sessionError ? (
             <Alert severity="error">{keys.sessionError}</Alert>
@@ -186,10 +181,6 @@ export function LoginPage() {
               openGdprInNewTab
             />
           ) : null}
-          <Typography variant="body2">
-            Choose a <strong>.jwk</strong> or <strong>.json</strong> private key
-            file to sign in with a browser-loaded key.
-          </Typography>
           <Button
             data-testid="login-choose-private-key-file"
             variant={protocolBridgeEnabled ? 'outlined' : 'contained'}
