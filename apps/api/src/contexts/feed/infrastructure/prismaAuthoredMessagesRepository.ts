@@ -62,6 +62,7 @@ function toAuthoredMessageRow(
     id: string;
     payload: string;
     createdAt: Date;
+    lastCommentAt: Date | null;
   },
   manifestEntryJson: string,
 ): AuthoredMessageRow {
@@ -69,6 +70,7 @@ function toAuthoredMessageRow(
     id: row.id,
     payload: row.payload,
     createdAt: row.createdAt,
+    lastCommentAt: row.lastCommentAt,
     manifestEntryJson,
   };
 }
@@ -127,6 +129,7 @@ export const authoredMessagesRepository: AuthoredMessagesRepository = {
         id: true,
         payload: true,
         createdAt: true,
+        lastCommentAt: true,
       },
     });
 

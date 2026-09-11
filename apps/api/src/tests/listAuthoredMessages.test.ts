@@ -46,6 +46,7 @@ describe('handleListAuthoredMessages', () => {
           id: '550e8400-e29b-41d4-a716-446655440001',
           payload: senderPayload,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          lastCommentAt: new Date('2026-01-02T00:00:00.000Z'),
           manifestEntryJson,
         },
       ],
@@ -74,6 +75,7 @@ describe('handleListAuthoredMessages', () => {
     expect(result.nextCursor).toBeNull();
     expect(result.items[0]?.id).toBe('550e8400-e29b-41d4-a716-446655440001');
     expect(result.items[0]?.type).toBe('message');
+    expect(result.items[0]?.lastCommentAt).toBe('2026-01-02T00:00:00.000Z');
     expect(result.items[0]?.keyManifest).toEqual({
       'author-key-id': {
         keyId: 'author-key-id',

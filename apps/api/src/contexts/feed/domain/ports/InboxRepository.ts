@@ -1,34 +1,39 @@
-export type InboxSort = 'date';
+export type InboxSort = 'shareTime' | 'originalDate' | 'lastComment';
 export type InboxOrder = 'asc' | 'desc';
 
-export type InboxDeliveryRef = {
-  id: string;
-  createdAt: Date;
-  kind: 'message' | 'share';
+export type InboxCursor = {
+  sortAt: Date;
+  threadId: string;
+};
+
+export type InboxPageThread = {
+  threadId: string;
+  sortAt: Date;
+  shareId: string | null;
+  entryJson: string;
+  messagePayload: string;
+  messageCreatedAt: Date;
+  messageLastCommentAt: Date | null;
+  sharePayload: string | null;
+  shareCreatedAt: Date | null;
 };
 
 export type ListInboxDeliveriesQuery = {
   recipientKeyId: string;
   limit: number;
-  cursor?: string;
+  cursor?: InboxCursor;
   sort: InboxSort;
   order: InboxOrder;
 };
 
 export type ListInboxDeliveriesResult = {
-  deliveries: InboxDeliveryRef[];
-  nextCursor: string | null;
+  threads: InboxPageThread[];
+  nextCursor: InboxCursor | null;
+  total: number;
 };
 
 export interface InboxRepository {
-  countDeliveries(
-    query: Pick<ListInboxDeliveriesQuery, 'recipientKeyId' | 'sort' | 'order'>,
-  ): Promise<number>;
   listDeliveries(
     query: ListInboxDeliveriesQuery,
   ): Promise<ListInboxDeliveriesResult>;
-  recipientHasShareAccessToParent(
-    parentMessageId: string,
-    recipientKeyId: string,
-  ): Promise<boolean>;
 }

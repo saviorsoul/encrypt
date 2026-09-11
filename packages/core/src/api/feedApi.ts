@@ -1,5 +1,6 @@
 import type { KeyManifestMap } from '../types/manifest.ts';
 import type {
+  AuthoredMessagesPageResponse,
   InboxPageResponse,
   InboxOrder,
   InboxSort,
@@ -134,7 +135,8 @@ async function readApiError(response: Response): Promise<string> {
 
 export type GetInboxOptions = {
   limit?: number;
-  cursor?: string | null;
+  cursorSortAt?: string | null;
+  cursorThreadId?: string | null;
   sort?: InboxSort;
   order?: InboxOrder;
 };
@@ -238,8 +240,11 @@ export function createFeedApi(config: FeedApiConfig) {
       if (options?.limit != null) {
         params.set('limit', String(options.limit));
       }
-      if (options?.cursor) {
-        params.set('cursor', options.cursor);
+      if (options?.cursorSortAt) {
+        params.set('cursorSortAt', options.cursorSortAt);
+      }
+      if (options?.cursorThreadId) {
+        params.set('cursorThreadId', options.cursorThreadId);
       }
       if (options?.sort) {
         params.set('sort', options.sort);
@@ -260,7 +265,7 @@ export function createFeedApi(config: FeedApiConfig) {
 
     async getAuthoredMessages(
       options?: GetAuthoredMessagesOptions,
-    ): Promise<InboxPageResponse> {
+    ): Promise<AuthoredMessagesPageResponse> {
       const params = new URLSearchParams();
       if (options?.limit != null) {
         params.set('limit', String(options.limit));
@@ -285,7 +290,7 @@ export function createFeedApi(config: FeedApiConfig) {
       if (!response.ok) {
         throw new Error(await readApiError(response));
       }
-      return (await response.json()) as InboxPageResponse;
+      return (await response.json()) as AuthoredMessagesPageResponse;
     },
 
     async postMessage(body: CreateMessageRequest): Promise<{ id: string }> {

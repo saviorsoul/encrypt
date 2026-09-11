@@ -13,11 +13,18 @@ describe('inboxQuery wire schema', () => {
     expect(
       validate({
         limit: '15',
-        cursor: '550e8400-e29b-41d4-a716-446655440000',
-        sort: 'date',
+        cursorSortAt: '2026-09-10T15:00:00.000Z',
+        cursorThreadId: '550e8400-e29b-41d4-a716-446655440000',
+        sort: 'shareTime',
         order: 'asc',
       }),
     ).toBe(true);
+  });
+
+  it('accepts all feed sort modes', () => {
+    expect(validate({ sort: 'originalDate' })).toBe(true);
+    expect(validate({ sort: 'lastComment' })).toBe(true);
+    expect(validate({ sort: 'date' })).toBe(true);
   });
 
   it('rejects unknown query parameters', () => {
@@ -40,8 +47,22 @@ describe('inboxQuery wire schema', () => {
     expect(validate({ limit: String(MAX_INBOX_LIMIT + 1) })).toBe(false);
   });
 
-  it('rejects invalid cursor format', () => {
-    expect(validate({ cursor: 'not-a-uuid' })).toBe(false);
+  it('rejects invalid cursor fields', () => {
+    expect(validate({ cursorSortAt: 'not-a-date' })).toBe(false);
+    expect(validate({ cursorThreadId: 'not-a-uuid' })).toBe(false);
+  });
+
+  it('rejects partial cursor params', () => {
+    expect(
+      validate({
+        cursorSortAt: '2026-09-10T15:00:00.000Z',
+      }),
+    ).toBe(false);
+    expect(
+      validate({
+        cursorThreadId: '550e8400-e29b-41d4-a716-446655440000',
+      }),
+    ).toBe(false);
   });
 
   it('accepts ascending and descending aliases before normalization', () => {

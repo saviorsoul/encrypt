@@ -6,7 +6,8 @@ import type {
 export type ListInboxQuery = {
   recipientKeyId: string;
   limit: number;
-  cursor?: string;
+  cursorSortAt?: string;
+  cursorThreadId?: string;
   sort: InboxSort;
   order: InboxOrder;
 };

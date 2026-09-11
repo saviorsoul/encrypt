@@ -35,8 +35,10 @@ export const commentRepository: CommentRepository = {
     id: string,
     messageId: string,
     payload: string,
+    tx?: PrismaTx,
   ): Promise<StoredComment> {
-    const row = await prisma.comment.create({
+    const client = tx ?? prisma;
+    const row = await client.comment.create({
       data: { id, messageId, payload },
     });
 

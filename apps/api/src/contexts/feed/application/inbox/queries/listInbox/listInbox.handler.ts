@@ -1,135 +1,113 @@
 import type { InboxApiItem, InboxPageResponse } from '@encrypt/core/feed/types';
 import type { KeyManifestMap } from '@encrypt/core/types/manifest';
 import { logger } from '@/lib/logger.js';
-import type { InboxDeliveryRef } from '@/contexts/feed/domain/ports/InboxRepository.js';
+import type { InboxPageThread } from '@/contexts/feed/domain/ports/InboxRepository.js';
 import { inboxRepository } from '@/contexts/feed/infrastructure/prismaInboxRepository.js';
-import { manifestShardRepository } from '@/contexts/feed/infrastructure/prismaManifestShardRepository.js';
-import { messageRepository } from '@/contexts/feed/infrastructure/prismaMessageRepository.js';
-import { shareRepository } from '@/contexts/feed/infrastructure/prismaShareRepository.js';
 import type { ListInboxQuery } from './listInbox.query.js';
 
-async function buildDirectKeyManifestForParent(
-  parentMessageId: string,
+function parseKeyManifestEntry(
+  thread: InboxPageThread,
   recipientKeyId: string,
-): Promise<KeyManifestMap> {
-  const entry = await manifestShardRepository.getManifestEntry(
-    parentMessageId,
-    recipientKeyId,
-  );
-  if (!entry) {
-    return {};
+): KeyManifestMap | null {
+  try {
+    return {
+      [recipientKeyId]: JSON.parse(thread.entryJson) as KeyManifestMap[string],
+    };
+  } catch (error) {
+    logger.error(
+      { threadId: thread.threadId, recipientKeyId, error },
+      'inbox thread has invalid manifest entry json',
+    );
+    return null;
   }
-
-  return { [recipientKeyId]: entry };
 }
 
-async function buildKeyManifestForDelivery(
-  deliveryId: string,
+function mapThreadToInboxItems(
+  thread: InboxPageThread,
   recipientKeyId: string,
-): Promise<KeyManifestMap> {
-  const entry = await manifestShardRepository.getManifestEntryForDelivery(
-    deliveryId,
-    recipientKeyId,
-  );
-  if (!entry) {
-    return {};
+): InboxApiItem[] {
+  const keyManifest = parseKeyManifestEntry(thread, recipientKeyId);
+  if (keyManifest == null) {
+    return [];
   }
 
-  return { [recipientKeyId]: entry };
-}
-
-async function buildInboxItemForDelivery(
-  delivery: InboxDeliveryRef,
-  recipientKeyId: string,
-): Promise<InboxApiItem | null> {
-  if (delivery.kind === 'share') {
-    const share = await shareRepository.getById(delivery.id);
-    if (!share) {
+  if (thread.shareId != null) {
+    if (thread.sharePayload == null || thread.shareCreatedAt == null) {
       logger.error(
-        { deliveryId: delivery.id, recipientKeyId },
+        { threadId: thread.threadId, shareId: thread.shareId, recipientKeyId },
         'inbox share delivery is missing share row',
       );
-      return null;
+      return [];
     }
 
-    const keyManifest = await buildKeyManifestForDelivery(
-      delivery.id,
-      recipientKeyId,
-    );
-    if (Object.keys(keyManifest).length === 0) {
-      return null;
-    }
+    return [
+      {
+        id: thread.shareId,
+        type: 'share',
+        messageId: thread.threadId,
+        payload: thread.sharePayload,
+        createdAt: thread.shareCreatedAt.toISOString(),
+        keyManifest,
+      },
+      {
+        id: thread.threadId,
+        type: 'message',
+        payload: thread.messagePayload,
+        createdAt: thread.messageCreatedAt.toISOString(),
+        lastCommentAt:
+          thread.messageLastCommentAt != null
+            ? thread.messageLastCommentAt.toISOString()
+            : null,
+        keyManifest: {},
+      },
+    ];
+  }
 
-    return {
-      id: share.id,
-      type: 'share',
-      messageId: share.messageId,
-      payload: share.payload,
-      createdAt: new Date(share.createdAt).toISOString(),
+  return [
+    {
+      id: thread.threadId,
+      type: 'message',
+      payload: thread.messagePayload,
+      createdAt: thread.messageCreatedAt.toISOString(),
+      lastCommentAt:
+        thread.messageLastCommentAt != null
+          ? thread.messageLastCommentAt.toISOString()
+          : null,
       keyManifest,
-    };
-  }
-
-  const message = await messageRepository.getById(delivery.id);
-  if (!message) {
-    logger.error(
-      { deliveryId: delivery.id, recipientKeyId },
-      'inbox message delivery is missing message row',
-    );
-    return null;
-  }
-
-  const keyManifest = await buildDirectKeyManifestForParent(
-    delivery.id,
-    recipientKeyId,
-  );
-  const includeParentForShareAccess =
-    Object.keys(keyManifest).length === 0 &&
-    (await inboxRepository.recipientHasShareAccessToParent(
-      delivery.id,
-      recipientKeyId,
-    ));
-
-  if (Object.keys(keyManifest).length === 0 && !includeParentForShareAccess) {
-    return null;
-  }
-
-  return {
-    id: message.id,
-    type: 'message',
-    payload: message.payload,
-    createdAt: new Date(message.createdAt).toISOString(),
-    keyManifest: includeParentForShareAccess ? {} : keyManifest,
-  };
+    },
+  ];
 }
 
 export async function handleListInbox(
   query: ListInboxQuery,
 ): Promise<InboxPageResponse> {
-  const { recipientKeyId, cursor, limit, sort, order } = query;
+  const { recipientKeyId, cursorSortAt, cursorThreadId, limit, sort, order } =
+    query;
 
-  const [total, page] = await Promise.all([
-    inboxRepository.countDeliveries({ recipientKeyId, sort, order }),
-    inboxRepository.listDeliveries({
-      recipientKeyId,
-      limit,
-      cursor,
-      sort,
-      order,
-    }),
-  ]);
+  const page = await inboxRepository.listDeliveries({
+    recipientKeyId,
+    limit,
+    cursor:
+      cursorSortAt != null && cursorThreadId != null
+        ? { sortAt: new Date(cursorSortAt), threadId: cursorThreadId }
+        : undefined,
+    sort,
+    order,
+  });
 
-  const items: InboxApiItem[] = [];
-  for (const delivery of page.deliveries) {
-    const item = await buildInboxItemForDelivery(delivery, recipientKeyId);
-    if (item) {
-      items.push(item);
-    }
-  }
+  const items = page.threads.flatMap((thread) =>
+    mapThreadToInboxItems(thread, recipientKeyId),
+  );
 
   return {
     items,
-    total,
-    nextCursor: page.nextCursor,
+    total: page.total,
+    nextCursor:
+      page.nextCursor != null
+        ? {
+            sortAt: page.nextCursor.sortAt.toISOString(),
+            threadId: page.nextCursor.threadId,
+          }
+        : null,
   };
 }

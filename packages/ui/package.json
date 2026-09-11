@@ -27,6 +27,8 @@
     "./FeedMessageEnter": "./src/components/FeedMessageEnter.tsx",
     "./useFeedMessageEnterState": "./src/hooks/useFeedMessageEnterState.ts",
     "./useFeedRefreshFeedback": "./src/hooks/useFeedRefreshFeedback.ts",
+    "./useFeedMessageSort": "./src/hooks/useFeedMessageSort.ts",
+    "./FeedMessageSortButton": "./src/components/FeedMessageSortButton.tsx",
     "./FeedRefreshButtonIcon": "./src/components/FeedRefreshButtonIcon.tsx",
     "./TooltipIconWrap": "./src/components/TooltipIconWrap.tsx",
     "./FeedntText": "./src/components/FeedntText.tsx",

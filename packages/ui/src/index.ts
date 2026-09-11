@@ -37,7 +37,10 @@ export {
   type MessagePolicyOptionsProps,
 } from './components/MessagePolicyOptions.tsx';
 export { useRelativeTime } from './hooks/useRelativeTime.ts';
-export { formatRelativeTime } from './utils/formatRelativeTime.ts';
+export {
+  formatRelativeTime,
+  type FormatRelativeTimeOptions,
+} from './utils/formatRelativeTime.ts';
 export { nameInitial } from './utils/nameInitial.ts';
 export type { CopyState } from './utils/copyState.ts';
 export { copyTextToClipboard } from './utils/copyToClipboard.ts';
@@ -53,6 +56,11 @@ export {
 } from './components/FeedMessageEnter.tsx';
 export { useFeedMessageEnterState } from './hooks/useFeedMessageEnterState.ts';
 export { useFeedRefreshFeedback } from './hooks/useFeedRefreshFeedback.ts';
+export { useFeedMessageSort } from './hooks/useFeedMessageSort.ts';
+export {
+  FeedMessageSortButton,
+  type FeedMessageSortButtonProps,
+} from './components/FeedMessageSortButton.tsx';
 export {
   FeedBusyButtonIcon,
   FeedRefreshButtonIcon,

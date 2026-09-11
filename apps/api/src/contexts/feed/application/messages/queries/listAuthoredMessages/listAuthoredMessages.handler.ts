@@ -1,4 +1,7 @@
-import type { InboxApiItem, InboxPageResponse } from '@encrypt/core/feed/types';
+import type {
+  AuthoredMessagesPageResponse,
+  InboxApiItem,
+} from '@encrypt/core/feed/types';
 import type { KeyManifestMap } from '@encrypt/core/types/manifest';
 import { authoredMessagesRepository } from '@/contexts/feed/infrastructure/prismaAuthoredMessagesRepository.js';
 import type { ListAuthoredMessagesQuery } from './listAuthoredMessages.query.js';
@@ -18,7 +21,7 @@ function parseBeforeFilter(before?: string): Date | undefined {
 
 export async function handleListAuthoredMessages(
   query: ListAuthoredMessagesQuery,
-): Promise<InboxPageResponse> {
+): Promise<AuthoredMessagesPageResponse> {
   const { authorKeyId, limit, order } = query;
   const before = parseBeforeFilter(query.before);
 
@@ -35,6 +38,7 @@ export async function handleListAuthoredMessages(
     type: 'message',
     payload: row.payload,
     createdAt: row.createdAt.toISOString(),
+    lastCommentAt: row.lastCommentAt?.toISOString() ?? null,
     keyManifest: {
       [authorKeyId]: JSON.parse(
         row.manifestEntryJson,

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { notFound } from '@/lib/httpError.js';
+import { prisma } from '@/lib/prisma.js';
 import { commentRepository } from '@/contexts/feed/infrastructure/prismaCommentRepository.js';
 import { messageRepository } from '@/contexts/feed/infrastructure/prismaMessageRepository.js';
 import type { CreateCommentCommand } from './createComment.command.js';
@@ -15,7 +16,19 @@ export async function handleCreateComment(
   const commentId = randomUUID();
   const payload = JSON.stringify(command);
 
-  await commentRepository.insert(commentId, messageId, payload);
+  await prisma.$transaction(async (tx) => {
+    const comment = await commentRepository.insert(
+      commentId,
+      messageId,
+      payload,
+      tx,
+    );
+    await messageRepository.touchLastCommentAt(
+      messageId,
+      new Date(comment.createdAt),
+      tx,
+    );
+  });
 
   return { id: commentId };
 }

@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -28,6 +29,7 @@ import { nameInitial } from '@encrypt/ui/nameInitial';
 import type { CopyState } from '@encrypt/ui/copyState';
 import { resolveParentMessageAccessFromFeed } from '@encrypt/core/feed/access';
 import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
+import { messageHasComments } from '@encrypt/core/utils/feedMessageComments';
 import type { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
 import { useBackendComments } from '@lab/hooks/useBackendComments.ts';
 import type { IdentityDialogTarget } from '@lab/components/IdentityDialog.tsx';
@@ -92,6 +94,8 @@ type MessageThreadCardProps = {
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
   onOpenIdentity: (identity: IdentityDialogTarget) => void;
+  onCommentPosted?: (messageId: string, createdAt: number) => void;
+  instantCollapseTransition?: boolean;
 };
 
 const REDACTED_PREVIEW_WORDS = 24;
@@ -108,6 +112,17 @@ const messageDecryptButtonSx = {
     theme.transitions.create(['padding-left', 'padding-right'], {
       duration: theme.transitions.duration.short,
     }),
+};
+
+const commentsRelativeTimeSx = {
+  display: 'inline-block',
+  minWidth: '4rem',
+  textAlign: 'left',
+  ml: 0.5,
+};
+
+const cardActionIconSx = {
+  fontSize: 16,
 };
 
 const cardActionButtonSx = {
@@ -167,6 +182,8 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   usernameByKeyId,
   viewerKeyId,
   onOpenIdentity,
+  onCommentPosted,
+  instantCollapseTransition = false,
 }: MessageThreadCardProps) {
   const [senderIdentity, setSenderIdentity] = useState<FeedIdentity | null>(
     null,
@@ -179,6 +196,11 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [copyBusy, setCopyBusy] = useState(false);
   const [commentsForCopy, setCommentsForCopy] = useState<StoredComment[]>([]);
+  const hasComments = messageHasComments(message);
+  const lastCommentRelative = useRelativeTime(
+    message.lastCommentAt ?? message.createdAt,
+    { omitSeconds: true },
+  );
 
   const markInteracted = useCallback(() => {
     onMessageInteract(message.id);
@@ -492,10 +514,25 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           size="small"
           color="inherit"
           onClick={handleToggle}
-          startIcon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 16 }} />}
+          startIcon={
+            hasComments ? (
+              <ChatOutlinedIcon sx={cardActionIconSx} />
+            ) : (
+              <ChatBubbleOutlineOutlinedIcon sx={cardActionIconSx} />
+            )
+          }
           sx={cardActionButtonSx}
         >
-          Comments
+          {hasComments ? (
+            <>
+              Comments ·
+              <Box component="span" sx={commentsRelativeTimeSx}>
+                {lastCommentRelative}
+              </Box>
+            </>
+          ) : (
+            'Comments'
+          )}
         </Button>
         <Button
           size="small"
@@ -535,7 +572,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
 
       <Collapse
         in={expanded}
-        timeout={COMMENTS_PANEL_COLLAPSE_MS}
+        timeout={instantCollapseTransition ? 0 : COMMENTS_PANEL_COLLAPSE_MS}
         unmountOnExit
       >
         <MessageThreadExpandedPanel
@@ -552,6 +589,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
           usernameByKeyId={usernameByKeyId}
           viewerKeyId={viewerKeyId}
           onOpenIdentity={onOpenIdentity}
+          onCommentPosted={onCommentPosted}
         />
       </Collapse>
     </ThreadCardSurface>
@@ -574,6 +612,7 @@ type MessageThreadExpandedPanelProps = {
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
   onOpenIdentity: (identity: IdentityDialogTarget) => void;
+  onCommentPosted?: (messageId: string, createdAt: number) => void;
 };
 
 const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
@@ -590,6 +629,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
   usernameByKeyId,
   viewerKeyId,
   onOpenIdentity,
+  onCommentPosted,
 }: MessageThreadExpandedPanelProps) {
   const { keys } = useFeedLabSession();
   const { automateDecryption } = useFeedLabSettings();
@@ -600,7 +640,7 @@ const MessageThreadExpandedPanel = memo(function MessageThreadExpandedPanel({
     postBusy: commentsPostBusy,
     postComment,
     decryptCommentText,
-  } = useBackendComments(message.id, keys.keyId, keys);
+  } = useBackendComments(message.id, keys.keyId, keys, { onCommentPosted });
 
   useEffect(() => {
     if (!commentsLoading) {

@@ -20,9 +20,7 @@ export function filterFeedInboxMessages(
     threads.set(threadId, group);
   }
 
-  const canonical = [...threads.values()]
+  return [...threads.values()]
     .map(pickCanonicalFeedMessage)
     .filter((message): message is StoredMessage => message !== null);
-
-  return canonical.sort((a, b) => b.createdAt - a.createdAt);
 }

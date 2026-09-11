@@ -1,7 +1,10 @@
+export type FeedMessageSortMode = 'shareTime' | 'originalDate' | 'lastComment';
+
 export type StoredMessage = {
   id: string;
   payload: string;
   createdAt: number;
+  lastCommentAt?: number | null;
 };
 
 export type StoredShare = {
@@ -20,14 +23,27 @@ export type StoredComment = {
   createdAt: number;
 };
 
+/** Composite inbox pagination cursor returned by the API. */
+export type InboxCursor = {
+  sortAt: string;
+  threadId: string;
+};
+
 /** Paginated inbox API response. */
 export type InboxPageResponse = {
+  items: InboxApiItem[];
+  total?: number;
+  nextCursor: InboxCursor | null;
+};
+
+/** Paginated authored-messages API response. */
+export type AuthoredMessagesPageResponse = {
   items: InboxApiItem[];
   total?: number;
   nextCursor: string | null;
 };
 
-export type InboxSort = 'date';
+export type InboxSort = FeedMessageSortMode;
 export type InboxOrder = 'asc' | 'desc';
 
 /** API inbox row — key manifest shard included for decrypt. */
@@ -38,6 +54,7 @@ export type InboxApiItem = {
   messageId?: string;
   payload: string;
   createdAt: string;
+  lastCommentAt?: string | null;
   keyManifest: Record<
     string,
     {
@@ -62,10 +79,17 @@ export function inboxApiItemToStoredDelivery(
       createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
     };
   }
+  const lastCommentAt =
+    item.lastCommentAt != null ? Date.parse(item.lastCommentAt) : null;
+
   return {
     id: item.id,
     payload: item.payload,
     createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
+    lastCommentAt:
+      lastCommentAt != null && !Number.isNaN(lastCommentAt)
+        ? lastCommentAt
+        : null,
   };
 }
 

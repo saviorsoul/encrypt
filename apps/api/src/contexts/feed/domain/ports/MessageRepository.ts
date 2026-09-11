@@ -1,5 +1,6 @@
 import type { StoredMessage } from '@encrypt/core/feed/types';
 import type { KeyManifestMap } from '@encrypt/core/types/manifest';
+import type { PrismaTx } from '@/lib/prisma.js';
 
 export interface MessageRepository {
   getById(id: string): Promise<StoredMessage | null>;
@@ -10,4 +11,5 @@ export interface MessageRepository {
     keyManifest: KeyManifestMap,
     senderKeyId: string,
   ): Promise<StoredMessage>;
+  touchLastCommentAt(messageId: string, at: Date, tx?: PrismaTx): Promise<void>;
 }

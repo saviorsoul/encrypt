@@ -15,6 +15,7 @@ export function useFeedRefreshFeedback({
   feedError,
 }: UseFeedRefreshFeedbackOptions) {
   const refreshPendingRef = useRef(false);
+  const wasFeedBusyRef = useRef(feedBusy);
   const [showRefreshSuccess, setShowRefreshSuccess] = useState(false);
   const [isFeedPulsing, setIsFeedPulsing] = useState(false);
 
@@ -24,7 +25,10 @@ export function useFeedRefreshFeedback({
   }, []);
 
   useEffect(() => {
-    if (!refreshPendingRef.current || feedBusy) {
+    const wasFeedBusy = wasFeedBusyRef.current;
+    wasFeedBusyRef.current = feedBusy;
+
+    if (!refreshPendingRef.current || feedBusy || !wasFeedBusy) {
       return;
     }
 

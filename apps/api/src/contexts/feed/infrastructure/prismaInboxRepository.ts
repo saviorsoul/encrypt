@@ -1,170 +1,157 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma.js';
 import type {
-  InboxDeliveryRef,
+  InboxCursor,
   InboxOrder,
+  InboxPageThread,
   InboxRepository,
+  InboxSort,
   ListInboxDeliveriesResult,
 } from '@/contexts/feed/domain/ports/InboxRepository.js';
 
-function inboxDeliveriesCte(recipientKeyId: string): Prisma.Sql {
+function buildThreadSortAtExpr(sort: InboxSort): Prisma.Sql {
+  if (sort === 'originalDate') {
+    return Prisma.sql`m.created_at`;
+  }
+
+  if (sort === 'lastComment') {
+    return Prisma.sql`COALESCE(m.last_comment_at, TIMESTAMPTZ '1970-01-01 00:00:00+00')`;
+  }
+
   return Prisma.sql`
-    WITH inbox_deliveries AS (
-      SELECT mkms.share_id AS id, s.created_at AS created_at, 'share'::text AS kind
-      FROM message_key_manifest_shards mkms
-      INNER JOIN shares s ON s.id = mkms.share_id
-      WHERE mkms.recipient_key_id = ${recipientKeyId}
-        AND mkms.share_id IS NOT NULL
-
-      UNION
-
-      SELECT mkms.message_id AS id, m.created_at AS created_at, 'message'::text AS kind
-      FROM message_key_manifest_shards mkms
-      INNER JOIN messages m ON m.id = mkms.message_id
-      WHERE mkms.recipient_key_id = ${recipientKeyId}
-        AND mkms.share_id IS NULL
-
-      UNION
-
-      SELECT DISTINCT mkms.message_id AS id, m.created_at AS created_at, 'message'::text AS kind
-      FROM message_key_manifest_shards mkms
-      INNER JOIN messages m ON m.id = mkms.message_id
-      WHERE mkms.recipient_key_id = ${recipientKeyId}
-        AND mkms.share_id IS NOT NULL
-        AND NOT EXISTS (
-          SELECT 1
-          FROM message_key_manifest_shards direct
-          WHERE direct.recipient_key_id = mkms.recipient_key_id
-            AND direct.message_id = mkms.message_id
-            AND direct.share_id IS NULL
-        )
-    )
+    CASE
+      WHEN mkms.share_id IS NULL THEN m.created_at
+      ELSE COALESCE(s.created_at, m.created_at)
+    END
   `;
 }
 
-function buildCursorFilter(
+function buildThreadCursorFilter(
   order: InboxOrder,
-  cursorCreatedAt: Date,
-  cursorId: string,
+  cursor: InboxCursor,
 ): Prisma.Sql {
   if (order === 'desc') {
     return Prisma.sql`
       AND (
-        created_at < ${cursorCreatedAt}
-        OR (created_at = ${cursorCreatedAt} AND id < ${cursorId}::uuid)
+        sort_at < ${cursor.sortAt}
+        OR (sort_at = ${cursor.sortAt} AND thread_id < ${cursor.threadId}::uuid)
       )
     `;
   }
 
   return Prisma.sql`
     AND (
-      created_at > ${cursorCreatedAt}
-      OR (created_at = ${cursorCreatedAt} AND id > ${cursorId}::uuid)
+      sort_at > ${cursor.sortAt}
+      OR (sort_at = ${cursor.sortAt} AND thread_id > ${cursor.threadId}::uuid)
     )
   `;
 }
 
-function buildOrderBy(order: InboxOrder): Prisma.Sql {
+function buildThreadOrderBy(order: InboxOrder): Prisma.Sql {
   return order === 'desc'
-    ? Prisma.sql`ORDER BY created_at DESC, id DESC`
-    : Prisma.sql`ORDER BY created_at ASC, id ASC`;
+    ? Prisma.sql`ORDER BY sort_at DESC, thread_id DESC`
+    : Prisma.sql`ORDER BY sort_at ASC, thread_id ASC`;
 }
 
-type InboxDeliveryRow = {
-  id: string;
-  created_at: Date;
-  kind: 'message' | 'share';
+type InboxPageRow = {
+  thread_id: string;
+  sort_at: Date;
+  total_count: number;
+  share_id: string | null;
+  entry_json: string;
+  message_payload: string;
+  message_created_at: Date;
+  message_last_comment_at: Date | null;
+  share_payload: string | null;
+  share_created_at: Date | null;
 };
 
-async function getCursorCreatedAt(
-  recipientKeyId: string,
-  cursorId: string,
-): Promise<Date | null> {
-  const rows = await prisma.$queryRaw<Array<{ created_at: Date }>>(
-    Prisma.sql`
-      ${inboxDeliveriesCte(recipientKeyId)}
-      SELECT created_at
-      FROM inbox_deliveries
-      WHERE id = ${cursorId}::uuid
-      LIMIT 1
-    `,
-  );
-
-  return rows[0]?.created_at ?? null;
-}
-
-function toDeliveryRef(row: InboxDeliveryRow): InboxDeliveryRef {
+function toPageThread(row: InboxPageRow): InboxPageThread {
   return {
-    id: row.id,
-    createdAt: row.created_at,
-    kind: row.kind,
+    threadId: row.thread_id,
+    sortAt: row.sort_at,
+    shareId: row.share_id,
+    entryJson: row.entry_json,
+    messagePayload: row.message_payload,
+    messageCreatedAt: row.message_created_at,
+    messageLastCommentAt: row.message_last_comment_at,
+    sharePayload: row.share_payload,
+    shareCreatedAt: row.share_created_at,
   };
 }
 
 export const inboxRepository: InboxRepository = {
-  async countDeliveries({ recipientKeyId }) {
-    const rows = await prisma.$queryRaw<Array<{ count: number }>>(
-      Prisma.sql`
-        ${inboxDeliveriesCte(recipientKeyId)}
-        SELECT COUNT(*)::int AS count
-        FROM inbox_deliveries
-      `,
-    );
-
-    return rows[0]?.count ?? 0;
-  },
-
   async listDeliveries({
     recipientKeyId,
     limit,
     cursor,
+    sort,
     order,
   }): Promise<ListInboxDeliveriesResult> {
-    const cursorCreatedAt =
-      cursor !== undefined
-        ? await getCursorCreatedAt(recipientKeyId, cursor)
-        : null;
+    const sortAt = buildThreadSortAtExpr(sort);
     const cursorFilter =
-      cursor !== undefined && cursorCreatedAt !== null
-        ? buildCursorFilter(order, cursorCreatedAt, cursor)
-        : Prisma.empty;
+      cursor != null ? buildThreadCursorFilter(order, cursor) : Prisma.empty;
 
-    const rows = await prisma.$queryRaw<InboxDeliveryRow[]>(
+    const pageRows = await prisma.$queryRaw<InboxPageRow[]>(
       Prisma.sql`
-        ${inboxDeliveriesCte(recipientKeyId)}
-        SELECT id, created_at, kind
-        FROM inbox_deliveries
+        SELECT
+          thread_id,
+          sort_at,
+          total_count,
+          share_id,
+          entry_json,
+          message_payload,
+          message_created_at,
+          message_last_comment_at,
+          share_payload,
+          share_created_at
+        FROM (
+          SELECT
+            mkms.message_id AS thread_id,
+            ${sortAt} AS sort_at,
+            COUNT(*) OVER()::int AS total_count,
+            mkms.share_id,
+            mkms.entry_json,
+            m.payload AS message_payload,
+            m.created_at AS message_created_at,
+            m.last_comment_at AS message_last_comment_at,
+            s.payload AS share_payload,
+            s.created_at AS share_created_at
+          FROM message_key_manifest_shards mkms
+          INNER JOIN messages m ON m.id = mkms.message_id
+          LEFT JOIN shares s ON s.id = mkms.share_id
+          WHERE mkms.recipient_key_id = ${recipientKeyId}
+        ) inbox_threads
         WHERE 1 = 1
         ${cursorFilter}
-        ${buildOrderBy(order)}
+        ${buildThreadOrderBy(order)}
         LIMIT ${limit + 1}
       `,
     );
 
-    const hasMore = rows.length > limit;
-    const pageRows = hasMore ? rows.slice(0, limit) : rows;
-    const deliveries = pageRows.map(toDeliveryRef);
+    const hasMore = pageRows.length > limit;
+    const rows = hasMore ? pageRows.slice(0, limit) : pageRows;
+    const total = pageRows[0]?.total_count ?? 0;
+
+    if (rows.length === 0) {
+      return {
+        threads: [],
+        nextCursor: null,
+        total,
+      };
+    }
+
+    const lastRow = rows[rows.length - 1]!;
 
     return {
-      deliveries,
-      nextCursor:
-        hasMore && deliveries.length > 0
-          ? deliveries[deliveries.length - 1]!.id
-          : null,
+      threads: rows.map(toPageThread),
+      nextCursor: hasMore
+        ? {
+            sortAt: lastRow.sort_at,
+            threadId: lastRow.thread_id,
+          }
+        : null,
+      total,
     };
-  },
-
-  async recipientHasShareAccessToParent(
-    parentMessageId: string,
-    recipientKeyId: string,
-  ): Promise<boolean> {
-    const count = await prisma.messageKeyManifestShard.count({
-      where: {
-        messageId: parentMessageId,
-        recipientKeyId,
-        shareId: { not: null },
-      },
-    });
-    return count > 0;
   },
 };

@@ -15,10 +15,20 @@ export async function insertMessage(
     data: { id, payload, senderKeyId },
   });
 
+  return mapMessageRow(row);
+}
+
+function mapMessageRow(row: {
+  id: string;
+  payload: string;
+  createdAt: Date;
+  lastCommentAt: Date | null;
+}): StoredMessage {
   return {
     id: row.id,
     payload: row.payload,
     createdAt: row.createdAt.getTime(),
+    lastCommentAt: row.lastCommentAt?.getTime() ?? null,
   };
 }
 
@@ -43,11 +53,7 @@ export const messageRepository: MessageRepository = {
       return null;
     }
 
-    return {
-      id: row.id,
-      payload: row.payload,
-      createdAt: row.createdAt.getTime(),
-    };
+    return mapMessageRow(row);
   },
 
   async exists(id: string): Promise<boolean> {
@@ -77,5 +83,17 @@ export const messageRepository: MessageRepository = {
       }
       throw error;
     }
+  },
+
+  async touchLastCommentAt(
+    messageId: string,
+    at: Date,
+    tx?: PrismaTx,
+  ): Promise<void> {
+    const client = tx ?? prisma;
+    await client.message.update({
+      where: { id: messageId },
+      data: { lastCommentAt: at },
+    });
   },
 };

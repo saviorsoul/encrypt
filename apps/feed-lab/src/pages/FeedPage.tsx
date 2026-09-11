@@ -5,8 +5,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import type { FeedMessageSortMode } from '@encrypt/core/feed/types';
 import { useNavigate } from 'react-router-dom';
-import { Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
 import { useBackendDecrypt } from '@lab/hooks/useBackendDecrypt.ts';
@@ -28,6 +29,8 @@ import {
   SendMessageDialog,
   useFeedMessageEnterState,
   useFeedRefreshFeedback,
+  useFeedMessageSort,
+  FeedMessageSortButton,
   FeedNoFriendsGuide,
   AcceptInvitationDialog,
   LazyInvitationQrScanDialog,
@@ -49,6 +52,8 @@ export function FeedPage() {
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [instantCollapseTransition, setInstantCollapseTransition] =
+    useState(false);
   const [lastInteractedMessageId, setLastInteractedMessageId] = useState<
     string | null
   >(null);
@@ -84,8 +89,10 @@ export function FeedPage() {
     ensureFriendshipsLoadedRef.current = ensureFriendshipsLoaded;
   });
 
+  const { sortMode, setSortMode } = useFeedMessageSort();
   const feed = useBackendFeedData(keys.keyId, {
     onEmptyInbox: () => void ensureFriendshipsLoadedRef.current(),
+    sort: sortMode,
   });
   const { reload: reloadFeed } = feed;
   const identity = useIdentityDialog({
@@ -157,6 +164,15 @@ export function FeedPage() {
     feedContext,
   });
   const feedBusy = feed.loading || preparingFeed;
+  const handleCommentPosted = useCallback(
+    (messageId: string, createdAt: number) => {
+      feed.bumpLastCommentAt(messageId, createdAt);
+      if (sortMode === 'lastComment') {
+        void reloadFeed();
+      }
+    },
+    [feed, reloadFeed, sortMode],
+  );
   const inboxIsEmpty =
     keys.keyId != null &&
     !feed.loading &&
@@ -181,6 +197,22 @@ export function FeedPage() {
       feedBusy,
       feedError: feed.error,
     });
+  const handleSortModeChange = useCallback(
+    (mode: FeedMessageSortMode) => {
+      if (mode === sortMode) {
+        return;
+      }
+      markRefreshStarted();
+      setInstantCollapseTransition(true);
+      setExpandedMessageIds(new Set());
+      clearLastShare();
+      setSortMode(mode);
+      queueMicrotask(() => {
+        setInstantCollapseTransition(false);
+      });
+    },
+    [clearLastShare, markRefreshStarted, setSortMode, sortMode],
+  );
 
   const wasFeedLoadingRef = useRef(feed.loading);
 
@@ -357,6 +389,13 @@ export function FeedPage() {
         >
           Create message
         </Button>
+        <Box sx={{ ml: 'auto' }}>
+          <FeedMessageSortButton
+            sortMode={sortMode}
+            onSortModeChange={handleSortModeChange}
+            disabled={!keys.keyId || feedBusy}
+          />
+        </Box>
       </Stack>
 
       {showOnboardingGuide ? (
@@ -427,6 +466,8 @@ export function FeedPage() {
                 usernameByKeyId={usernameByKeyId}
                 viewerKeyId={keys.keyId}
                 onOpenIdentity={identity.openIdentity}
+                onCommentPosted={handleCommentPosted}
+                instantCollapseTransition={instantCollapseTransition}
               />
             </FeedMessageEnter>
           );

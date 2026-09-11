@@ -24,10 +24,13 @@ export function useVisibleFeedMessages({
   const [visibleMessages, setVisibleMessages] = useState<StoredMessage[]>([]);
   const [preparing, setPreparing] = useState(false);
   const feedContextRef = useRef(feedContext);
-  const lastProcessedMessageIdsKeyRef = useRef<string | null>(null);
+  const lastProcessedMessagesSyncKeyRef = useRef<string | null>(null);
 
-  const messageIdsKey = useMemo(
-    () => messages.map((message) => message.id).join('\0'),
+  const messagesSyncKey = useMemo(
+    () =>
+      messages
+        .map((message) => `${message.id}:${message.lastCommentAt ?? ''}`)
+        .join('\0'),
     [messages],
   );
 
@@ -50,19 +53,19 @@ export function useVisibleFeedMessages({
 
   useEffect(() => {
     if (feedLoading) {
-      lastProcessedMessageIdsKeyRef.current = null;
+      lastProcessedMessagesSyncKeyRef.current = null;
       return;
     }
 
     if (!automateDecryption) {
-      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+      if (lastProcessedMessagesSyncKeyRef.current === messagesSyncKey) {
         return;
       }
-      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+      lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
       setVisibleMessages((current) => {
         if (
           current.length === messages.length &&
-          current.every((message, index) => message.id === messages[index]?.id)
+          current.every((message, index) => message === messages[index])
         ) {
           return current;
         }
@@ -73,10 +76,10 @@ export function useVisibleFeedMessages({
     }
 
     if (messages.length === 0) {
-      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+      if (lastProcessedMessagesSyncKeyRef.current === messagesSyncKey) {
         return;
       }
-      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+      lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
       setVisibleMessages((current) => (current.length === 0 ? current : []));
       setPreparing(false);
       return;
@@ -88,11 +91,11 @@ export function useVisibleFeedMessages({
     );
 
     if (!hasNewMessageIds) {
-      if (lastProcessedMessageIdsKeyRef.current === messageIdsKey) {
+      if (lastProcessedMessagesSyncKeyRef.current === messagesSyncKey) {
         return;
       }
 
-      lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+      lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
       setVisibleMessages(messages);
       setPreparing(false);
       void decryptDeliveries(messages, feedContextRef.current);
@@ -106,7 +109,7 @@ export function useVisibleFeedMessages({
       .then(() => {
         if (!cancelled) {
           setVisibleMessages(messages);
-          lastProcessedMessageIdsKeyRef.current = messageIdsKey;
+          lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
         }
       })
       .finally(() => {
@@ -122,8 +125,8 @@ export function useVisibleFeedMessages({
     automateDecryption,
     decryptDeliveries,
     feedLoading,
-    messageIdsKey,
     messages,
+    messagesSyncKey,
     visibleMessages,
   ]);
 

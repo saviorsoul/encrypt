@@ -298,12 +298,20 @@ export const inboxQueryWireSchema = {
       type: 'string',
       pattern: '^(?:100|[1-9]\\d?)$',
     },
-    cursor: { type: 'string', format: 'uuid' },
-    sort: { type: 'string', enum: ['date'] },
+    cursorSortAt: { type: 'string', format: 'date-time' },
+    cursorThreadId: { type: 'string', format: 'uuid' },
+    sort: {
+      type: 'string',
+      enum: ['shareTime', 'originalDate', 'lastComment', 'date'],
+    },
     order: {
       type: 'string',
       enum: ['asc', 'desc', 'ascending', 'descending'],
     },
+  },
+  dependentRequired: {
+    cursorSortAt: ['cursorThreadId'],
+    cursorThreadId: ['cursorSortAt'],
   },
 } as const;
 
@@ -317,14 +325,24 @@ export const inboxQuerySchema = {
       maximum: MAX_INBOX_LIMIT,
       default: DEFAULT_INBOX_LIMIT,
     },
-    cursor: { type: 'string', format: 'uuid' },
-    sort: { type: 'string', enum: ['date'], default: 'date' },
+    cursorSortAt: { type: 'string', format: 'date-time' },
+    cursorThreadId: { type: 'string', format: 'uuid' },
+    sort: {
+      type: 'string',
+      enumAliases: { date: 'shareTime' },
+      enum: ['shareTime', 'originalDate', 'lastComment'],
+      default: 'shareTime',
+    },
     order: {
       type: 'string',
       enumAliases: { ascending: 'asc', descending: 'desc' },
       enum: ['asc', 'desc'],
       default: 'desc',
     },
+  },
+  dependentRequired: {
+    cursorSortAt: ['cursorThreadId'],
+    cursorThreadId: ['cursorSortAt'],
   },
 } as const;
 

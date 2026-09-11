@@ -25,11 +25,17 @@ type CommentContext = {
   manifestLookup: Parameters<typeof resolveParentMessageAccessFromFeed>[3];
 };
 
+type UseBackendCommentsOptions = {
+  onCommentPosted?: (messageId: string, createdAt: number) => void;
+};
+
 export function useBackendComments(
   messageId: string | null,
   recipientKeyId: string | null,
   keys: KeysSession,
+  options?: UseBackendCommentsOptions,
 ) {
+  const onCommentPosted = options?.onCommentPosted;
   const api = useFeedApi();
   const [comments, setComments] = useState<StoredComment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,7 +131,11 @@ export function useBackendComments(
           const { id } = await api.postComment(encrypted.payload);
           const loaded = await api.getComments(threadId);
           setComments(loaded);
-          return loaded.find((comment) => comment.id === id) ?? null;
+          const posted = loaded.find((comment) => comment.id === id) ?? null;
+          if (posted) {
+            onCommentPosted?.(threadId, posted.createdAt);
+          }
+          return posted;
         }
 
         const newComment = await keys.withPrivateKey(async (material) => {
@@ -153,7 +163,11 @@ export function useBackendComments(
           const { id } = await api.postComment(payload);
           const loaded = await api.getComments(threadId);
           setComments(loaded);
-          return loaded.find((comment) => comment.id === id) ?? null;
+          const posted = loaded.find((comment) => comment.id === id) ?? null;
+          if (posted) {
+            onCommentPosted?.(threadId, posted.createdAt);
+          }
+          return posted;
         });
         return newComment ?? null;
       } catch (e) {
@@ -163,7 +177,7 @@ export function useBackendComments(
         setPostBusy(false);
       }
     },
-    [api, keys],
+    [api, keys, onCommentPosted],
   );
 
   const decryptCommentText = useCallback(

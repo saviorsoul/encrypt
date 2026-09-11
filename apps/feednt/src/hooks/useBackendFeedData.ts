@@ -2,7 +2,11 @@ import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationErro
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
 import { filterFeedInboxMessages } from '@encrypt/core/utils/feedInboxVisibility';
-import type { StoredMessage } from '@encrypt/core/feed/types';
+import type {
+  FeedMessageSortMode,
+  InboxCursor,
+  StoredMessage,
+} from '@encrypt/core/feed/types';
 import {
   inboxApiItemsToStoredDeliveries,
   type InboxApiItem,
@@ -44,12 +48,14 @@ function inboxMessagesFromItems(items: InboxApiItem[]): StoredMessage[] {
 
 export type UseBackendFeedDataOptions = {
   onEmptyInbox?: () => void;
+  sort?: FeedMessageSortMode;
 };
 
 export function useBackendFeedData(
   keyId: string | null,
   options?: UseBackendFeedDataOptions,
 ) {
+  const sort = options?.sort ?? 'shareTime';
   const api = useFeedApi();
   const onEmptyInboxRef = useRef(options?.onEmptyInbox);
 
@@ -59,7 +65,7 @@ export function useBackendFeedData(
   const [rawItems, setRawItems] = useState<InboxApiItem[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [total, setTotal] = useState(0);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<InboxCursor | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +107,7 @@ export function useBackendFeedData(
     setError(null);
     setNotRegistered(false);
     try {
-      const page = await api.getInbox();
+      const page = await api.getInbox({ sort, order: 'desc' });
       if (loadId !== loadIdRef.current) {
         return;
       }
@@ -131,7 +137,7 @@ export function useBackendFeedData(
         setLoading(false);
       }
     }
-  }, [api, applyInboxPage, keyId]);
+  }, [api, applyInboxPage, keyId, sort]);
 
   const loadMore = useCallback(async () => {
     if (!keyId || !nextCursor || loadingMore) {
@@ -142,7 +148,12 @@ export function useBackendFeedData(
     setLoadingMore(true);
     setError(null);
     try {
-      const page = await api.getInbox({ cursor: nextCursor });
+      const page = await api.getInbox({
+        cursorSortAt: nextCursor.sortAt,
+        cursorThreadId: nextCursor.threadId,
+        sort,
+        order: 'desc',
+      });
       if (loadId !== loadIdRef.current) {
         return;
       }
@@ -167,7 +178,7 @@ export function useBackendFeedData(
         setLoadingMore(false);
       }
     }
-  }, [api, applyInboxPage, keyId, loadingMore, nextCursor]);
+  }, [api, applyInboxPage, keyId, loadingMore, nextCursor, sort]);
 
   useEffect(() => {
     if (!keyId) {
@@ -198,6 +209,25 @@ export function useBackendFeedData(
     [rawItems],
   );
 
+  const bumpLastCommentAt = useCallback(
+    (messageId: string, createdAt: number) => {
+      const lastCommentAtIso = new Date(createdAt).toISOString();
+      setRawItems((current) =>
+        current.map((item) =>
+          item.type === 'message' && item.id === messageId
+            ? { ...item, lastCommentAt: lastCommentAtIso }
+            : item,
+        ),
+      );
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId ? { ...message, lastCommentAt: createdAt } : message,
+        ),
+      );
+    },
+    [],
+  );
+
   return {
     messages,
     rawItems,
@@ -212,6 +242,7 @@ export function useBackendFeedData(
     reload,
     loadMore,
     manifestLookup,
+    bumpLastCommentAt,
   };
 }
 

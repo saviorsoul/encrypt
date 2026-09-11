@@ -4,6 +4,7 @@ export type AuthoredMessageRow = {
   id: string;
   payload: string;
   createdAt: Date;
+  lastCommentAt: Date | null;
   manifestEntryJson: string;
 };
 

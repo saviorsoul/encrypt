@@ -52,7 +52,7 @@ function CommentItem({
   showDecryptButton: boolean;
 }) {
   const { text: decryptedText, error: decryptError } = decryption;
-  const postedAgo = useRelativeTime(comment.createdAt);
+  const postedAgo = useRelativeTime(comment.createdAt, { omitSeconds: true });
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [copyBusy, setCopyBusy] = useState(false);
 

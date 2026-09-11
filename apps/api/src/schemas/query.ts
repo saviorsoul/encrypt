@@ -6,8 +6,9 @@ export type CommentsQuery = {
 
 export type InboxQuery = {
   limit: number;
-  cursor?: string;
-  sort: 'date';
+  cursorSortAt?: string;
+  cursorThreadId?: string;
+  sort: 'shareTime' | 'originalDate' | 'lastComment';
   order: 'asc' | 'desc';
 };
 

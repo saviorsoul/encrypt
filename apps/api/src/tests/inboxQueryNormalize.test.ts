@@ -10,13 +10,19 @@ describe('inboxQuery normalization', () => {
     expect(normalize(query)).toBe(true);
     expect(query).toEqual({
       limit: DEFAULT_INBOX_LIMIT,
-      sort: 'date',
+      sort: 'shareTime',
       order: 'desc',
     });
   });
 
+  it('maps legacy date sort to shareTime', () => {
+    const query: Record<string, unknown> = { sort: 'date' };
+    expect(normalize(query)).toBe(true);
+    expect(query.sort).toBe('shareTime');
+  });
+
   it('coerces limit from string', () => {
-    const query = { limit: '15', sort: 'date', order: 'asc' };
+    const query = { limit: '15', sort: 'originalDate', order: 'asc' };
     expect(normalize(query)).toBe(true);
     expect(query.limit).toBe(15);
   });

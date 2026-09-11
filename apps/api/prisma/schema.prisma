@@ -25,10 +25,11 @@ model User {
 }
 
 model Message {
-  id          String   @id @db.Uuid
-  payload     String
-  senderKeyId String?  @map("sender_key_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String    @id @db.Uuid
+  payload        String
+  senderKeyId    String?   @map("sender_key_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastCommentAt  DateTime? @map("last_comment_at")
 
   shares          Share[]
   comments        Comment[]
