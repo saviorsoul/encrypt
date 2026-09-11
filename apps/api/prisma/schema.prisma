@@ -99,6 +99,8 @@ model UserFriendship {
   friendKeyId            String    @map("friend_key_id")
   invitationToken        String?   @map("invitation_token")
   messageHistorySharedAt DateTime? @map("message_history_shared_at")
+  messagesMuted          Boolean   @default(false) @map("messages_muted")
+  sharesMuted            Boolean   @default(false) @map("shares_muted")
   createdAt              DateTime  @default(now()) @map("created_at")
 
   // No DB FKs: Citus distributed table → users reference table. Prisma-only joins.

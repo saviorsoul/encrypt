@@ -15,12 +15,16 @@ export async function handleListFriendships(query: ListFriendshipsQuery) {
       createdAt,
       invitationToken,
       messageHistorySharedAt,
+      messagesMuted,
+      sharesMuted,
     }) => ({
       friendKeyId,
       publicKey,
       invitationToken,
       createdAt: createdAt.toISOString(),
       messageHistorySharedAt: messageHistorySharedAt?.toISOString() ?? null,
+      messagesMuted,
+      sharesMuted,
     }),
   );
 }

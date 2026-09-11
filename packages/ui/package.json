@@ -18,6 +18,7 @@
     "./MessageSharedSnackbar": "./src/components/MessageSharedSnackbar.tsx",
     "./useRelativeTime": "./src/hooks/useRelativeTime.ts",
     "./formatRelativeTime": "./src/utils/formatRelativeTime.ts",
+    "./formatFriendDeliveryMuteTooltip": "./src/utils/formatFriendDeliveryMuteTooltip.ts",
     "./copyToClipboard": "./src/utils/copyToClipboard.ts",
     "./nameInitial": "./src/utils/nameInitial.ts",
     "./copyState": "./src/utils/copyState.ts",
@@ -47,6 +48,8 @@
     "./AcceptInvitationDialog": "./src/components/AcceptInvitationDialog.tsx",
     "./GdprConsentCheckbox": "./src/components/GdprConsentCheckbox.tsx",
     "./ClearAccountDataDialog": "./src/components/ClearAccountDataDialog.tsx",
+    "./IdentityDialog": "./src/components/IdentityDialog.tsx",
+    "./useIdentityDialog": "./src/hooks/useIdentityDialog.ts",
     "./gdprDataContent": "./src/content/gdprDataContent.ts",
     "./renderGdprHtml": "./src/content/renderGdprHtml.ts",
     "./gdprPageHref": "./src/utils/gdprPageHref.ts"

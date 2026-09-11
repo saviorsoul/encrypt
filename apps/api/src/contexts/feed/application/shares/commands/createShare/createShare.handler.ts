@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { parseKeyManifest } from '@/schemas/parseKeyManifest.js';
-import { friendshipRepository } from '@/contexts/friendships/infrastructure/prismaFriendshipRepository.js';
-import { filterKeyManifestToFriends } from '@/contexts/feed/application/messages/filterKeyManifestToFriends.js';
+import { resolveDeliverableShareKeyManifest } from '@/contexts/feed/application/shares/resolveDeliverableShareKeyManifest.js';
 import { badRequest } from '@/lib/httpError.js';
 import { shareRepository } from '@/contexts/feed/infrastructure/prismaShareRepository.js';
 import type { CreateShareCommand } from './createShare.command.js';
@@ -26,13 +25,11 @@ export async function handleCreateShare(
     throw badRequest('Share payload is missing parentMessageId.');
   }
 
-  const friendKeyIds = await friendshipRepository.listFriendKeyIds(
-    command.senderKeyId,
-  );
-  const keyManifest = filterKeyManifestToFriends(
+  const keyManifest = await resolveDeliverableShareKeyManifest(
     parseKeyManifest(command.keyManifest),
     command.senderKeyId,
-    friendKeyIds,
+    threadRootId,
+    command.parentMessage,
   );
 
   const shareCoreJson = JSON.stringify(command.share);

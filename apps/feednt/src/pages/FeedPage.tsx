@@ -9,8 +9,6 @@ import { useVisibleFeedMessages } from '@feednt/hooks/useVisibleFeedMessages.ts'
 import { useBackendShare } from '@feednt/hooks/useBackendShare.ts';
 import { useFeedntFriendships } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
 import { useFeedntRecipients } from '@feednt/hooks/useFeedntRecipients.ts';
-import { useIdentityDialog } from '@feednt/hooks/useIdentityDialog.ts';
-import { IdentityDialog } from '@feednt/components/IdentityDialog.tsx';
 import { MessageThreadCard } from '@feednt/components/MessageThreadCard.tsx';
 import {
   FeedMessageEnter,
@@ -29,13 +27,17 @@ import {
   AcceptInvitationDialog,
   useCreateMessageRecipientsLoading,
   isFeedInvitationalOnlyEnabled,
+  IdentityDialog,
+  useIdentityDialog,
 } from '@encrypt/ui';
+import { saveFeedntUser } from '@feednt/services/db/storedUsers.ts';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
 import { useFeedntSession } from '@feednt/providers/FeedntSessionProvider.tsx';
 import { useFeedntSettings } from '@feednt/providers/FeedntSettingsProvider.tsx';
 import { AddFriendDialog } from '@feednt/components/AddFriendDialog.tsx';
 import { useBackendFriendInvitations } from '@feednt/hooks/useBackendFriendInvitations.ts';
 import { useBackendFriendshipRequests } from '@feednt/hooks/useBackendFriendshipRequests.ts';
+import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
 import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
 
 export function FeedPage() {
@@ -67,7 +69,10 @@ export function FeedPage() {
     await friendships.refresh({ force: true });
   }, [friendships]);
   const friendInvitations = useBackendFriendInvitations(refreshFriendData);
-  const friendshipRequests = useBackendFriendshipRequests(refreshFriendData);
+  const friendshipRequests = useBackendFriendshipRequests(
+    refreshFriendData,
+    addLocalUser,
+  );
   const isRegistered =
     keys.keyId != null &&
     (!feedInvitationalOnly ||
@@ -91,15 +96,45 @@ export function FeedPage() {
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
-    usernames,
     addLocalUser,
     friendKeyIds: friendships.friendKeyIds,
+    saveLocalUser: async (ownerKeyId, username, publicKey) => {
+      await saveFeedntUser(ownerKeyId, username, {
+        kty: 'EC',
+        crv: 'P-256',
+        x: publicKey.x,
+        y: publicKey.y,
+      });
+    },
     friendshipsLoading: friendships.friendshipsLoading,
     friendshipsError: friendships.friendshipsError,
-    onFriendshipsChanged: () => friendships.refresh({ force: true }),
-    onOpen: () => {
+    busy: friendshipRequests.busy,
+    error: friendshipRequests.error,
+    info: friendshipRequests.info,
+    onClearError: friendshipRequests.clearError,
+    onCancelInFlight: friendshipRequests.cancelInFlight,
+    onOpenIdentity: () => {
+      friendshipRequests.clearError();
+      friendshipRequests.clearInfo();
       void friendships.ensureFriendshipsLoaded();
     },
+    onCloseIdentity: () => {
+      friendshipRequests.cancelInFlight();
+    },
+    onAddFriend: async (name, target) => {
+      if (!keys.keyId) {
+        return { ok: false };
+      }
+      return friendshipRequests.sendRequestByPublicKey(
+        keys.keyId,
+        formatEcPublicKeyText(target.publicKey),
+        name,
+        usernames,
+        usernameByKeyId,
+      );
+    },
+    getFriendMute: friendships.getFriendMute,
+    onToggleFriendMute: friendships.toggleFriendDeliveryMute,
   });
   const recipients = useFeedntRecipients({
     viewerKeyId: keys.keyId,
@@ -466,6 +501,7 @@ export function FeedPage() {
                 feedContext={feedContext}
                 usernameByKeyId={usernameByKeyId}
                 viewerKeyId={keys.keyId}
+                getFriendMute={friendships.getFriendMute}
                 onOpenIdentity={identity.openIdentity}
                 onCommentPosted={handleCommentPosted}
                 instantCollapseTransition={instantCollapseTransition}

@@ -88,8 +88,12 @@ export type Friendship = {
   publicKey: { x: string; y: string };
   invitationToken: string | null;
   messageHistorySharedAt: string | null;
+  messagesMuted: boolean;
+  sharesMuted: boolean;
   createdAt: string;
 };
+
+export type FriendshipMuteScope = 'messages' | 'shares';
 
 export type CreateFriendshipRequestResult =
   | { status: 'pending'; request: FriendshipRequest }
@@ -487,6 +491,38 @@ export function createFeedApi(config: FeedApiConfig) {
         throw new Error(await readApiError(response));
       }
       return (await response.json()) as MarkMessageHistorySharedResult;
+    },
+
+    async muteFriend(body: {
+      friendKeyId: string;
+      scope: FriendshipMuteScope;
+    }): Promise<{ friendKeyId: string; scope: FriendshipMuteScope }> {
+      const response = await authorizedFetch('/api/friendships/mute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+      return (await response.json()) as {
+        friendKeyId: string;
+        scope: FriendshipMuteScope;
+      };
+    },
+
+    async unmuteFriend(body: {
+      friendKeyId: string;
+      scope: FriendshipMuteScope;
+    }): Promise<void> {
+      const response = await authorizedFetch('/api/friendships/mute', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
     },
 
     async deleteAccount(): Promise<void> {

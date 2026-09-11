@@ -1,9 +1,12 @@
+import type { Prisma } from '@prisma/client';
 import { prisma, type PrismaTx } from '@/lib/prisma.js';
 import { userRepository } from '@/contexts/users/index.js';
 import {
+  FRIENDSHIP_MUTE_SCOPE_MESSAGES,
   FRIENDSHIP_REQUEST_PENDING,
   FRIENDSHIP_REQUEST_REJECTED,
   FRIEND_INVITATION_CONSUMED,
+  type FriendshipMuteScope,
 } from '@/contexts/friendships/domain/constants.js';
 import type {
   FriendshipRepository,
@@ -11,6 +14,17 @@ import type {
   FriendshipWithPublicKey,
   SerializedFriendshipRequest,
 } from '@/contexts/friendships/domain/ports/FriendshipRepository.js';
+
+function friendshipMuteUpdateData(
+  scope: FriendshipMuteScope,
+  muted: boolean,
+): Prisma.UserFriendshipUpdateInput {
+  if (scope === FRIENDSHIP_MUTE_SCOPE_MESSAGES) {
+    return { messagesMuted: muted } as Prisma.UserFriendshipUpdateInput;
+  }
+
+  return { sharesMuted: muted } as Prisma.UserFriendshipUpdateInput;
+}
 
 function toRecord(row: {
   requesterKeyId: string;
@@ -152,6 +166,8 @@ export const friendshipRepository: FriendshipRepository = {
         createdAt: true,
         invitationToken: true,
         messageHistorySharedAt: true,
+        messagesMuted: true,
+        sharesMuted: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -163,21 +179,26 @@ export const friendshipRepository: FriendshipRepository = {
     const publicKeyByKeyId =
       await userRepository.findPublicKeysByKeyIds(friendKeyIds);
 
-    return friendships
-      .map((friendship) => {
-        const publicKey = publicKeyByKeyId.get(friendship.friendKeyId);
-        if (!publicKey) {
-          return null;
-        }
-        return {
-          friendKeyId: friendship.friendKeyId,
-          publicKey,
-          createdAt: friendship.createdAt,
-          invitationToken: friendship.invitationToken,
-          messageHistorySharedAt: friendship.messageHistorySharedAt,
-        };
-      })
-      .filter((row): row is FriendshipWithPublicKey => row !== null);
+    const result: FriendshipWithPublicKey[] = [];
+
+    for (const friendship of friendships) {
+      const publicKey = publicKeyByKeyId.get(friendship.friendKeyId);
+      if (!publicKey) {
+        continue;
+      }
+
+      result.push({
+        friendKeyId: friendship.friendKeyId,
+        publicKey,
+        createdAt: friendship.createdAt,
+        invitationToken: friendship.invitationToken,
+        messageHistorySharedAt: friendship.messageHistorySharedAt,
+        messagesMuted: friendship.messagesMuted,
+        sharesMuted: friendship.sharesMuted,
+      });
+    }
+
+    return result;
   },
 
   async listFriendKeyIds(ownerKeyId: string): Promise<Set<string>> {
@@ -331,6 +352,125 @@ export const friendshipRepository: FriendshipRepository = {
     await prisma.$transaction(async (tx) => {
       await deleteFriendshipPair(tx, ownerKeyId, friendKeyId);
     });
+  },
+
+  async muteFriendDelivery(
+    ownerKeyId: string,
+    friendKeyId: string,
+    scope: FriendshipMuteScope,
+  ): Promise<{ friendKeyId: string } | null> {
+    const friendship = await prisma.userFriendship.findUnique({
+      where: {
+        ownerKeyId_friendKeyId: { ownerKeyId, friendKeyId },
+      },
+    });
+    if (!friendship) {
+      return null;
+    }
+
+    const updated = await prisma.userFriendship.update({
+      where: {
+        ownerKeyId_friendKeyId: { ownerKeyId, friendKeyId },
+      },
+      data: friendshipMuteUpdateData(scope, true),
+    });
+
+    return { friendKeyId: updated.friendKeyId };
+  },
+
+  async unmuteFriendDelivery(
+    ownerKeyId: string,
+    friendKeyId: string,
+    scope: FriendshipMuteScope,
+  ): Promise<void> {
+    await prisma.userFriendship.updateMany({
+      where: {
+        ownerKeyId,
+        friendKeyId,
+        ...(scope === FRIENDSHIP_MUTE_SCOPE_MESSAGES
+          ? { messagesMuted: true }
+          : { sharesMuted: true }),
+      },
+      data: friendshipMuteUpdateData(scope, false),
+    });
+  },
+
+  async listDeliveryFriendshipConstraints(
+    senderKeyId: string,
+    recipientKeyIds: string[],
+  ): Promise<{
+    friendKeyIds: Set<string>;
+    recipientKeyIdsWhoMutedMessages: Set<string>;
+    recipientKeyIdsWhoMutedShares: Set<string>;
+  }> {
+    const incomingRecipients =
+      recipientKeyIds.length > 0
+        ? {
+            friendKeyId: senderKeyId,
+            ownerKeyId: { in: recipientKeyIds },
+          }
+        : null;
+
+    const rows = await prisma.userFriendship.findMany({
+      where: {
+        OR: [
+          { ownerKeyId: senderKeyId },
+          ...(incomingRecipients ? [incomingRecipients] : []),
+        ],
+      },
+      select: {
+        ownerKeyId: true,
+        friendKeyId: true,
+        messagesMuted: true,
+        sharesMuted: true,
+      },
+    });
+
+    const friendKeyIds = new Set<string>();
+    const recipientKeyIdsWhoMutedMessages = new Set<string>();
+    const recipientKeyIdsWhoMutedShares = new Set<string>();
+
+    for (const row of rows) {
+      if (row.ownerKeyId === senderKeyId) {
+        friendKeyIds.add(row.friendKeyId);
+      }
+      if (row.friendKeyId === senderKeyId) {
+        if (row.messagesMuted) {
+          recipientKeyIdsWhoMutedMessages.add(row.ownerKeyId);
+        }
+        if (row.sharesMuted) {
+          recipientKeyIdsWhoMutedShares.add(row.ownerKeyId);
+        }
+      }
+    }
+
+    return {
+      friendKeyIds,
+      recipientKeyIdsWhoMutedMessages,
+      recipientKeyIdsWhoMutedShares,
+    };
+  },
+
+  async listRecipientsWhoMutedAuthorMessages(
+    authorKeyId: string,
+    recipientKeyIds: string[],
+  ): Promise<Set<string>> {
+    if (recipientKeyIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await prisma.userFriendship.findMany({
+      where: {
+        friendKeyId: authorKeyId,
+        ownerKeyId: { in: recipientKeyIds },
+        messagesMuted: true,
+      },
+      select: {
+        ownerKeyId: true,
+      },
+    });
+
+    return new Set(rows.map((row) => row.ownerKeyId));
   },
 
   async markMessageHistoryShared(

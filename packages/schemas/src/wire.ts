@@ -423,6 +423,16 @@ export const deleteFriendshipBodySchema = {
   },
 } as const;
 
+export const muteFriendBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['friendKeyId', 'scope'],
+  properties: {
+    friendKeyId: keyIdProperty,
+    scope: { type: 'string', enum: ['messages', 'shares'] },
+  },
+} as const;
+
 export const createFriendInvitationBodySchema = {
   type: 'object',
   additionalProperties: false,

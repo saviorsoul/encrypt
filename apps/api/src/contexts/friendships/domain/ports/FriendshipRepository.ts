@@ -1,4 +1,5 @@
 import type { EcPublicKey } from '@/contexts/users/index.js';
+import type { FriendshipMuteScope } from '@/contexts/friendships/domain/constants.js';
 import type { PrismaTx } from '@/lib/prisma.js';
 
 export type FriendshipRequestRecord = {
@@ -25,6 +26,8 @@ export type FriendshipWithPublicKey = {
   createdAt: Date;
   invitationToken: string | null;
   messageHistorySharedAt: Date | null;
+  messagesMuted: boolean;
+  sharesMuted: boolean;
 };
 
 export interface FriendshipRepository {
@@ -81,6 +84,28 @@ export interface FriendshipRepository {
     friendKeyId: string;
     messageHistorySharedAt: Date;
   } | null>;
+  muteFriendDelivery(
+    ownerKeyId: string,
+    friendKeyId: string,
+    scope: FriendshipMuteScope,
+  ): Promise<{ friendKeyId: string } | null>;
+  unmuteFriendDelivery(
+    ownerKeyId: string,
+    friendKeyId: string,
+    scope: FriendshipMuteScope,
+  ): Promise<void>;
+  listDeliveryFriendshipConstraints(
+    senderKeyId: string,
+    recipientKeyIds: string[],
+  ): Promise<{
+    friendKeyIds: Set<string>;
+    recipientKeyIdsWhoMutedMessages: Set<string>;
+    recipientKeyIdsWhoMutedShares: Set<string>;
+  }>;
+  listRecipientsWhoMutedAuthorMessages(
+    authorKeyId: string,
+    recipientKeyIds: string[],
+  ): Promise<Set<string>>;
   deleteFriendshipRequestsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
   deleteFriendshipsForKeyId(keyId: string, tx?: PrismaTx): Promise<void>;
 }

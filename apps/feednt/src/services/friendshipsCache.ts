@@ -50,3 +50,17 @@ export function cacheHasUsersData(
 ): cached is FriendshipsCacheEntry {
   return cached?.hasUsersData === true;
 }
+
+export function cacheFriendshipsNeedRefresh(
+  cached: FriendshipsCacheEntry | null,
+): boolean {
+  if (!cacheHasFriendships(cached)) {
+    return true;
+  }
+
+  return cached.friendships.some(
+    (friendship) =>
+      typeof friendship.messagesMuted !== 'boolean' ||
+      typeof friendship.sharesMuted !== 'boolean',
+  );
+}

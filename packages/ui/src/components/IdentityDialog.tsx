@@ -1,24 +1,35 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import {
   formatEcPublicKeyText,
   slimEcPublicJwk,
 } from '@encrypt/core/crypto/ecPublicKey';
 import { prettifyJsonText } from '@encrypt/core/utils/prettifyJsonText';
-import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
-import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
+import { CopiedToClipboardSnackbar } from './CopiedToClipboardSnackbar.tsx';
+import { useCopiedToClipboardSnackbar } from '../hooks/useCopiedToClipboardSnackbar.tsx';
 
 export type IdentityDialogTarget = {
   keyId: string;
@@ -26,7 +37,7 @@ export type IdentityDialogTarget = {
   label: string;
 };
 
-type IdentityDialogProps = {
+export type IdentityDialogProps = {
   open: boolean;
   identity: IdentityDialogTarget | null;
   isSelf: boolean;
@@ -44,7 +55,61 @@ type IdentityDialogProps = {
   onCancelInFlight: () => void;
   onAddFriend: (name: string) => Promise<{ ok: boolean }>;
   onSaveName: (name: string) => Promise<{ ok: boolean; error?: string }>;
+  messagesMuted?: boolean;
+  sharesMuted?: boolean;
+  onToggleMessagesMute?: () => Promise<{ ok: boolean; error?: string }>;
+  onToggleSharesMute?: () => Promise<{ ok: boolean; error?: string }>;
 };
+
+type DeliveryMuteSwitchProps = {
+  checked: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+  ariaLabel: string;
+  tooltip: string;
+  icon: React.ReactNode;
+};
+
+function DeliveryMuteSwitch({
+  checked,
+  disabled = false,
+  onToggle,
+  ariaLabel,
+  tooltip,
+  icon,
+}: DeliveryMuteSwitchProps) {
+  return (
+    <Tooltip title={tooltip}>
+      <Stack
+        component="span"
+        direction="row"
+        spacing={0.25}
+        sx={{ alignItems: 'center', verticalAlign: 'middle' }}
+      >
+        <Box
+          sx={{
+            display: 'inline-flex',
+            color: checked ? 'error.main' : 'text.secondary',
+          }}
+        >
+          {icon}
+        </Box>
+        <Switch
+          size="small"
+          checked={checked}
+          onChange={() => onToggle()}
+          disabled={disabled}
+          color="error"
+          slotProps={{
+            input: {
+              'aria-label': ariaLabel,
+            },
+          }}
+        />
+      </Stack>
+    </Tooltip>
+  );
+}
 
 function formatPublicKeyText(
   publicKey: { x: string; y: string },
@@ -80,11 +145,23 @@ export function IdentityDialog({
   onCancelInFlight,
   onAddFriend,
   onSaveName,
+  messagesMuted = false,
+  sharesMuted = false,
+  onToggleMessagesMute,
+  onToggleSharesMute,
 }: IdentityDialogProps) {
   const [format, setFormat] = useState<'xy' | 'json'>('xy');
   const [friendName, setFriendName] = useState('');
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [muteError, setMuteError] = useState<string | null>(null);
+  const [messagesMutedOverride, setMessagesMutedOverride] = useState<
+    boolean | null
+  >(null);
+  const [sharesMutedOverride, setSharesMutedOverride] = useState<
+    boolean | null
+  >(null);
+  const muteToggleInflightRef = useRef({ messages: false, shares: false });
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevIdentityKeyId, setPrevIdentityKeyId] = useState(
     identity?.keyId ?? null,
@@ -98,8 +175,14 @@ export function IdentityDialog({
       setFriendName(existingUsername);
       setSaveBusy(false);
       setSaveError(null);
+      setMuteError(null);
+      setMessagesMutedOverride(null);
+      setSharesMutedOverride(null);
     } else {
       setSaveError(null);
+      setMuteError(null);
+      setMessagesMutedOverride(null);
+      setSharesMutedOverride(null);
     }
   }
 
@@ -108,8 +191,26 @@ export function IdentityDialog({
     if (open) {
       setFriendName(existingUsername);
       setSaveError(null);
+      setMuteError(null);
+      setMessagesMutedOverride(null);
+      setSharesMutedOverride(null);
     }
   }
+
+  useEffect(() => {
+    if (
+      messagesMutedOverride !== null &&
+      messagesMuted === messagesMutedOverride
+    ) {
+      setMessagesMutedOverride(null);
+    }
+  }, [messagesMuted, messagesMutedOverride]);
+
+  useEffect(() => {
+    if (sharesMutedOverride !== null && sharesMuted === sharesMutedOverride) {
+      setSharesMutedOverride(null);
+    }
+  }, [sharesMuted, sharesMutedOverride]);
 
   const publicKeyText = useMemo(() => {
     if (!identity) {
@@ -136,6 +237,8 @@ export function IdentityDialog({
   const duplicateError = nameExists
     ? `"${trimmedName}" already exists. Choose a unique name.`
     : null;
+  const displayMessagesMuted = messagesMutedOverride ?? messagesMuted;
+  const displaySharesMuted = sharesMutedOverride ?? sharesMuted;
   const formBusy = busy || saveBusy;
   const canAddFriend =
     Boolean(identity) &&
@@ -176,6 +279,40 @@ export function IdentityDialog({
     });
   }, [canAddFriend, onAddFriend, onClose, trimmedName]);
 
+  const handleToggleMessagesMute = useCallback(() => {
+    if (!onToggleMessagesMute || muteToggleInflightRef.current.messages) {
+      return;
+    }
+    const next = !displayMessagesMuted;
+    setMessagesMutedOverride(next);
+    setMuteError(null);
+    muteToggleInflightRef.current.messages = true;
+    void onToggleMessagesMute().then((result) => {
+      muteToggleInflightRef.current.messages = false;
+      if (!result.ok) {
+        setMessagesMutedOverride(null);
+        setMuteError(result.error ?? 'Failed to update message mute.');
+      }
+    });
+  }, [displayMessagesMuted, onToggleMessagesMute]);
+
+  const handleToggleSharesMute = useCallback(() => {
+    if (!onToggleSharesMute || muteToggleInflightRef.current.shares) {
+      return;
+    }
+    const next = !displaySharesMuted;
+    setSharesMutedOverride(next);
+    setMuteError(null);
+    muteToggleInflightRef.current.shares = true;
+    void onToggleSharesMute().then((result) => {
+      muteToggleInflightRef.current.shares = false;
+      if (!result.ok) {
+        setSharesMutedOverride(null);
+        setMuteError(result.error ?? 'Failed to update share mute.');
+      }
+    });
+  }, [displaySharesMuted, onToggleSharesMute]);
+
   const handleSaveName = useCallback(() => {
     if (!canSaveName) {
       return;
@@ -200,6 +337,10 @@ export function IdentityDialog({
       ? 'Identity'
       : identity.label
     : 'Identity';
+  const showMuteControls =
+    !isSelf &&
+    isFriend &&
+    (onToggleMessagesMute != null || onToggleSharesMute != null);
 
   return (
     <>
@@ -226,19 +367,70 @@ export function IdentityDialog({
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <ToggleButtonGroup
-              value={format}
-              exclusive
-              onChange={(_, next: 'xy' | 'json' | null) => {
-                if (next) {
-                  setFormat(next);
-                }
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
               }}
-              size="small"
+              useFlexGap
             >
-              <ToggleButton value="xy">x;y</ToggleButton>
-              <ToggleButton value="json">JSON</ToggleButton>
-            </ToggleButtonGroup>
+              <ToggleButtonGroup
+                value={format}
+                exclusive
+                onChange={(_, next: 'xy' | 'json' | null) => {
+                  if (next) {
+                    setFormat(next);
+                  }
+                }}
+                size="small"
+              >
+                <ToggleButton value="xy">x;y</ToggleButton>
+                <ToggleButton value="json">JSON</ToggleButton>
+              </ToggleButtonGroup>
+              {showMuteControls ? (
+                <Stack direction="row" spacing={1} useFlexGap>
+                  {onToggleMessagesMute ? (
+                    <DeliveryMuteSwitch
+                      checked={displayMessagesMuted}
+                      disabled={formBusy}
+                      onToggle={handleToggleMessagesMute}
+                      ariaLabel={
+                        displayMessagesMuted
+                          ? 'Unmute new messages from this friend'
+                          : 'Mute new messages from this friend'
+                      }
+                      tooltip={
+                        displayMessagesMuted
+                          ? 'Unmute new messages from this friend'
+                          : 'Mute new messages from this friend'
+                      }
+                      icon={<ChatBubbleOutlineOutlinedIcon fontSize="small" />}
+                    />
+                  ) : null}
+                  {onToggleSharesMute ? (
+                    <DeliveryMuteSwitch
+                      checked={displaySharesMuted}
+                      disabled={formBusy}
+                      onToggle={handleToggleSharesMute}
+                      ariaLabel={
+                        displaySharesMuted
+                          ? 'Unmute new shares from this friend'
+                          : 'Mute new shares from this friend'
+                      }
+                      tooltip={
+                        displaySharesMuted
+                          ? 'Unmute new shares from this friend'
+                          : 'Mute new shares from this friend'
+                      }
+                      icon={<ShareOutlinedIcon fontSize="small" />}
+                    />
+                  ) : null}
+                </Stack>
+              ) : null}
+            </Stack>
 
             <TextField
               label="Public key"
@@ -333,6 +525,7 @@ export function IdentityDialog({
                   <Alert severity="error">{friendshipsError}</Alert>
                 ) : null}
                 {error ? <Alert severity="error">{error}</Alert> : null}
+                {muteError ? <Alert severity="error">{muteError}</Alert> : null}
                 {info ? <Alert severity="info">{info}</Alert> : null}
               </>
             )}

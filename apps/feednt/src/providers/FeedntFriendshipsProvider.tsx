@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import {
   useFeedntFriendshipsState,
   type FeedntFriendshipsValue,
@@ -14,7 +9,11 @@ const FeedntFriendshipsContext = createContext<FeedntFriendshipsValue | null>(
   null,
 );
 
-export function FeedntFriendshipsProvider({ children }: { children: ReactNode }) {
+export function FeedntFriendshipsProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const { session, feedntUsers } = useFeedntSession();
   const friendships = useFeedntFriendshipsState(
     session?.keyId ?? null,

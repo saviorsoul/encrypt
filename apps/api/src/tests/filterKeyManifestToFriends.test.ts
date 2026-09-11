@@ -46,4 +46,19 @@ describe('filterKeyManifestToFriends', () => {
 
     expect(Object.keys(result).sort()).toEqual(['friend', 'sender']);
   });
+
+  it('omits friends who muted the sender', () => {
+    const result = filterKeyManifestToFriends(
+      {
+        sender: { ...shard, keyId: 'sender' },
+        friend: { ...shard, keyId: 'friend' },
+        mutedFriend: { ...shard, keyId: 'mutedFriend' },
+      },
+      'sender',
+      new Set(['friend', 'mutedFriend']),
+      new Set(['mutedFriend']),
+    );
+
+    expect(Object.keys(result).sort()).toEqual(['friend', 'sender']);
+  });
 });

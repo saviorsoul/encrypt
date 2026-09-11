@@ -23,7 +23,9 @@ import ChatOutlinedIcon from '@mui/icons-material/ChatOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import NotificationsOffOutlinedIcon from '@mui/icons-material/NotificationsOffOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import { formatFriendDeliveryMuteTooltip } from '@encrypt/ui';
 import { useRelativeTime } from '@encrypt/ui/useRelativeTime';
 import { nameInitial } from '@encrypt/ui/nameInitial';
 import type { CopyState } from '@encrypt/ui/copyState';
@@ -32,7 +34,7 @@ import type { StoredComment, StoredMessage } from '@encrypt/core/feed/types';
 import { messageHasComments } from '@encrypt/core/utils/feedMessageComments';
 import type { useBackendDecrypt } from '@feednt/hooks/useBackendDecrypt.ts';
 import { useBackendComments } from '@feednt/hooks/useBackendComments.ts';
-import type { IdentityDialogTarget } from '@feednt/components/IdentityDialog.tsx';
+import type { IdentityDialogTarget } from '@encrypt/ui';
 import { formatCommentAuthorLabel } from '@feednt/lib/formatCommentAuthorLabel.ts';
 import { assembleStoredMessageCopyPayload } from '@feednt/lib/assembleMessageCopyPayload.ts';
 import {
@@ -93,6 +95,9 @@ type MessageThreadCardProps = {
   feedContext: FeedContext;
   usernameByKeyId: Record<string, string>;
   viewerKeyId: string | null;
+  getFriendMute?: (
+    keyId: string,
+  ) => { messagesMuted: boolean; sharesMuted: boolean } | undefined;
   onOpenIdentity: (identity: IdentityDialogTarget) => void;
   onCommentPosted?: (messageId: string, createdAt: number) => void;
   instantCollapseTransition?: boolean;
@@ -100,6 +105,51 @@ type MessageThreadCardProps = {
 
 const REDACTED_PREVIEW_WORDS = 24;
 const REDACTED_COMMENT_WORDS = 12;
+
+function getFriendDeliveryMute(
+  getFriendMute: MessageThreadCardProps['getFriendMute'],
+  keyId: string | null,
+) {
+  if (!keyId || !getFriendMute) {
+    return null;
+  }
+  const mute = getFriendMute(keyId);
+  if (mute == null || (!mute.messagesMuted && !mute.sharesMuted)) {
+    return null;
+  }
+  return mute;
+}
+
+function FriendMuteIndicator({
+  mute,
+}: {
+  mute: { messagesMuted: boolean; sharesMuted: boolean } | null;
+}) {
+  if (!mute) {
+    return null;
+  }
+
+  const tooltip = formatFriendDeliveryMuteTooltip(mute);
+
+  return (
+    <Tooltip
+      title={tooltip}
+      slotProps={{
+        tooltip: {
+          sx: {
+            maxWidth: 200,
+            textAlign: 'center',
+          },
+        },
+      }}
+    >
+      <NotificationsOffOutlinedIcon
+        aria-label={tooltip}
+        sx={{ fontSize: '0.875rem', color: 'error.main', flexShrink: 0 }}
+      />
+    </Tooltip>
+  );
+}
 
 const messageDecryptButtonSx = {
   mb: 1.25,
@@ -181,6 +231,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   feedContext,
   usernameByKeyId,
   viewerKeyId,
+  getFriendMute,
   onOpenIdentity,
   onCommentPosted,
   instantCollapseTransition = false,
@@ -211,12 +262,6 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   }, [message.id, onToggleMessage]);
 
   useEffect(() => {
-    if (!expanded) {
-      setCommentsForCopy([]);
-    }
-  }, [expanded]);
-
-  useEffect(() => {
     let cancelled = false;
 
     void getSenderIdentityFromCorePayload(message.payload).then((identity) => {
@@ -236,13 +281,11 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   }, [message.payload, usernameByKeyId]);
 
   useEffect(() => {
-    let cancelled = false;
-
     if (!viewerKeyId) {
-      setSharerIdentity(null);
-      setSharerLabel(null);
       return;
     }
+
+    let cancelled = false;
 
     void (async () => {
       const access = await resolveParentMessageAccessFromFeed(
@@ -286,8 +329,15 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   ]);
 
   const senderKeyId = senderIdentity?.keyId ?? null;
+  const resolvedSharerIdentity = viewerKeyId ? sharerIdentity : null;
+  const resolvedSharerLabel = viewerKeyId ? sharerLabel : null;
+  const sharerKeyId = resolvedSharerIdentity?.keyId ?? null;
   const isOwnMessage =
     viewerKeyId !== null && senderKeyId !== null && senderKeyId === viewerKeyId;
+  const senderMute = isOwnMessage
+    ? null
+    : getFriendDeliveryMute(getFriendMute, senderKeyId);
+  const sharerMute = getFriendDeliveryMute(getFriendMute, sharerKeyId);
 
   const handleOpenSenderIdentity = useCallback(() => {
     if (!senderIdentity) {
@@ -302,16 +352,21 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   }, [markInteracted, onOpenIdentity, senderIdentity, senderLabel]);
 
   const handleOpenSharerIdentity = useCallback(() => {
-    if (!sharerIdentity) {
+    if (!resolvedSharerIdentity) {
       return;
     }
     markInteracted();
     onOpenIdentity({
-      keyId: sharerIdentity.keyId,
-      publicKey: sharerIdentity.publicKey,
-      label: sharerLabel ?? sharerIdentity.keyId,
+      keyId: resolvedSharerIdentity.keyId,
+      publicKey: resolvedSharerIdentity.publicKey,
+      label: resolvedSharerLabel ?? resolvedSharerIdentity.keyId,
     });
-  }, [markInteracted, onOpenIdentity, sharerIdentity, sharerLabel]);
+  }, [
+    markInteracted,
+    onOpenIdentity,
+    resolvedSharerIdentity,
+    resolvedSharerLabel,
+  ]);
 
   const sentAgo = useRelativeTime(message.createdAt);
   const sentAtLabel = useMemo(
@@ -325,7 +380,7 @@ export const MessageThreadCard = memo(function MessageThreadCard({
     try {
       const payloadJson = assembleStoredMessageCopyPayload(
         message,
-        commentsForCopy,
+        expanded ? commentsForCopy : [],
         feedContext.allDeliveries,
       );
       await navigator.clipboard.writeText(payloadJson);
@@ -336,7 +391,13 @@ export const MessageThreadCard = memo(function MessageThreadCard({
       setCopyBusy(false);
       window.setTimeout(() => setCopyState('idle'), 2000);
     }
-  }, [commentsForCopy, feedContext.allDeliveries, markInteracted, message]);
+  }, [
+    commentsForCopy,
+    expanded,
+    feedContext.allDeliveries,
+    markInteracted,
+    message,
+  ]);
 
   return (
     <ThreadCardSurface highlighted={highlighted}>
@@ -372,52 +433,68 @@ export const MessageThreadCard = memo(function MessageThreadCard({
               </ThreadGlassAvatar>
             </Box>
             <Stack spacing={0.2} sx={{ minWidth: 0 }}>
-              <Typography
-                component="button"
-                type="button"
-                disabled={!senderIdentity}
-                onClick={handleOpenSenderIdentity}
-                variant="subtitle2"
-                sx={{
-                  p: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: senderIdentity ? 'pointer' : 'default',
-                  color: 'inherit',
-                  fontWeight: 800,
-                  fontSize: '0.8125rem',
-                  textAlign: 'left',
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  '&:hover': senderIdentity ? { opacity: 0.85 } : undefined,
-                }}
+              <Stack
+                direction="row"
+                spacing={0.375}
+                sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}
               >
-                {isOwnMessage ? 'Your own message' : (senderLabel ?? '...')}
-              </Typography>
-              {sharerIdentity && sharerLabel ? (
                 <Typography
                   component="button"
                   type="button"
-                  variant="caption"
-                  color="primary"
-                  onClick={handleOpenSharerIdentity}
+                  disabled={!senderIdentity}
+                  onClick={handleOpenSenderIdentity}
+                  variant="subtitle2"
                   sx={{
                     p: 0,
                     border: 'none',
                     background: 'none',
-                    cursor: 'pointer',
+                    cursor: senderIdentity ? 'pointer' : 'default',
+                    color: 'inherit',
+                    fontWeight: 800,
+                    fontSize: '0.8125rem',
                     textAlign: 'left',
+                    minWidth: 0,
                     maxWidth: '100%',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    '&:hover': { color: 'text.primary' },
+                    '&:hover': senderIdentity ? { opacity: 0.85 } : undefined,
                   }}
                 >
-                  shared by: {sharerLabel}
+                  {isOwnMessage ? 'Your own message' : (senderLabel ?? '...')}
                 </Typography>
+                <FriendMuteIndicator mute={senderMute} />
+              </Stack>
+              {resolvedSharerIdentity && resolvedSharerLabel ? (
+                <Stack
+                  direction="row"
+                  spacing={0.375}
+                  sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}
+                >
+                  <Typography
+                    component="button"
+                    type="button"
+                    variant="caption"
+                    color="primary"
+                    onClick={handleOpenSharerIdentity}
+                    sx={{
+                      p: 0,
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      minWidth: 0,
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      '&:hover': { color: 'text.primary' },
+                    }}
+                  >
+                    shared by: {resolvedSharerLabel}
+                  </Typography>
+                  <FriendMuteIndicator mute={sharerMute} />
+                </Stack>
               ) : null}
             </Stack>
           </Stack>

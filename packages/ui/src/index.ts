@@ -42,6 +42,10 @@ export {
   type FormatRelativeTimeOptions,
 } from './utils/formatRelativeTime.ts';
 export { nameInitial } from './utils/nameInitial.ts';
+export {
+  formatFriendDeliveryMuteTooltip,
+  type FriendDeliveryMuteState,
+} from './utils/formatFriendDeliveryMuteTooltip.ts';
 export type { CopyState } from './utils/copyState.ts';
 export { copyTextToClipboard } from './utils/copyToClipboard.ts';
 export {
@@ -152,3 +156,12 @@ export {
   type InvitationQrScanDialogProps,
 } from './components/InvitationQrScanDialog.tsx';
 export { LazyInvitationQrScanDialog } from './components/LazyInvitationQrScanDialog.tsx';
+export {
+  IdentityDialog,
+  type IdentityDialogProps,
+  type IdentityDialogTarget,
+} from './components/IdentityDialog.tsx';
+export {
+  useIdentityDialog,
+  type UseIdentityDialogOptions,
+} from './hooks/useIdentityDialog.ts';

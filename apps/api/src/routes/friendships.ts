@@ -5,6 +5,7 @@ import type {
   FriendshipRequesterBody,
   FriendshipTargetBody,
   MarkMessageHistorySharedBody,
+  MuteFriendBody,
 } from '@/schemas/common.js';
 import { validateBody } from '@/middleware/validateBody.js';
 import { unauthorized } from '@/lib/httpError.js';
@@ -15,7 +16,9 @@ import {
   handleListFriendshipRequests,
   handleListFriendships,
   handleMarkMessageHistoryShared,
+  handleMuteFriend,
   handleRejectFriendshipRequest,
+  handleUnmuteFriend,
 } from '@/contexts/friendships/index.js';
 
 function readAuthenticatedKeyId(ctx: {
@@ -126,6 +129,27 @@ export function createFriendshipsRouter(): Router {
         ownerKeyId,
         friendKeyId,
       });
+    },
+  );
+
+  router.post(
+    '/friendships/mute',
+    validateBody('muteFriendBody'),
+    async (ctx) => {
+      const ownerKeyId = readAuthenticatedKeyId(ctx);
+      const { friendKeyId, scope } = ctx.request.body as MuteFriendBody;
+      ctx.body = await handleMuteFriend({ ownerKeyId, friendKeyId, scope });
+    },
+  );
+
+  router.delete(
+    '/friendships/mute',
+    validateBody('muteFriendBody'),
+    async (ctx) => {
+      const ownerKeyId = readAuthenticatedKeyId(ctx);
+      const { friendKeyId, scope } = ctx.request.body as MuteFriendBody;
+      await handleUnmuteFriend({ ownerKeyId, friendKeyId, scope });
+      ctx.status = 204;
     },
   );
 

@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type {
   Friendship,
+  FriendshipMuteScope,
   FriendshipRequest,
   FriendInvitation,
 } from '@encrypt/core/api/feedApi';
@@ -13,6 +21,7 @@ import {
   waitForMinDuration,
 } from '@lab/lib/usersDrawerTiming.ts';
 import {
+  cacheFriendshipsNeedRefresh,
   cacheHasFriendships,
   cacheHasUsersData,
   getFriendshipsCache,
@@ -25,6 +34,8 @@ export type FeedLabFriend = {
   label: string;
   publicKey: { x: string; y: string };
   messageHistorySharedAt: string | null;
+  messagesMuted: boolean;
+  sharesMuted: boolean;
 };
 
 export type RefreshFriendshipsOptions = {
@@ -52,6 +63,13 @@ export type FeedLabFriendshipsValue = {
   refresh: (refreshOptions?: RefreshFriendshipsOptions) => Promise<void>;
   updateInvitationLabel: (token: string, label: string) => void;
   markMessageHistorySharedLocally: (friendKeyId: string) => void;
+  getFriendMute: (
+    friendKeyId: string,
+  ) => { messagesMuted: boolean; sharesMuted: boolean } | undefined;
+  toggleFriendDeliveryMute: (
+    friendKeyId: string,
+    scope: FriendshipMuteScope,
+  ) => Promise<{ ok: boolean; error?: string }>;
 };
 
 function labelForFriend(
@@ -90,6 +108,8 @@ function mapFriendshipsToFriends(
     ),
     publicKey: friendship.publicKey,
     messageHistorySharedAt: friendship.messageHistorySharedAt,
+    messagesMuted: friendship.messagesMuted,
+    sharesMuted: friendship.sharesMuted,
   }));
 }
 
@@ -167,6 +187,7 @@ export function useFeedLabFriendshipsState(
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const friendshipsInflightRef = useRef(false);
+  const muteToggleInflightRef = useRef(new Set<string>());
   const usersInflightRef = useRef<Promise<void> | null>(null);
 
   const ensureFriendshipsLoaded = useCallback(
@@ -371,28 +392,31 @@ export function useFeedLabFriendshipsState(
     }
 
     const cached = getFriendshipsCache(ownerKeyId);
-    if (!cached) {
-      return;
+    if (cached) {
+      if (cacheHasUsersData(cached)) {
+        applyFullCache(
+          cached,
+          setRawFriendships,
+          setInvitationLabelByToken,
+          setIncomingRequests,
+          setOutgoingRequests,
+          setPendingInvitations,
+        );
+      } else if (cacheHasFriendships(cached)) {
+        applyFriendshipsCache(
+          cached,
+          setRawFriendships,
+          setInvitationLabelByToken,
+        );
+      }
     }
-    if (cacheHasUsersData(cached)) {
-      applyFullCache(
-        cached,
-        setRawFriendships,
-        setInvitationLabelByToken,
-        setIncomingRequests,
-        setOutgoingRequests,
-        setPendingInvitations,
+
+    if (cacheFriendshipsNeedRefresh(cached)) {
+      void ensureFriendshipsLoaded(
+        cacheHasFriendships(cached) ? { force: true } : undefined,
       );
-      return;
     }
-    if (cacheHasFriendships(cached)) {
-      applyFriendshipsCache(
-        cached,
-        setRawFriendships,
-        setInvitationLabelByToken,
-      );
-    }
-  }, [ownerKeyId]);
+  }, [ownerKeyId, ensureFriendshipsLoaded]);
 
   const updateInvitationLabel = useCallback(
     (token: string, label: string) => {
@@ -440,6 +464,97 @@ export function useFeedLabFriendshipsState(
       });
     },
     [ownerKeyId],
+  );
+
+  const setFriendDeliveryMuteLocally = useCallback(
+    (friendKeyId: string, scope: FriendshipMuteScope, muted: boolean) => {
+      setRawFriendships((current) => {
+        const next = current.map((friendship) =>
+          friendship.friendKeyId === friendKeyId
+            ? {
+                ...friendship,
+                ...(scope === 'messages'
+                  ? { messagesMuted: muted }
+                  : { sharesMuted: muted }),
+              }
+            : friendship,
+        );
+        if (ownerKeyId) {
+          const cached = getFriendshipsCache(ownerKeyId);
+          if (cached) {
+            setFriendshipsCache(ownerKeyId, {
+              ...cached,
+              friendships: next,
+            });
+          }
+        }
+        return next;
+      });
+    },
+    [ownerKeyId],
+  );
+
+  const getFriendMute = useCallback(
+    (friendKeyId: string) => {
+      const friendship = rawFriendships.find(
+        (entry) => entry.friendKeyId === friendKeyId,
+      );
+      if (!friendship) {
+        return undefined;
+      }
+      return {
+        messagesMuted: friendship.messagesMuted,
+        sharesMuted: friendship.sharesMuted,
+      };
+    },
+    [rawFriendships],
+  );
+
+  const toggleFriendDeliveryMute = useCallback(
+    async (friendKeyId: string, scope: FriendshipMuteScope) => {
+      const friendship = rawFriendships.find(
+        (entry) => entry.friendKeyId === friendKeyId,
+      );
+      if (!friendship) {
+        return { ok: false, error: 'Friend not found.' };
+      }
+
+      const inflightKey = `${friendKeyId}:${scope}`;
+      if (muteToggleInflightRef.current.has(inflightKey)) {
+        return { ok: false, error: 'Update already in progress.' };
+      }
+
+      const isMuted =
+        scope === 'messages'
+          ? friendship.messagesMuted
+          : friendship.sharesMuted;
+      const nextMuted = !isMuted;
+
+      muteToggleInflightRef.current.add(inflightKey);
+      startTransition(() => {
+        setFriendDeliveryMuteLocally(friendKeyId, scope, nextMuted);
+      });
+
+      try {
+        if (isMuted) {
+          await api.unmuteFriend({ friendKeyId, scope });
+        } else {
+          await api.muteFriend({ friendKeyId, scope });
+        }
+        return { ok: true };
+      } catch (e) {
+        startTransition(() => {
+          setFriendDeliveryMuteLocally(friendKeyId, scope, isMuted);
+        });
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Failed to update mute.',
+        };
+      } finally {
+        muteToggleInflightRef.current.delete(inflightKey);
+      }
+    },
+    [api, rawFriendships, setFriendDeliveryMuteLocally],
   );
 
   useEffect(() => {
@@ -521,6 +636,8 @@ export function useFeedLabFriendshipsState(
       refresh,
       updateInvitationLabel,
       markMessageHistorySharedLocally,
+      getFriendMute,
+      toggleFriendDeliveryMute,
     }),
     [
       ensureFriendshipsLoaded,
@@ -530,12 +647,14 @@ export function useFeedLabFriendshipsState(
       friends,
       friendshipsError,
       friendshipsLoading,
+      getFriendMute,
       incomingRequests,
       invitationLabelByToken,
       markMessageHistorySharedLocally,
       outgoingRequests,
       pendingInvitations,
       refresh,
+      toggleFriendDeliveryMute,
       updateInvitationLabel,
       usersError,
       usersLoading,

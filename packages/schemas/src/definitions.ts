@@ -15,6 +15,7 @@ import {
   inboxQuerySchema,
   inboxQueryWireSchema,
   markMessageHistorySharedBodySchema,
+  muteFriendBodySchema,
   authoredMessagesQueryWireSchema,
   registerUserRequestSchema,
 } from './wire';
@@ -31,6 +32,7 @@ export const schemaDefinitions = {
   friendshipRequesterBody: friendshipRequesterBodySchema,
   deleteFriendshipBody: deleteFriendshipBodySchema,
   markMessageHistorySharedBody: markMessageHistorySharedBodySchema,
+  muteFriendBody: muteFriendBodySchema,
   createFriendInvitationBody: createFriendInvitationBodySchema,
   acceptFriendInvitationBody: acceptFriendInvitationBodySchema,
 } as const;

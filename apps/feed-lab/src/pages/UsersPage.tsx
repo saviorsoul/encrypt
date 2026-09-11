@@ -4,6 +4,7 @@ import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import PersonRemoveOutlinedIcon from '@mui/icons-material/PersonRemoveOutlined';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import {
@@ -33,8 +34,8 @@ import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { RemoveInvitationConfirmDialog } from '@encrypt/ui';
 import { LazyInvitationQrScanDialog } from '@encrypt/ui/LazyInvitationQrScanDialog';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
-import { useIdentityDialog } from '@lab/hooks/useIdentityDialog.ts';
-import { IdentityDialog } from '@lab/components/IdentityDialog.tsx';
+import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
+import { IdentityDialog, useIdentityDialog } from '@encrypt/ui';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
   saveFeedLabUser,
@@ -117,15 +118,45 @@ export function UsersPage() {
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
-    usernames,
     addLocalUser,
     friendKeyIds: friendships.friendKeyIds,
+    saveLocalUser: async (ownerKeyId, username, publicKey) => {
+      await saveFeedLabUser(ownerKeyId, username, {
+        kty: 'EC',
+        crv: 'P-256',
+        x: publicKey.x,
+        y: publicKey.y,
+      });
+    },
     friendshipsLoading: friendships.friendshipsLoading,
     friendshipsError: friendships.friendshipsError,
-    onFriendshipsChanged: refreshFriendData,
-    onOpen: () => {
+    busy: friendshipRequests.busy,
+    error: friendshipRequests.error,
+    info: friendshipRequests.info,
+    onClearError: friendshipRequests.clearError,
+    onCancelInFlight: friendshipRequests.cancelInFlight,
+    onOpenIdentity: () => {
+      friendshipRequests.clearError();
+      friendshipRequests.clearInfo();
       void friendships.ensureFriendshipsLoaded();
     },
+    onCloseIdentity: () => {
+      friendshipRequests.cancelInFlight();
+    },
+    onAddFriend: async (name, target) => {
+      if (!keys.keyId) {
+        return { ok: false };
+      }
+      return friendshipRequests.sendRequestByPublicKey(
+        keys.keyId,
+        formatEcPublicKeyText(target.publicKey),
+        name,
+        usernames,
+        usernameByKeyId,
+      );
+    },
+    getFriendMute: friendships.getFriendMute,
+    onToggleFriendMute: friendships.toggleFriendDeliveryMute,
   });
 
   const handleAcceptFriendWithName = useCallback(
@@ -589,11 +620,11 @@ export function UsersPage() {
                           {friend.keyId}
                         </Typography>
                       </Box>
-                      <Tooltip title="Show key info">
+                      <Tooltip title="User info">
                         <span>
                           <IconButton
                             size="small"
-                            aria-label="Show key info"
+                            aria-label="User info"
                             disabled={friendshipRequests.busy}
                             sx={{ flexShrink: 0 }}
                             onClick={() =>
@@ -607,7 +638,7 @@ export function UsersPage() {
                               })
                             }
                           >
-                            <KeyOutlinedIcon fontSize="small" />
+                            <ManageAccountsOutlinedIcon fontSize="small" />
                           </IconButton>
                         </span>
                       </Tooltip>

@@ -51,6 +51,11 @@ export type MarkMessageHistorySharedBody = {
   friendKeyId: string;
 };
 
+export type MuteFriendBody = {
+  friendKeyId: string;
+  scope: 'messages' | 'shares';
+};
+
 export type CreateFriendInvitationBody = Record<string, never>;
 
 export type AcceptFriendInvitationBody = Record<string, never>;
