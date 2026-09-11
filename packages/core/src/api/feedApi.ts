@@ -141,9 +141,12 @@ export type GetInboxOptions = {
   order?: InboxOrder;
 };
 
-export type GetAuthoredMessagesOptions = GetInboxOptions & {
-  /** Opaque pagination cursor from a previous authored-messages page. */
+/** Authored-messages list uses opaque string cursors, not inbox composite cursors. */
+export type GetAuthoredMessagesOptions = {
+  limit?: number;
   cursor?: string;
+  sort?: InboxSort;
+  order?: InboxOrder;
   /** ISO timestamp — only messages created strictly before this time. */
   before?: string;
 };
