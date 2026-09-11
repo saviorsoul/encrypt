@@ -142,6 +142,8 @@ export type GetInboxOptions = {
 };
 
 export type GetAuthoredMessagesOptions = GetInboxOptions & {
+  /** Opaque pagination cursor from a previous authored-messages page. */
+  cursor?: string;
   /** ISO timestamp — only messages created strictly before this time. */
   before?: string;
 };
