@@ -51,7 +51,7 @@ export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile
     input.style.display = 'none';
 
     let settled = false;
-    let focusCancelTimer: ReturnType<typeof setTimeout> | undefined;
+    let focusCancelTimer: number | undefined;
 
     const rejectCancelled = () => {
       if (settled) return;
