@@ -53,7 +53,6 @@ export function useVisibleFeedMessages({
 
   useEffect(() => {
     if (feedLoading) {
-      lastProcessedMessagesSyncKeyRef.current = null;
       return;
     }
 
@@ -98,7 +97,6 @@ export function useVisibleFeedMessages({
       lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
       setVisibleMessages(messages);
       setPreparing(false);
-      void decryptDeliveries(messages, feedContextRef.current);
       return;
     }
 
