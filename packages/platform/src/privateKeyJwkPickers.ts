@@ -2,10 +2,46 @@ import { readPrivateKeyJwkFromText } from './privateKeyJwkText.ts';
 
 export const FILE_SELECTION_CANCELLED = 'No private key file selected.';
 
+/** Desktop browsers without `<input type="file">` cancel need a focus fallback. */
+const FILE_PICKER_FOCUS_CANCEL_MS = 500;
+
 export type PickedPrivateKeyJwkFile = {
   jwk: JsonWebKey;
   fileName: string;
 };
+
+function supportsFileInputCancelEvent(input: HTMLInputElement): boolean {
+  return 'oncancel' in input;
+}
+
+function isMobileTouchFilePickerDevice(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  if (/iPad|iPhone|iPod|Android/i.test(navigator.userAgent)) {
+    return true;
+  }
+
+  // iPadOS may report MacIntel while still using the mobile file picker.
+  return navigator.maxTouchPoints > 1 && /MacIntel/.test(navigator.platform);
+}
+
+function shouldUseFilePickerFocusCancellationFallback(
+  input: HTMLInputElement,
+): boolean {
+  if (supportsFileInputCancelEvent(input)) {
+    return false;
+  }
+
+  // iOS/Android fire window focus before the change event; the fallback
+  // rejects a successful pick as cancelled.
+  if (isMobileTouchFilePickerDevice()) {
+    return false;
+  }
+
+  return true;
+}
 
 export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile> {
   return new Promise((resolve, reject) => {
@@ -15,6 +51,7 @@ export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile
     input.style.display = 'none';
 
     let settled = false;
+    let focusCancelTimer: ReturnType<typeof setTimeout> | undefined;
 
     const rejectCancelled = () => {
       if (settled) return;
@@ -24,6 +61,10 @@ export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile
     };
 
     const cleanup = () => {
+      if (focusCancelTimer !== undefined) {
+        clearTimeout(focusCancelTimer);
+        focusCancelTimer = undefined;
+      }
       input.removeEventListener('change', onChange);
       input.removeEventListener('cancel', onCancel);
       window.removeEventListener('focus', onWindowFocus);
@@ -54,16 +95,18 @@ export function pickPrivateKeyJwkFileWithName(): Promise<PickedPrivateKeyJwkFile
     };
 
     const onWindowFocus = () => {
-      window.setTimeout(() => {
+      focusCancelTimer = window.setTimeout(() => {
         if (!input.files?.length) {
           rejectCancelled();
         }
-      }, 500);
+      }, FILE_PICKER_FOCUS_CANCEL_MS);
     };
 
     input.addEventListener('change', onChange);
     input.addEventListener('cancel', onCancel);
-    window.addEventListener('focus', onWindowFocus, { once: true });
+    if (shouldUseFilePickerFocusCancellationFallback(input)) {
+      window.addEventListener('focus', onWindowFocus, { once: true });
+    }
 
     document.body.appendChild(input);
     input.click();

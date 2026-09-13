@@ -23,5 +23,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     ignoreHTTPSErrors: true,
+    env: {
+      FEED_LAB_DEV_HTTPS: 'true',
+      VITE_FEED_LAB_DEV_HOSTNAME: 'localhost',
+    },
   },
 });
