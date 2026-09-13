@@ -18,6 +18,7 @@ import {
   muteFriendBodySchema,
   authoredMessagesQueryWireSchema,
   registerUserRequestSchema,
+  authHeadersWireSchema,
 } from './wire';
 
 export const schemaDefinitions = {
@@ -49,7 +50,12 @@ export const queryWireSchemaDefinitions = {
   authoredMessagesQuery: authoredMessagesQueryWireSchema,
 } as const;
 
+export const headerSchemaDefinitions = {
+  authHeadersWire: authHeadersWireSchema,
+} as const;
+
 export type SchemaName = keyof typeof schemaDefinitions;
 export type QuerySchemaName = keyof typeof querySchemaDefinitions;
+export type HeaderSchemaName = keyof typeof headerSchemaDefinitions;
 
 export type SchemaRegistry = typeof schemaDefinitions;

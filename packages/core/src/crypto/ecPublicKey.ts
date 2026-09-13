@@ -2,6 +2,23 @@
 export const EC_PUBLIC_KTY = 'EC';
 export const EC_PUBLIC_CRV = 'P-256';
 
+/** P-256 field element size in bytes (unsigned big-endian). */
+export const EC_P256_COORD_BYTES = 32;
+
+/** Base64url wire length for a fixed-width P-256 coordinate (no padding). */
+export const EC_P256_COORD_BASE64URL_LENGTH = Math.ceil(
+  (EC_P256_COORD_BYTES * 8) / 6,
+);
+
+/** Base64url alphabet for a fixed-width P-256 coordinate. */
+export const EC_P256_COORD_BASE64URL_PATTERN = `^[A-Za-z0-9_-]{${EC_P256_COORD_BASE64URL_LENGTH}}$`;
+
+/** `x;y` public-key text: two fixed-width base64url coordinates. */
+export const EC_P256_COORDS_WIRE_TEXT_LENGTH =
+  EC_P256_COORD_BASE64URL_LENGTH * 2 + 1;
+
+export const EC_P256_COORDS_WIRE_TEXT_PATTERN = `^[A-Za-z0-9_-]{${EC_P256_COORD_BASE64URL_LENGTH}};[A-Za-z0-9_-]{${EC_P256_COORD_BASE64URL_LENGTH}}$`;
+
 export type EcPublicKeyCoords = {
   x: string;
   y: string;

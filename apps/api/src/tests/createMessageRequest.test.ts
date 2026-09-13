@@ -11,8 +11,8 @@ const SAMPLE_KEY_ID = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ';
 const ecPublicJwk = {
   kty: 'EC',
   crv: 'P-256',
-  x: 'x',
-  y: 'y',
+  x: 'A'.repeat(43),
+  y: 'B'.repeat(43),
 } as const;
 
 function minimalCreateMessageRequest(

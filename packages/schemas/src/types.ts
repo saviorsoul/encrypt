@@ -19,7 +19,20 @@ export type CreateShareBatchRequest = {
 };
 
 export type RegisterUserRequest = {
-  publicKey: string | Record<string, unknown>;
+  publicKey: {
+    kty: 'EC';
+    crv: 'P-256';
+    x: string;
+    y: string;
+  };
+};
+
+export type AuthHeadersWire = {
+  keyId: string;
+  publicKey: string;
+  timeSlot: number;
+  nonce: string;
+  signature: string;
 };
 
 export type CommentPayloadBody = Record<string, unknown>;

@@ -15,6 +15,12 @@ import {
   MANIFEST_SHARE_VERSION,
   MANIFEST_SHARE_WRAP,
 } from '@encrypt/core/constants/manifestShare';
+import {
+  EC_P256_COORD_BASE64URL_LENGTH,
+  EC_P256_COORD_BASE64URL_PATTERN,
+  EC_P256_COORDS_WIRE_TEXT_LENGTH,
+  EC_P256_COORDS_WIRE_TEXT_PATTERN,
+} from '@encrypt/core/crypto/ecPublicKey';
 import { JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH } from '@encrypt/core/crypto/jwkThumbprint';
 import {
   ES256_SIGNATURE_BASE64_LENGTH,
@@ -28,7 +34,25 @@ import {
 } from './constants.ts';
 
 /** Standard base64 length for a 12-byte auth nonce (no padding). */
-const AUTH_NONCE_WIRE_LENGTH = Math.ceil((AUTH_NONCE_BYTES * 4) / 3);
+export const AUTH_NONCE_WIRE_LENGTH = Math.ceil((AUTH_NONCE_BYTES * 4) / 3);
+
+/** Standard base64 alphabet for a fixed-width 12-byte auth nonce. */
+export const AUTH_NONCE_WIRE_PATTERN = `^[A-Za-z0-9+/]{${AUTH_NONCE_WIRE_LENGTH}}$`;
+
+/** `X-Public-Key` header: fixed-width P-256 `x;y` coordinates. */
+export const authPublicKeyWireProperty = {
+  type: 'string',
+  minLength: EC_P256_COORDS_WIRE_TEXT_LENGTH,
+  maxLength: EC_P256_COORDS_WIRE_TEXT_LENGTH,
+  pattern: EC_P256_COORDS_WIRE_TEXT_PATTERN,
+} as const;
+
+export const authNonceWireProperty = {
+  type: 'string',
+  minLength: AUTH_NONCE_WIRE_LENGTH,
+  maxLength: AUTH_NONCE_WIRE_LENGTH,
+  pattern: AUTH_NONCE_WIRE_PATTERN,
+} as const;
 
 /** RFC 7638 SHA-256 JWK thumbprint (base64url, no padding). */
 export const keyIdProperty = {
@@ -46,16 +70,38 @@ export const es256SignatureProperty = {
   pattern: ES256_SIGNATURE_BASE64_PATTERN,
 } as const;
 
+export const authHeadersWireSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['keyId', 'publicKey', 'timeSlot', 'nonce', 'signature'],
+  properties: {
+    keyId: keyIdProperty,
+    publicKey: authPublicKeyWireProperty,
+    timeSlot: { type: 'integer', minimum: 0 },
+    nonce: authNonceWireProperty,
+    signature: es256SignatureProperty,
+  },
+} as const;
+
+const ecP256CoordProperty = {
+  type: 'string',
+  minLength: EC_P256_COORD_BASE64URL_LENGTH,
+  maxLength: EC_P256_COORD_BASE64URL_LENGTH,
+  pattern: EC_P256_COORD_BASE64URL_PATTERN,
+} as const;
+
+const ecPublicJwkProperties = {
+  kty: { type: 'string', const: 'EC' },
+  crv: { type: 'string', const: 'P-256' },
+  x: ecP256CoordProperty,
+  y: ecP256CoordProperty,
+} as const;
+
 export const ecPublicJwkSchema = {
   type: 'object',
-  additionalProperties: true,
+  additionalProperties: false,
   required: ['kty', 'crv', 'x', 'y'],
-  properties: {
-    kty: { type: 'string', const: 'EC' },
-    crv: { type: 'string', const: 'P-256' },
-    x: { type: 'string', minLength: 1, maxLength: 256 },
-    y: { type: 'string', minLength: 1, maxLength: 256 },
-  },
+  properties: ecPublicJwkProperties,
 } as const;
 
 export const encryptedContentSchema = {
@@ -207,27 +253,12 @@ export const createShareBatchRequestSchema = {
   },
 } as const;
 
-const publicKeyWireSchema = {
-  oneOf: [
-    { type: 'string', minLength: 1, maxLength: 512 },
-    {
-      type: 'object',
-      additionalProperties: true,
-      required: ['x', 'y'],
-      properties: {
-        x: { type: 'string', minLength: 1, maxLength: 256 },
-        y: { type: 'string', minLength: 1, maxLength: 256 },
-      },
-    },
-  ],
-} as const;
-
 export const registerUserRequestSchema = {
   type: 'object',
   additionalProperties: false,
   required: ['publicKey'],
   properties: {
-    publicKey: publicKeyWireSchema,
+    publicKey: ecPublicJwkSchema,
   },
 } as const;
 

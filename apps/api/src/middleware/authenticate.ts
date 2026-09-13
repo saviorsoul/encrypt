@@ -1,48 +1,78 @@
 import type { Middleware } from 'koa';
 import {
-  AUTH_HEADER_KEY_ID,
   AUTH_HEADER_NEXT_NONCE,
   AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
-  AUTH_HEADER_NONCE,
-  AUTH_HEADER_PUBLIC_KEY,
-  AUTH_HEADER_SIGNATURE,
-  AUTH_HEADER_TIME_SLOT,
   assertAuthKeyIdMatchesPublicKey,
   buildAuthRequestDescriptorFromContext,
   isAuthTimeSlotAccepted,
   parseAuthNonceHeader,
   parseAuthPublicKeyWire,
-  parseAuthTimeSlotHeader,
   verifyAuthProof,
 } from '@encrypt/core/crypto/authProof';
 import { slimEcPublicJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { ecPublicJwkFromCoords } from '@encrypt/core/crypto/ecPublicKey';
 import { consumeAndRotateAuthNonce } from '@/contexts/auth/index.js';
 import { unauthorized } from '@/lib/httpError.js';
-
-function readHeader(
-  ctx: { get: (name: string) => string | undefined },
-  name: string,
-): string {
-  const value = ctx.get(name);
-  return typeof value === 'string' ? value.trim() : '';
-}
+import { logger } from '@/lib/logger.js';
+import { parseAuthHeadersWire } from './parseAuthHeadersWire.js';
+import { validateAuthHeadersWireResult } from './validateAuthHeadersWire.js';
 
 export function authenticate(): Middleware {
   return async (ctx, next) => {
-    const keyId = readHeader(ctx, AUTH_HEADER_KEY_ID);
-    const publicKeyWire = readHeader(ctx, AUTH_HEADER_PUBLIC_KEY);
-    const signature = readHeader(ctx, AUTH_HEADER_SIGNATURE);
-    const timeSlot = parseAuthTimeSlotHeader(
-      readHeader(ctx, AUTH_HEADER_TIME_SLOT),
-    );
-    const nonce = parseAuthNonceHeader(readHeader(ctx, AUTH_HEADER_NONCE));
-
-    if (!keyId || !publicKeyWire || !signature || timeSlot === null || !nonce) {
+    const wire = parseAuthHeadersWire(ctx);
+    if (!wire) {
+      logger.debug(
+        {
+          method: ctx.method,
+          path: ctx.path,
+          schema: 'authHeadersWire',
+          outcome: 'missing',
+        },
+        'auth header validation failed',
+      );
       throw unauthorized('Missing or invalid API authentication headers.');
     }
 
-    if (!isAuthTimeSlotAccepted(timeSlot)) {
+    const headerValidation = validateAuthHeadersWireResult(wire);
+    if (!headerValidation.valid) {
+      logger.debug(
+        {
+          method: ctx.method,
+          path: ctx.path,
+          schema: 'authHeadersWire',
+          outcome: 'schema_mismatch',
+          errors: headerValidation.errors,
+        },
+        'auth header validation failed',
+      );
+      throw unauthorized('Missing or invalid API authentication headers.');
+    }
+
+    const nonce = parseAuthNonceHeader(wire.nonce);
+    if (!nonce) {
+      logger.debug(
+        {
+          method: ctx.method,
+          path: ctx.path,
+          schema: 'authHeadersWire',
+          outcome: 'invalid_nonce',
+        },
+        'auth header validation failed',
+      );
+      throw unauthorized('Missing or invalid API authentication headers.');
+    }
+
+    logger.debug(
+      {
+        method: ctx.method,
+        path: ctx.path,
+        schema: 'authHeadersWire',
+        outcome: 'valid',
+      },
+      'auth header validation passed',
+    );
+
+    if (!isAuthTimeSlotAccepted(wire.timeSlot)) {
       throw unauthorized(
         'Authentication time slot is outside the accepted window.',
       );
@@ -50,8 +80,8 @@ export function authenticate(): Middleware {
 
     let publicKeyCoords;
     try {
-      publicKeyCoords = parseAuthPublicKeyWire(publicKeyWire);
-      await assertAuthKeyIdMatchesPublicKey(keyId, publicKeyCoords);
+      publicKeyCoords = parseAuthPublicKeyWire(wire.publicKey);
+      await assertAuthKeyIdMatchesPublicKey(wire.keyId, publicKeyCoords);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Invalid public key.';
@@ -64,9 +94,9 @@ export function authenticate(): Middleware {
     try {
       await verifyAuthProof(
         publicJwk,
-        keyId,
-        { timeSlot, nonce },
-        signature,
+        wire.keyId,
+        { timeSlot: wire.timeSlot, nonce },
+        wire.signature,
         request,
       );
     } catch (error) {
@@ -77,7 +107,7 @@ export function authenticate(): Middleware {
 
     // Consume before route validation (ADR 0012): valid proofs are single-use
     // even when later middleware or the handler returns 4xx/5xx.
-    const nonceOutcome = await consumeAndRotateAuthNonce(keyId, nonce);
+    const nonceOutcome = await consumeAndRotateAuthNonce(wire.keyId, nonce);
 
     ctx.set(AUTH_HEADER_NEXT_NONCE, nonceOutcome.entry.nonce);
     ctx.set(
@@ -93,7 +123,7 @@ export function authenticate(): Middleware {
       throw unauthorized('Authentication nonce is invalid or already used.');
     }
 
-    ctx.state.authenticatedKeyId = keyId;
+    ctx.state.authenticatedKeyId = wire.keyId;
     ctx.state.authenticatedPublicKey = publicKeyCoords;
     await next();
   };
