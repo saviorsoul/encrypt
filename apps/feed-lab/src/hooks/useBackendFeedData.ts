@@ -1,5 +1,13 @@
 import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { yieldToMain } from '@encrypt/core/utils/yieldToMain';
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { KeyManifestRecipientPayload } from '@encrypt/core/types/manifest';
 import { filterFeedInboxMessages } from '@encrypt/core/utils/feedInboxVisibility';
 import type {
@@ -46,6 +54,19 @@ function inboxMessagesFromItems(items: InboxApiItem[]): StoredMessage[] {
   return filterFeedInboxMessages(inboxApiItemsToStoredDeliveries(items));
 }
 
+const MIN_RELOAD_FEEDBACK_MS = 350;
+
+async function ensureMinReloadFeedbackDuration(
+  startedAt: number,
+): Promise<void> {
+  const remaining = MIN_RELOAD_FEEDBACK_MS - (Date.now() - startedAt);
+  if (remaining > 0) {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, remaining);
+    });
+  }
+}
+
 export type UseBackendFeedDataOptions = {
   onEmptyInbox?: () => void;
   sort?: FeedMessageSortMode;
@@ -74,25 +95,43 @@ export function useBackendFeedData(
     () => new Set(),
   );
   const loadIdRef = useRef(0);
+  const rawItemsRef = useRef<InboxApiItem[]>([]);
+
+  useEffect(() => {
+    rawItemsRef.current = rawItems;
+  }, [rawItems]);
 
   const applyInboxPage = useCallback(
-    (
+    async (
       pageItems: InboxApiItem[],
       pageTotal: number | undefined,
       replace: boolean,
+      options?: { transition?: boolean },
     ) => {
-      if (pageTotal !== undefined) {
-        setTotal(pageTotal);
+      await yieldToMain();
+      const merged = replace
+        ? pageItems
+        : mergeInboxItems(rawItemsRef.current, pageItems);
+      cacheInboxItems(pageItems, replace);
+      const nextMessages = filterFeedInboxMessages(
+        inboxApiItemsToStoredDeliveries(merged),
+      );
+
+      const commit = () => {
+        if (pageTotal !== undefined) {
+          setTotal(pageTotal);
+        }
+        rawItemsRef.current = merged;
+        setRawItems(merged);
+        setMessages(nextMessages);
+      };
+
+      if (options?.transition === false) {
+        commit();
+        return;
       }
-      setRawItems((current) => {
-        const merged = replace
-          ? pageItems
-          : mergeInboxItems(current, pageItems);
-        cacheInboxItems(pageItems, replace);
-        const deliveries = inboxApiItemsToStoredDeliveries(merged);
-        setMessages(filterFeedInboxMessages(deliveries));
-        return merged;
-      });
+
+      startTransition(commit);
     },
     [],
   );
@@ -103,18 +142,22 @@ export function useBackendFeedData(
     }
 
     const loadId = ++loadIdRef.current;
+    const reloadStartedAt = Date.now();
     setLoading(true);
     setError(null);
     setNotRegistered(false);
+    await yieldToMain();
     try {
       const page = await api.getInbox({ sort, order: 'desc' });
       if (loadId !== loadIdRef.current) {
         return;
       }
-      applyInboxPage(page.items, page.total, true);
-      setLoadedMoreMessageIds(new Set());
-      setNextCursor(page.nextCursor);
-      setNotRegistered(false);
+      await applyInboxPage(page.items, page.total, true);
+      startTransition(() => {
+        setLoadedMoreMessageIds(new Set());
+        setNextCursor(page.nextCursor);
+        setNotRegistered(false);
+      });
       if (inboxMessagesFromItems(page.items).length === 0) {
         onEmptyInboxRef.current?.();
       }
@@ -124,16 +167,19 @@ export function useBackendFeedData(
       }
       const message =
         e instanceof Error ? e.message : 'Failed to load feed data.';
-      setError(message);
-      setNotRegistered(
-        keyId != null && isUnknownUserKeyIdError(message, keyId),
-      );
-      setRawItems([]);
-      setMessages([]);
-      setTotal(0);
-      setNextCursor(null);
+      startTransition(() => {
+        setError(message);
+        setNotRegistered(
+          keyId != null && isUnknownUserKeyIdError(message, keyId),
+        );
+        setRawItems([]);
+        setMessages([]);
+        setTotal(0);
+        setNextCursor(null);
+      });
     } finally {
       if (loadId === loadIdRef.current) {
+        await ensureMinReloadFeedbackDuration(reloadStartedAt);
         setLoading(false);
       }
     }
@@ -147,6 +193,7 @@ export function useBackendFeedData(
     const loadId = loadIdRef.current;
     setLoadingMore(true);
     setError(null);
+    await yieldToMain();
     try {
       const page = await api.getInbox({
         cursorSortAt: nextCursor.sortAt,
@@ -157,7 +204,9 @@ export function useBackendFeedData(
       if (loadId !== loadIdRef.current) {
         return;
       }
-      applyInboxPage(page.items, page.total, false);
+      await applyInboxPage(page.items, page.total, false, {
+        transition: false,
+      });
       setLoadedMoreMessageIds((current) => {
         const next = new Set(current);
         for (const item of page.items) {

@@ -1,13 +1,11 @@
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import type { SxProps, Theme } from '@mui/material/styles';
-import CheckIcon from '@mui/icons-material/Check';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import type { ReactNode } from 'react';
 
 const ICON_SLOT_PX = 18;
 
-export const feedActionButtonSx: SxProps<Theme> = {
+export const feedActionButtonSx = {
   minHeight: 30.75,
   '& .MuiButton-startIcon': {
     display: 'inline-flex',
@@ -53,13 +51,9 @@ export function FeedBusyButtonIcon() {
 
 export type FeedRefreshButtonIconProps = {
   busy: boolean;
-  success: boolean;
 };
 
-export function FeedRefreshButtonIcon({
-  busy,
-  success,
-}: FeedRefreshButtonIconProps) {
+export function FeedRefreshButtonIcon({ busy }: FeedRefreshButtonIconProps) {
   return (
     <ButtonIconSlot>
       {busy ? (
@@ -69,8 +63,6 @@ export function FeedRefreshButtonIcon({
           thickness={4}
           sx={{ display: 'block' }}
         />
-      ) : success ? (
-        <CheckIcon />
       ) : (
         <RefreshOutlinedIcon />
       )}

@@ -13,7 +13,9 @@ export function formatSignRequestPreview(
 ): SignRequestPreview {
   const origin =
     baseUrl.replace(/\/$/, '') ||
-    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    (typeof window !== 'undefined'
+      ? window.location.origin
+      : 'http://localhost');
   const url = new URL(
     descriptor.path.startsWith('/') ? descriptor.path : `/${descriptor.path}`,
     `${origin}/`,

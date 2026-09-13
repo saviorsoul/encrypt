@@ -185,11 +185,17 @@ function createStoneTheme(mode: 'light' | 'dark') {
         styleOverrides: {
           html: {
             scrollbarGutter: 'stable',
+            '@media (hover: none) and (pointer: coarse)': {
+              overscrollBehaviorY: 'none',
+            },
           },
           body: {
             fontFamily: feedLabFontFamily,
             ...viewportMinHeightSx,
             ...feedAppBackgroundStyles(mode, stone),
+            '@media (hover: none) and (pointer: coarse)': {
+              overscrollBehaviorY: 'none',
+            },
           },
         },
       },

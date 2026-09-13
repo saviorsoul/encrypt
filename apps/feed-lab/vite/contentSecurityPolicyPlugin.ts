@@ -1,8 +1,5 @@
 import type { Plugin } from 'vite';
-import {
-  buildNetworkAppMetaCsp,
-  type NetworkAppCspOptions,
-} from '../csp.ts';
+import { buildNetworkAppMetaCsp, type NetworkAppCspOptions } from '../csp.ts';
 
 export function contentSecurityPolicyPlugin(
   options: NetworkAppCspOptions,

@@ -137,6 +137,7 @@ const SendMessageTextField = memo(function SendMessageTextField({
       onChange={handleChange}
       multiline
       minRows={5}
+      maxRows={10}
       fullWidth
       placeholder="Enter text to encrypt..."
       disabled={disabled}

@@ -22,7 +22,7 @@ export function useFeedMessageEnterState() {
   );
 
   const getStaggerIndex = useCallback(
-    (messageId: string, visibleMessageIds: string[]) => {
+    (messageId: string, visibleMessageIds: readonly string[]) => {
       if (animatedMessageIds.has(messageId)) {
         return 0;
       }

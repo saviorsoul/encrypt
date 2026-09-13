@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { decryptComment } from '@encrypt/core/crypto/commentCrypto';
 import {
   decryptSharedStoredMessage,
@@ -112,14 +112,19 @@ async function decryptDeliveriesWithMaterial(
   material: UploadedPrivateKeyMaterial,
   deliveries: StoredFeedDelivery[],
   { allDeliveries, manifestLookup }: DecryptFeedContext,
+  existingDecrypted: Record<string, string> = {},
 ): Promise<{
   decrypted: Record<string, string>;
   errors: Record<string, string>;
 }> {
-  const decrypted: Record<string, string> = {};
+  const decrypted: Record<string, string> = { ...existingDecrypted };
   const errors: Record<string, string> = {};
 
   for (const delivery of deliveries) {
+    if (decrypted[delivery.id] !== undefined) {
+      continue;
+    }
+
     try {
       decrypted[delivery.id] = await decryptWithMaterial(material, {
         delivery,
@@ -207,6 +212,11 @@ export function useBackendDecrypt(keys: KeysSession) {
   const [commentsErrors, setCommentsErrors] = useState<Record<string, string>>(
     {},
   );
+  const decryptedMessagesRef = useRef(decryptedMessages);
+
+  useEffect(() => {
+    decryptedMessagesRef.current = decryptedMessages;
+  }, [decryptedMessages]);
 
   const decryptComments = useCallback(
     async (context: DecryptCommentsContext) => {
@@ -257,16 +267,27 @@ export function useBackendDecrypt(keys: KeysSession) {
 
   const decryptDeliveries = useCallback(
     async (deliveries: StoredFeedDelivery[], context: DecryptFeedContext) => {
-      setMessageErrors({});
-      setCommentsErrors({});
+      const existingDecrypted = decryptedMessagesRef.current;
+      const pendingDeliveries = deliveries.filter(
+        (delivery) => existingDecrypted[delivery.id] === undefined,
+      );
+      if (pendingDeliveries.length === 0) {
+        return { decrypted: existingDecrypted, errors: {} };
+      }
+
       const results = await keys.withPrivateKey(async (material) =>
-        decryptDeliveriesWithMaterial(material, deliveries, context),
+        decryptDeliveriesWithMaterial(
+          material,
+          pendingDeliveries,
+          context,
+          existingDecrypted,
+        ),
       );
       if (results === null) {
         return null;
       }
       setDecryptedMessages(results.decrypted);
-      setMessageErrors(results.errors);
+      setMessageErrors((prev) => ({ ...prev, ...results.errors }));
       return results;
     },
     [keys],

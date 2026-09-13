@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useRef,
@@ -24,7 +25,7 @@ export type FeedMessageEnterProps = {
 };
 
 /** Fade entry wrapper for feed thread cards. Opacity-only to avoid transform text reflow. */
-export function FeedMessageEnter({
+export const FeedMessageEnter = memo(function FeedMessageEnter({
   messageId,
   animateEntry,
   staggerIndex,
@@ -120,4 +121,4 @@ export function FeedMessageEnter({
       {children}
     </Box>
   );
-}
+});

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FeedMessageSortMode } from '@encrypt/core/feed/types';
+import type { StoredMessage } from '@encrypt/core/feed/types';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
@@ -11,7 +12,6 @@ import { useFeedntFriendships } from '@feednt/providers/FeedntFriendshipsProvide
 import { useFeedntRecipients } from '@feednt/hooks/useFeedntRecipients.ts';
 import { MessageThreadCard } from '@feednt/components/MessageThreadCard.tsx';
 import {
-  FeedMessageEnter,
   FeedRefreshButtonIcon,
   ButtonIconSlot,
   feedActionButtonSx,
@@ -23,6 +23,12 @@ import {
   useFeedRefreshFeedback,
   useFeedMessageSort,
   FeedMessageSortButton,
+  FeedPullToRefresh,
+  FeedRefreshPulseOverlay,
+  FeedLoadMoreButton,
+  FeedMessageList,
+  useFeedPullToRefreshEnabled,
+  useFeedReloadAction,
   FeedNoFriendsGuide,
   AcceptInvitationDialog,
   useCreateMessageRecipientsLoading,
@@ -39,6 +45,7 @@ import { useBackendFriendInvitations } from '@feednt/hooks/useBackendFriendInvit
 import { useBackendFriendshipRequests } from '@feednt/hooks/useBackendFriendshipRequests.ts';
 import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
 import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
+import { isCapacitorApp } from '@encrypt/platform/isCapacitorApp';
 
 export function FeedPage() {
   const navigate = useNavigate();
@@ -219,11 +226,11 @@ export function FeedPage() {
   );
   const { shouldAnimateEntry, onAnimationDone, getStaggerIndex } =
     useFeedMessageEnterState();
-  const { showRefreshSuccess, markRefreshStarted, feedListPulseSx } =
-    useFeedRefreshFeedback({
-      feedBusy,
-      feedError: feed.error,
-    });
+  const { isFeedPulsing, markRefreshStarted } = useFeedRefreshFeedback({
+    feedBusy,
+    feedError: feed.error,
+  });
+  const pullToRefreshEnabled = useFeedPullToRefreshEnabled(isCapacitorApp());
   const handleSortModeChange = useCallback(
     (mode: FeedMessageSortMode) => {
       if (mode === sortMode) {
@@ -272,15 +279,16 @@ export function FeedPage() {
     [clearLastShare],
   );
 
-  const handleReloadFeed = useCallback(async () => {
-    if (!keys.keyId) {
-      return;
-    }
-    markRefreshStarted();
-    setExpandedMessageIds(new Set());
+  const prepareFeedReload = useCallback(() => {
     clearLastShare();
-    await reloadFeed();
-  }, [clearLastShare, keys.keyId, markRefreshStarted, reloadFeed]);
+  }, [clearLastShare]);
+
+  const handleReloadFeed = useFeedReloadAction({
+    keyId: keys.keyId,
+    markRefreshStarted,
+    onPrepareReload: prepareFeedReload,
+    reloadFeed,
+  });
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
@@ -374,12 +382,81 @@ export function FeedPage() {
     [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
   );
 
+  const renderFeedMessage = useCallback(
+    (message: StoredMessage) => {
+      const isExpanded = expandedMessageIds.has(message.id);
+      const decryptedComments = decryptedCommentsByMessage[message.id] ?? null;
+
+      return (
+        <MessageThreadCard
+          message={message}
+          expanded={isExpanded}
+          highlighted={lastInteractedMessageId === message.id}
+          onMessageInteract={handleMessageInteract}
+          onToggleMessage={handleToggleMessage}
+          onDecryptDelivery={decryptDelivery}
+          onDecryptComments={decryptComments}
+          decryptBusy={busyMessageId === message.id}
+          decryptError={messageErrors[message.id] ?? null}
+          decryptCommentsError={commentsErrors[message.id] ?? null}
+          decryptPlaintext={decryptedMessages[message.id] ?? null}
+          decryptedComments={decryptedComments}
+          shareBusy={shareBusy}
+          shareLastShareId={
+            isExpanded && lastShare?.messageId === message.id
+              ? lastShare.shareId
+              : null
+          }
+          onOpenShare={handleOpenShare}
+          onMergeDecryptedComments={mergeDecryptedComments}
+          feedContext={feedContext}
+          usernameByKeyId={usernameByKeyId}
+          viewerKeyId={keys.keyId}
+          getFriendMute={friendships.getFriendMute}
+          onOpenIdentity={identity.openIdentity}
+          onCommentPosted={handleCommentPosted}
+          instantCollapseTransition={instantCollapseTransition}
+        />
+      );
+    },
+    [
+      busyMessageId,
+      commentsErrors,
+      decryptComments,
+      decryptDelivery,
+      decryptedCommentsByMessage,
+      decryptedMessages,
+      expandedMessageIds,
+      feedContext,
+      friendships.getFriendMute,
+      handleCommentPosted,
+      handleMessageInteract,
+      handleOpenShare,
+      handleToggleMessage,
+      identity.openIdentity,
+      instantCollapseTransition,
+      keys.keyId,
+      lastInteractedMessageId,
+      lastShare,
+      mergeDecryptedComments,
+      messageErrors,
+      shareBusy,
+      usernameByKeyId,
+    ],
+  );
+
   if (!session) {
     return null;
   }
 
   return (
     <>
+      <FeedPullToRefresh
+        enabled={pullToRefreshEnabled}
+        disabled={!keys.keyId}
+        busy={feedBusy}
+        onRefresh={handleReloadFeed}
+      />
       <Stack
         direction="row"
         sx={{
@@ -393,12 +470,7 @@ export function FeedPage() {
           variant="outlined"
           size="small"
           sx={feedActionButtonSx}
-          startIcon={
-            <FeedRefreshButtonIcon
-              busy={feedBusy}
-              success={showRefreshSuccess}
-            />
-          }
+          startIcon={<FeedRefreshButtonIcon busy={feedBusy} />}
           disabled={!keys.keyId || feedBusy}
           onClick={() => void handleReloadFeed()}
         >
@@ -461,70 +533,31 @@ export function FeedPage() {
         </Typography>
       ) : null}
 
-      <Stack spacing={2} sx={{ width: '100%', ...feedListPulseSx }}>
-        {visibleMessages.map((message) => {
-          const isExpanded = expandedMessageIds.has(message.id);
-          const decryptedComments =
-            decryptedCommentsByMessage[message.id] ?? null;
-          const animateEntry =
-            shouldAnimateEntry(message.id) &&
-            !feed.loadedMoreMessageIds.has(message.id);
-          return (
-            <FeedMessageEnter
-              key={message.id}
-              messageId={message.id}
-              animateEntry={animateEntry}
-              staggerIndex={getStaggerIndex(message.id, visibleMessageIds)}
-              onAnimationDone={onAnimationDone}
-            >
-              <MessageThreadCard
-                message={message}
-                expanded={isExpanded}
-                highlighted={lastInteractedMessageId === message.id}
-                onMessageInteract={handleMessageInteract}
-                onToggleMessage={handleToggleMessage}
-                onDecryptDelivery={decryptDelivery}
-                onDecryptComments={decryptComments}
-                decryptBusy={busyMessageId === message.id}
-                decryptError={messageErrors[message.id] ?? null}
-                decryptCommentsError={commentsErrors[message.id] ?? null}
-                decryptPlaintext={decryptedMessages[message.id] ?? null}
-                decryptedComments={decryptedComments}
-                shareBusy={shareBusy}
-                shareLastShareId={
-                  isExpanded && lastShare?.messageId === message.id
-                    ? lastShare.shareId
-                    : null
-                }
-                onOpenShare={handleOpenShare}
-                onMergeDecryptedComments={mergeDecryptedComments}
-                feedContext={feedContext}
-                usernameByKeyId={usernameByKeyId}
-                viewerKeyId={keys.keyId}
-                getFriendMute={friendships.getFriendMute}
-                onOpenIdentity={identity.openIdentity}
-                onCommentPosted={handleCommentPosted}
-                instantCollapseTransition={instantCollapseTransition}
-              />
-            </FeedMessageEnter>
-          );
-        })}
-        {keys.keyId && !feedBusy && visibleMessages.length === 0 ? (
-          <Typography color="text.secondary">
-            No messages in your inbox yet.
-          </Typography>
-        ) : null}
-        {showLoadMore ? (
-          <Button
-            variant="outlined"
-            sx={{ ...feedActionButtonSx }}
-            disabled={loadMoreBusy}
-            onClick={() => void feed.loadMore()}
-          >
-            {loadMoreBusy ? 'Loading...' : 'Load more'}
-          </Button>
-        ) : null}
-      </Stack>
+      <Box sx={{ position: 'relative', width: '100%' }}>
+        <FeedRefreshPulseOverlay active={isFeedPulsing} />
+        <Stack spacing={2} sx={{ width: '100%' }}>
+          <FeedMessageList
+            messages={visibleMessages}
+            loadedMoreMessageIds={feed.loadedMoreMessageIds}
+            visibleMessageIds={visibleMessageIds}
+            shouldAnimateEntry={shouldAnimateEntry}
+            getStaggerIndex={getStaggerIndex}
+            onAnimationDone={onAnimationDone}
+            renderMessage={renderFeedMessage}
+          />
+          {keys.keyId && !feedBusy && visibleMessages.length === 0 ? (
+            <Typography color="text.secondary">
+              No messages in your inbox yet.
+            </Typography>
+          ) : null}
+          {showLoadMore ? (
+            <FeedLoadMoreButton
+              busy={loadMoreBusy}
+              onLoadMore={feed.loadMore}
+            />
+          ) : null}
+        </Stack>
+      </Box>
 
       <SendMessageDialog
         open={createMessageDialogOpen}
