@@ -53,6 +53,7 @@ export type FeedLabFriendshipsValue = {
   friendshipsLoading: boolean;
   friendshipsError: string | null;
   usersLoading: boolean;
+  usersHasData: boolean;
   usersError: string | null;
   ensureFriendshipsLoaded: (
     refreshOptions?: RefreshFriendshipsOptions,
@@ -185,6 +186,7 @@ export function useFeedLabFriendshipsState(
   const [friendshipsLoading, setFriendshipsLoading] = useState(false);
   const [friendshipsError, setFriendshipsError] = useState<string | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersHasData, setUsersHasData] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const friendshipsInflightRef = useRef(false);
   const muteToggleInflightRef = useRef(new Set<string>());
@@ -267,6 +269,7 @@ export function useFeedLabFriendshipsState(
         setPendingInvitations([]);
         setFriendshipsError(null);
         setUsersError(null);
+        setUsersHasData(false);
         return;
       }
 
@@ -289,6 +292,7 @@ export function useFeedLabFriendshipsState(
             );
             setFriendshipsError(null);
             setUsersError(null);
+            setUsersHasData(true);
             return;
           }
         }
@@ -325,6 +329,7 @@ export function useFeedLabFriendshipsState(
           setOutgoingRequests(requests.outgoing);
           setPendingInvitations(pendingInvitations);
           setFriendshipsError(null);
+          setUsersHasData(true);
         } catch (e) {
           const message = friendshipRequestErrorMessage(e);
           const cached = getFriendshipsCache(ownerKeyId);
@@ -388,10 +393,12 @@ export function useFeedLabFriendshipsState(
       setPendingInvitations([]);
       setFriendshipsError(null);
       setUsersError(null);
+      setUsersHasData(false);
       return;
     }
 
     const cached = getFriendshipsCache(ownerKeyId);
+    setUsersHasData(cacheHasUsersData(cached));
     if (cached) {
       if (cacheHasUsersData(cached)) {
         applyFullCache(
@@ -630,6 +637,7 @@ export function useFeedLabFriendshipsState(
       friendshipsLoading,
       friendshipsError,
       usersLoading,
+      usersHasData,
       usersError,
       ensureFriendshipsLoaded,
       ensureUsersLoaded,
@@ -657,6 +665,7 @@ export function useFeedLabFriendshipsState(
       toggleFriendDeliveryMute,
       updateInvitationLabel,
       usersError,
+      usersHasData,
       usersLoading,
     ],
   );

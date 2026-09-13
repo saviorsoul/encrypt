@@ -71,7 +71,7 @@ export function UsersDrawer({ open, onClose }: UsersDrawerProps) {
               <IconButton
                 aria-label="Refresh users"
                 onClick={handleRefresh}
-                disabled={!open || usersLoading}
+                disabled={!open}
                 edge="end"
               >
                 {usersLoading ? (

@@ -17,6 +17,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useFeedApi } from '@feednt/providers/FeedApiProvider.tsx';
 import { useFeedntFriendships } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
@@ -325,384 +326,406 @@ export function UsersPage() {
     .filter((label): label is string => Boolean(label));
   const existingLocalNames = [...usernames, ...invitationLabels];
 
+  const usersInitialLoading =
+    keys.keyId != null && friendships.usersLoading && !friendships.usersHasData;
+  const usersRefreshing =
+    keys.keyId != null && friendships.usersLoading && friendships.usersHasData;
+
   return (
     <>
       <Paper sx={{ p: 2 }}>
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            mb: 2,
-          }}
-        >
-          <Typography variant="h6">Friends</Typography>
-          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-            <Button
-              data-testid="users-accept-invitation"
-              variant="outlined"
-              size="small"
-              disabled={!keys.keyId || friendships.usersLoading}
-              onClick={() => setAcceptInvitationOpen(true)}
-            >
-              Enter code
-            </Button>
-            <Button
-              data-testid="users-add-friend"
-              variant="contained"
-              size="small"
-              disabled={
-                !keys.keyId ||
-                friendships.usersLoading ||
-                friendInvitations.busy ||
-                !isRegistered
-              }
-              onClick={openAddFriendDialog}
-            >
-              Invite friend
-            </Button>
+        <Box sx={{ position: 'relative' }} aria-busy={usersRefreshing}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">Friends</Typography>
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+              <Button
+                data-testid="users-accept-invitation"
+                variant="outlined"
+                size="small"
+                disabled={!keys.keyId}
+                onClick={() => setAcceptInvitationOpen(true)}
+              >
+                Enter code
+              </Button>
+              <Button
+                data-testid="users-add-friend"
+                variant="contained"
+                size="small"
+                disabled={
+                  !keys.keyId || friendInvitations.busy || !isRegistered
+                }
+                onClick={openAddFriendDialog}
+              >
+                Invite friend
+              </Button>
+            </Stack>
           </Stack>
-        </Stack>
 
-        {!keys.keyId ? (
-          <Typography variant="body2" color="text.secondary">
-            Authenticate with your private key to manage friendships.
-          </Typography>
-        ) : friendships.usersLoading ? (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <CircularProgress size={18} />
-            <Typography variant="body2">Loading friendships…</Typography>
-          </Stack>
-        ) : (
-          <Stack spacing={2}>
-            {friendships.incomingRequests.length > 0 ? (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">Incoming requests</Typography>
-                {friendships.incomingRequests.map((request) => {
-                  const localName =
-                    usernameByKeyId[request.requesterKeyId]?.trim() || null;
-                  return (
+          {!keys.keyId ? (
+            <Typography variant="body2" color="text.secondary">
+              Authenticate with your private key to manage friendships.
+            </Typography>
+          ) : usersInitialLoading ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <CircularProgress size={18} />
+              <Typography variant="body2">Loading friendships…</Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={2}>
+              {friendships.incomingRequests.length > 0 ? (
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2">Incoming requests</Typography>
+                  {friendships.incomingRequests.map((request) => {
+                    const localName =
+                      usernameByKeyId[request.requesterKeyId]?.trim() || null;
+                    return (
+                      <Stack
+                        key={`${request.requesterKeyId}-${request.targetKeyId}`}
+                        direction="row"
+                        spacing={1}
+                        sx={{ alignItems: 'center' }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          {localName ? (
+                            <Typography
+                              variant="body2"
+                              sx={{ overflowWrap: 'anywhere' }}
+                            >
+                              {localName}
+                            </Typography>
+                          ) : null}
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            sx={{ alignItems: 'center', minWidth: 0 }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ overflowWrap: 'anywhere', minWidth: 0 }}
+                            >
+                              {request.requesterKeyId}
+                            </Typography>
+                            {request.publicKey ? (
+                              <IconButton
+                                size="small"
+                                aria-label="Show public key"
+                                onClick={() => {
+                                  if (request.publicKey) {
+                                    setViewPublicKey(request.publicKey);
+                                  }
+                                }}
+                                sx={{ flexShrink: 0 }}
+                              >
+                                <KeyOutlinedIcon fontSize="inherit" />
+                              </IconButton>
+                            ) : null}
+                          </Stack>
+                        </Box>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{ flexShrink: 0 }}
+                        >
+                          <Button
+                            size="small"
+                            variant="contained"
+                            disabled={friendshipRequests.busy}
+                            onClick={() => {
+                              setAcceptFriendError(null);
+                              friendshipRequests.clearError();
+                              setAcceptFriendRequest({
+                                requesterKeyId: request.requesterKeyId,
+                                targetKeyId: request.targetKeyId,
+                              });
+                            }}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={friendshipRequests.busy}
+                            onClick={() =>
+                              void friendshipRequests.rejectRequest(
+                                request.requesterKeyId,
+                              )
+                            }
+                          >
+                            Reject
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+              ) : null}
+
+              {friendships.outgoingRequests.length > 0 ? (
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2">Outgoing requests</Typography>
+                  {friendships.outgoingRequests.map((request) => {
+                    const entry = formatFriendListEntry(
+                      request.targetKeyId,
+                      usernameByKeyId,
+                      friendships.invitationLabelByToken[
+                        request.invitationToken
+                      ],
+                    );
+                    return (
+                      <Box
+                        key={`${request.requesterKeyId}-${request.targetKeyId}`}
+                      >
+                        <Typography variant="body2">{entry.primary}</Typography>
+                        {entry.secondary ? (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block' }}
+                          >
+                            {entry.secondary}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              ) : null}
+
+              {shareablePendingInvitations.length > 0 ? (
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2">
+                    Pending invitations ({shareablePendingInvitations.length})
+                  </Typography>
+                  {shareablePendingInvitations.map((invitation) => (
                     <Stack
-                      key={`${request.requesterKeyId}-${request.targetKeyId}`}
+                      key={invitation.token}
                       direction="row"
                       spacing={1}
                       sx={{ alignItems: 'center' }}
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        {localName ? (
-                          <Typography
-                            variant="body2"
-                            sx={{ overflowWrap: 'anywhere' }}
-                          >
-                            {localName}
+                        {keys.keyId ? (
+                          <InvitationLabelField
+                            token={invitation.token}
+                            ownerKeyId={keys.keyId}
+                            storedLabel={invitation.label}
+                            existingNames={existingLocalNames}
+                            onSaved={(label) =>
+                              friendships.updateInvitationLabel(
+                                invitation.token,
+                                label,
+                              )
+                            }
+                          />
+                        ) : (
+                          <Typography variant="body2">
+                            {invitation.label ?? 'Unnamed invitation'}
                           </Typography>
-                        ) : null}
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          sx={{ alignItems: 'center', minWidth: 0 }}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ overflowWrap: 'anywhere', minWidth: 0 }}
-                          >
-                            {request.requesterKeyId}
-                          </Typography>
-                          {request.publicKey ? (
-                            <IconButton
-                              size="small"
-                              aria-label="Show public key"
-                              onClick={() => {
-                                if (request.publicKey) {
-                                  setViewPublicKey(request.publicKey);
-                                }
-                              }}
-                              sx={{ flexShrink: 0 }}
-                            >
-                              <KeyOutlinedIcon fontSize="inherit" />
-                            </IconButton>
-                          ) : null}
-                        </Stack>
-                      </Box>
-                      <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          disabled={friendshipRequests.busy}
-                          onClick={() => {
-                            setAcceptFriendError(null);
-                            friendshipRequests.clearError();
-                            setAcceptFriendRequest({
-                              requesterKeyId: request.requesterKeyId,
-                              targetKeyId: request.targetKeyId,
-                            });
-                          }}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={friendshipRequests.busy}
-                          onClick={() =>
-                            void friendshipRequests.rejectRequest(
-                              request.requesterKeyId,
-                            )
-                          }
-                        >
-                          Reject
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  );
-                })}
-              </Stack>
-            ) : null}
-
-            {friendships.outgoingRequests.length > 0 ? (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">Outgoing requests</Typography>
-                {friendships.outgoingRequests.map((request) => {
-                  const entry = formatFriendListEntry(
-                    request.targetKeyId,
-                    usernameByKeyId,
-                    friendships.invitationLabelByToken[request.invitationToken],
-                  );
-                  return (
-                    <Box
-                      key={`${request.requesterKeyId}-${request.targetKeyId}`}
-                    >
-                      <Typography variant="body2">{entry.primary}</Typography>
-                      {entry.secondary ? (
+                        )}
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ display: 'block' }}
+                          sx={{ display: 'block', overflowWrap: 'anywhere' }}
                         >
-                          {entry.secondary}
+                          {invitation.token}
                         </Typography>
-                      ) : null}
-                    </Box>
-                  );
-                })}
-              </Stack>
-            ) : null}
-
-            {shareablePendingInvitations.length > 0 ? (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">
-                  Pending invitations ({shareablePendingInvitations.length})
-                </Typography>
-                {shareablePendingInvitations.map((invitation) => (
-                  <Stack
-                    key={invitation.token}
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: 'center' }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      {keys.keyId ? (
-                        <InvitationLabelField
-                          token={invitation.token}
-                          ownerKeyId={keys.keyId}
-                          storedLabel={invitation.label}
-                          existingNames={existingLocalNames}
-                          onSaved={(label) =>
-                            friendships.updateInvitationLabel(
-                              invitation.token,
-                              label,
-                            )
-                          }
-                        />
-                      ) : (
-                        <Typography variant="body2">
-                          {invitation.label ?? 'Unnamed invitation'}
-                        </Typography>
-                      )}
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', overflowWrap: 'anywhere' }}
-                      >
-                        {invitation.token}
-                      </Typography>
-                    </Box>
-                    <Tooltip title="Show invitation QR code">
-                      <IconButton
-                        size="small"
-                        aria-label="Show invitation QR code"
-                        onClick={() => setQrCodeToken(invitation.token)}
-                        sx={{ flexShrink: 0 }}
-                      >
-                        <QrCode2OutlinedIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Copy invitation ID">
-                      <IconButton
-                        size="small"
-                        aria-label="Copy invitation ID"
-                        onClick={() => void copyAndNotify(invitation.token)}
-                        sx={{ flexShrink: 0 }}
-                      >
-                        <ContentCopyOutlinedIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remove invitation">
-                      <span>
+                      </Box>
+                      <Tooltip title="Show invitation QR code">
                         <IconButton
                           size="small"
-                          color="error"
-                          aria-label="Remove invitation"
-                          data-testid="users-remove-invitation"
-                          disabled={friendInvitations.busy}
-                          onClick={() =>
-                            setRemoveInvitationTarget({
-                              token: invitation.token,
-                              label: invitation.label,
-                            })
-                          }
+                          aria-label="Show invitation QR code"
+                          onClick={() => setQrCodeToken(invitation.token)}
                           sx={{ flexShrink: 0 }}
                         >
-                          <CloseOutlinedIcon fontSize="inherit" />
+                          <QrCode2OutlinedIcon fontSize="inherit" />
                         </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Stack>
-                ))}
-              </Stack>
-            ) : null}
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">
-                Your friends ({friendships.friends.length})
-              </Typography>
-              {friendships.friends.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No friends yet. Accept an invitation from someone else to get
-                  started — you need at least one friend before you can invite
-                  others.
-                </Typography>
-              ) : (
-                friendships.friends.map((friend) => {
-                  return (
-                    <Stack
-                      key={friend.keyId}
-                      direction="row"
-                      spacing={1}
-                      sx={{ alignItems: 'center', minWidth: 0 }}
-                    >
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <FriendNameField
-                          friendKeyId={friend.keyId}
-                          label={friend.label}
-                          storedUsername={usernameByKeyId[friend.keyId]}
-                          publicKey={friend.publicKey}
-                          ownerKeyId={keys.keyId!}
-                          existingUsernames={usernames}
-                          disabled={friendshipRequests.busy}
-                          onSaved={addLocalUser}
-                        />
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          title={friend.keyId}
-                          sx={{
-                            display: 'block',
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {friend.keyId}
-                        </Typography>
-                      </Box>
-                      <Tooltip title="User info">
-                        <span>
-                          <IconButton
-                            size="small"
-                            aria-label="User info"
-                            disabled={friendshipRequests.busy}
-                            sx={{ flexShrink: 0 }}
-                            onClick={() =>
-                              identity.openIdentity({
-                                keyId: friend.keyId,
-                                publicKey: friend.publicKey,
-                                label:
-                                  usernameByKeyId[friend.keyId]?.trim() ||
-                                  friend.label ||
-                                  friend.keyId,
-                              })
-                            }
-                          >
-                            <ManageAccountsOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </span>
                       </Tooltip>
-                      {friend.messageHistorySharedAt ? null : (
-                        <Tooltip title="Share history">
-                          <span>
-                            <IconButton
-                              size="small"
-                              aria-label="Share history"
-                              disabled={
-                                friendshipRequests.busy ||
-                                !keys.keyId ||
-                                shareMessageHistory.busy
-                              }
-                              sx={{ flexShrink: 0 }}
-                              onClick={() => {
-                                setShareHistoryTarget({
-                                  keyId: friend.keyId,
-                                  name:
-                                    usernameByKeyId[friend.keyId]?.trim() ||
-                                    null,
-                                  publicKey: friend.publicKey,
-                                });
-                                shareMessageHistory.clearError();
-                              }}
-                            >
-                              <HistoryOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Unfriend">
+                      <Tooltip title="Copy invitation ID">
+                        <IconButton
+                          size="small"
+                          aria-label="Copy invitation ID"
+                          onClick={() => void copyAndNotify(invitation.token)}
+                          sx={{ flexShrink: 0 }}
+                        >
+                          <ContentCopyOutlinedIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remove invitation">
                         <span>
                           <IconButton
                             size="small"
                             color="error"
-                            aria-label="Unfriend"
-                            disabled={friendshipRequests.busy || !keys.keyId}
+                            aria-label="Remove invitation"
+                            data-testid="users-remove-invitation"
+                            disabled={friendInvitations.busy}
+                            onClick={() =>
+                              setRemoveInvitationTarget({
+                                token: invitation.token,
+                                label: invitation.label,
+                              })
+                            }
                             sx={{ flexShrink: 0 }}
-                            onClick={() => {
-                              if (!keys.keyId) {
-                                return;
-                              }
-                              setUnfriendError(null);
-                              friendshipRequests.clearError();
-                              setUnfriendTarget({
-                                keyId: friend.keyId,
-                                label:
-                                  usernameByKeyId[friend.keyId]?.trim() ||
-                                  friend.label,
-                              });
-                              setUnfriendDialogOpen(true);
-                            }}
                           >
-                            <PersonRemoveOutlinedIcon fontSize="small" />
+                            <CloseOutlinedIcon fontSize="inherit" />
                           </IconButton>
                         </span>
                       </Tooltip>
                     </Stack>
-                  );
-                })
-              )}
+                  ))}
+                </Stack>
+              ) : null}
+
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">
+                  Your friends ({friendships.friends.length})
+                </Typography>
+                {friendships.friends.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No friends yet. Accept an invitation from someone else to
+                    get started — you need at least one friend before you can
+                    invite others.
+                  </Typography>
+                ) : (
+                  friendships.friends.map((friend) => {
+                    return (
+                      <Stack
+                        key={friend.keyId}
+                        direction="row"
+                        spacing={1}
+                        sx={{ alignItems: 'center', minWidth: 0 }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <FriendNameField
+                            friendKeyId={friend.keyId}
+                            label={friend.label}
+                            storedUsername={usernameByKeyId[friend.keyId]}
+                            publicKey={friend.publicKey}
+                            ownerKeyId={keys.keyId!}
+                            existingUsernames={usernames}
+                            disabled={friendshipRequests.busy}
+                            onSaved={addLocalUser}
+                          />
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            title={friend.keyId}
+                            sx={{
+                              display: 'block',
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {friend.keyId}
+                          </Typography>
+                        </Box>
+                        {friend.messageHistorySharedAt ? null : (
+                          <Tooltip title="Share history">
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label="Share history"
+                                disabled={
+                                  friendshipRequests.busy ||
+                                  !keys.keyId ||
+                                  shareMessageHistory.busy
+                                }
+                                sx={{ flexShrink: 0 }}
+                                onClick={() => {
+                                  setShareHistoryTarget({
+                                    keyId: friend.keyId,
+                                    name:
+                                      usernameByKeyId[friend.keyId]?.trim() ||
+                                      null,
+                                    publicKey: friend.publicKey,
+                                  });
+                                  shareMessageHistory.clearError();
+                                }}
+                              >
+                                <HistoryOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="User info">
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label="User info"
+                              disabled={friendshipRequests.busy}
+                              sx={{ flexShrink: 0 }}
+                              onClick={() =>
+                                identity.openIdentity({
+                                  keyId: friend.keyId,
+                                  publicKey: friend.publicKey,
+                                  label:
+                                    usernameByKeyId[friend.keyId]?.trim() ||
+                                    friend.label ||
+                                    friend.keyId,
+                                })
+                              }
+                            >
+                              <ManageAccountsOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Unfriend">
+                          <span>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              aria-label="Unfriend"
+                              disabled={friendshipRequests.busy || !keys.keyId}
+                              sx={{ flexShrink: 0 }}
+                              onClick={() => {
+                                if (!keys.keyId) {
+                                  return;
+                                }
+                                setUnfriendError(null);
+                                friendshipRequests.clearError();
+                                setUnfriendTarget({
+                                  keyId: friend.keyId,
+                                  label:
+                                    usernameByKeyId[friend.keyId]?.trim() ||
+                                    friend.label,
+                                });
+                                setUnfriendDialogOpen(true);
+                              }}
+                            >
+                              <PersonRemoveOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+                    );
+                  })
+                )}
+              </Stack>
             </Stack>
-          </Stack>
-        )}
+          )}
+          {usersRefreshing ? (
+            <Box
+              aria-hidden
+              sx={(theme) => ({
+                position: 'absolute',
+                inset: 0,
+                zIndex: 1,
+                cursor: 'wait',
+                bgcolor: alpha(theme.palette.background.paper, 0.72),
+              })}
+            />
+          ) : null}
+        </Box>
 
         {friendships.usersError ? (
           <Alert severity="warning" sx={{ mt: 2 }}>
