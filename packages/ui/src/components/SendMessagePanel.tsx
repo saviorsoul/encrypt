@@ -12,8 +12,8 @@ import {
 } from '@mui/material';
 import type { ManifestRecipientKeys } from '@encrypt/core/types/manifest';
 import {
-  encryptedContentCiphertextBase64Length,
-  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+  formatContentCharactersLeftCount,
+  getContentPlaintextLimitState,
 } from '@encrypt/core/constants/contentLimits';
 import { ImportJsonPayloadInput } from './ImportJsonPayloadInput.tsx';
 import { MessagePolicyOptionsReveal } from './MessagePolicyOptions.tsx';
@@ -37,95 +37,68 @@ export type SendMessageRecipients = {
   recipients: ManifestRecipientKeys[];
 };
 
-type MessageDraftStatus = {
-  ciphertextLength: number;
-  overLimit: boolean;
+type MessageDraftGate = {
   hasText: boolean;
+  overLimit: boolean;
 };
-
-const MESSAGE_DRAFT_STATUS_DEBOUNCE_MS = 100;
 
 function useMessageDraft() {
   const textRef = useRef('');
   const [resetKey, setResetKey] = useState(0);
-  const [status, setStatus] = useState<MessageDraftStatus>({
-    ciphertextLength: 0,
-    overLimit: false,
+  const [sendGate, setSendGate] = useState<MessageDraftGate>({
     hasText: false,
+    overLimit: false,
   });
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const updateDraft = useCallback((text: string) => {
-    textRef.current = text;
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      const ciphertextLength = text
-        ? encryptedContentCiphertextBase64Length(text)
-        : 0;
-      setStatus({
-        ciphertextLength,
-        overLimit: ciphertextLength > MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
-        hasText: Boolean(text.trim()),
-      });
-    }, MESSAGE_DRAFT_STATUS_DEBOUNCE_MS);
+  const updateDraft = useCallback((next: string, gate: MessageDraftGate) => {
+    textRef.current = next;
+    setSendGate((current) =>
+      current.hasText === gate.hasText && current.overLimit === gate.overLimit
+        ? current
+        : gate,
+    );
   }, []);
 
   const clearDraft = useCallback(() => {
     textRef.current = '';
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    setStatus({
-      ciphertextLength: 0,
-      overLimit: false,
-      hasText: false,
-    });
+    setSendGate({ hasText: false, overLimit: false });
     setResetKey((current) => current + 1);
   }, []);
 
-  useEffect(
-    () => () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    },
-    [],
-  );
-
-  return { textRef, status, updateDraft, clearDraft, resetKey };
+  return { textRef, sendGate, updateDraft, clearDraft, resetKey };
 }
 
 type SendMessageTextFieldProps = {
   resetKey: number;
   disabled: boolean;
-  error: boolean;
-  helperText: string;
-  onDraftChange: (text: string) => void;
+  onDraftChange: (text: string, gate: MessageDraftGate) => void;
 };
 
 const SendMessageTextField = memo(function SendMessageTextField({
   resetKey,
   disabled,
-  error,
-  helperText,
   onDraftChange,
 }: SendMessageTextFieldProps) {
   const [value, setValue] = useState('');
+  const [limitState, setLimitState] = useState(() =>
+    getContentPlaintextLimitState(''),
+  );
 
   useEffect(() => {
     setValue('');
+    setLimitState(getContentPlaintextLimitState(''));
   }, [resetKey]);
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const next = event.target.value;
+      const nextLimit = getContentPlaintextLimitState(next);
       setValue(next);
-      onDraftChange(next);
+      setLimitState(nextLimit);
+      onDraftChange(next, {
+        hasText: Boolean(next.trim()),
+        overLimit: nextLimit.overLimit,
+      });
     },
     [onDraftChange],
   );
@@ -141,8 +114,8 @@ const SendMessageTextField = memo(function SendMessageTextField({
       fullWidth
       placeholder="Enter text to encrypt..."
       disabled={disabled}
-      error={error}
-      helperText={helperText}
+      error={limitState.overLimit}
+      helperText={formatContentCharactersLeftCount(limitState.charactersLeft)}
       slotProps={{
         input: {
           sx: (theme) => ({
@@ -188,8 +161,10 @@ export function useSendMessageForm<
   const [importFieldResetKey, setImportFieldResetKey] = useState(0);
   const [importHasText, setImportHasText] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const { textRef, status, updateDraft, clearDraft, resetKey } =
+  const { textRef, sendGate, updateDraft, clearDraft, resetKey } =
     useMessageDraft();
+  const sendErrorRef = useRef(sendError);
+  sendErrorRef.current = sendError;
 
   const handleSendImport = useCallback(async () => {
     const ok = await importSend.sendImport(importPayloadRef.current.trim());
@@ -216,13 +191,13 @@ export function useSendMessageForm<
   }, [sendMessage, recipients.recipients, onMessageSent, onSendSuccess]);
 
   const handleMessageDraftChange = useCallback(
-    (text: string) => {
-      updateDraft(text);
-      if (sendError) {
+    (text: string, gate: MessageDraftGate) => {
+      updateDraft(text, gate);
+      if (sendErrorRef.current) {
         clearError();
       }
     },
-    [clearError, sendError, updateDraft],
+    [clearError, updateDraft],
   );
 
   const clearFormNotices = useCallback(() => {
@@ -261,8 +236,8 @@ export function useSendMessageForm<
   const canSendMessage =
     !busy &&
     !recipientsLoading &&
-    status.hasText &&
-    !status.overLimit &&
+    sendGate.hasText &&
+    !sendGate.overLimit &&
     (recipients.recipients.length > 0 || allowSelfOnlyMessage);
   const canSendImport = !busy && importHasText;
 
@@ -270,8 +245,6 @@ export function useSendMessageForm<
     sendMode,
     setSendMode,
     handleSendModeChange,
-    messageCiphertextLength: status.ciphertextLength,
-    messageOverLimit: status.overLimit,
     messageFieldResetKey: resetKey,
     handleMessageDraftChange,
     handleImportPayloadChange,
@@ -311,8 +284,6 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
   const {
     sendMode,
     handleSendModeChange,
-    messageCiphertextLength,
-    messageOverLimit,
     messageFieldResetKey,
     handleMessageDraftChange,
     handleImportPayloadChange,
@@ -417,8 +388,6 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
           <SendMessageTextField
             resetKey={messageFieldResetKey}
             disabled={busy || recipientsLoading}
-            error={messageOverLimit}
-            helperText={`${messageCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`}
             onDraftChange={handleMessageDraftChange}
           />
 

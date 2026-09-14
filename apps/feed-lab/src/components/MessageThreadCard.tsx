@@ -52,9 +52,8 @@ import { sanitizeDisplayText } from '@lab/lib/sanitizeDisplayText.ts';
 import { useFeedLabSession } from '@lab/providers/FeedLabSessionProvider.tsx';
 import { useFeedLabSettings } from '@lab/providers/FeedLabSettingsProvider.tsx';
 import {
-  CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD,
-  encryptedContentCiphertextBase64Length,
-  MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
+  contentCharactersLeftHelperText,
+  getContentPlaintextLimitState,
   validateContentPlaintext,
 } from '@encrypt/core/constants/contentLimits';
 import {
@@ -890,11 +889,7 @@ const CommentComposer = memo(function CommentComposer({
 }) {
   const [commentText, setCommentText] = useState('');
 
-  const commentCiphertextLength = commentText
-    ? encryptedContentCiphertextBase64Length(commentText)
-    : 0;
-  const commentOverLimit =
-    commentCiphertextLength > MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH;
+  const commentLimit = getContentPlaintextLimitState(commentText);
 
   const handlePostComment = useCallback(async () => {
     if (validateContentPlaintext(commentText, 'comment')) {
@@ -917,7 +912,7 @@ const CommentComposer = memo(function CommentComposer({
           messageDecrypted ? 'New comment' : 'Decrypt message to add a comment'
         }
         sx={{ mt: 1 }}
-        error={commentOverLimit}
+        error={commentLimit.overLimit}
         slotProps={{
           input: {
             sx: {
@@ -925,11 +920,7 @@ const CommentComposer = memo(function CommentComposer({
             },
           },
         }}
-        helperText={
-          commentCiphertextLength >= CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD
-            ? `${commentCiphertextLength}/${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} encrypted size`
-            : undefined
-        }
+        helperText={contentCharactersLeftHelperText(commentText)}
       />
       <Button
         variant="contained"
@@ -938,7 +929,7 @@ const CommentComposer = memo(function CommentComposer({
           !messageDecrypted ||
           commentsPostBusy ||
           !commentText.trim() ||
-          commentOverLimit
+          commentLimit.overLimit
         }
         onClick={() => void handlePostComment()}
         sx={{ width: 'fit-content' }}

@@ -34,10 +34,104 @@ export const MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH =
       3,
   ) * 4;
 
-/** Show ciphertext size helper once encrypted payload reaches half the wire limit. */
+/** Show characters-left helper once encrypted payload reaches half the wire limit. */
 export const CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD = Math.floor(
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH / 2,
 );
+
+export type ContentPlaintextLimitState = {
+  charactersLeft: number;
+  overLimit: boolean;
+  ciphertextLength: number;
+};
+
+function countCharactersToRemove(plaintext: string): number {
+  let lo = 1;
+  let hi = plaintext.length;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const trimmed = plaintext.slice(0, plaintext.length - mid);
+    if (isContentPlaintextOverLimitByCiphertext(trimmed)) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
+function isContentPlaintextOverLimitByCiphertext(plaintext: string): boolean {
+  if (!plaintext) {
+    return false;
+  }
+  return (
+    encryptedContentCiphertextBase64Length(plaintext) >
+    MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH
+  );
+}
+
+/**
+ * Single-pass limit state for a draft: characters left, over-limit flag, and
+ * ciphertext size (for helper visibility threshold). {@link charactersLeft} may
+ * be negative when over the limit (characters to remove).
+ */
+export function getContentPlaintextLimitState(
+  plaintext: string,
+): ContentPlaintextLimitState {
+  if (!plaintext) {
+    return {
+      charactersLeft: MAX_CONTENT_PLAINTEXT_LENGTH,
+      overLimit: false,
+      ciphertextLength: 0,
+    };
+  }
+
+  const ciphertextLength = encryptedContentCiphertextBase64Length(plaintext);
+  let charactersLeft = MAX_CONTENT_PLAINTEXT_LENGTH - plaintext.length;
+
+  if (
+    plaintext.length <= MAX_CONTENT_PLAINTEXT_LENGTH &&
+    isContentPlaintextOverLimitByCiphertext(plaintext)
+  ) {
+    charactersLeft = -countCharactersToRemove(plaintext);
+  }
+
+  return {
+    charactersLeft,
+    overLimit: charactersLeft < 0,
+    ciphertextLength,
+  };
+}
+
+export function isContentPlaintextOverLimit(plaintext: string): boolean {
+  return getContentPlaintextLimitState(plaintext).overLimit;
+}
+
+export function formatContentCharactersLeftCount(
+  charactersLeft: number,
+): string {
+  if (charactersLeft < 0) {
+    return `characters over limit: ~${-charactersLeft}`;
+  }
+  return `characters left: ~${charactersLeft}`;
+}
+
+export function formatContentCharactersLeftHelper(plaintext: string): string {
+  const { charactersLeft } = getContentPlaintextLimitState(plaintext);
+  return formatContentCharactersLeftCount(charactersLeft);
+}
+
+/** Helper text when near the limit; undefined below {@link CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD}. */
+export function contentCharactersLeftHelperText(
+  plaintext: string,
+): string | undefined {
+  const { charactersLeft, ciphertextLength } =
+    getContentPlaintextLimitState(plaintext);
+  if (ciphertextLength < CONTENT_CIPHERTEXT_SIZE_HELPER_THRESHOLD) {
+    return undefined;
+  }
+  return formatContentCharactersLeftCount(charactersLeft);
+}
 
 /** Standard base64 length of a 12-byte IV (with padding). */
 export const AES_GCM_IV_BASE64_LENGTH = Math.ceil((AES_GCM_IV_BYTES * 4) / 3);
@@ -64,12 +158,9 @@ export function validateContentPlaintext(
   if (!text.trim()) {
     return label === 'comment' ? 'Enter a comment.' : 'Enter a message.';
   }
-  if (
-    encryptedContentCiphertextBase64Length(text) >
-    MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH
-  ) {
+  if (isContentPlaintextOverLimit(text)) {
     const noun = label === 'comment' ? 'Comment' : 'Message';
-    return `${noun} exceeds the maximum encrypted size (${MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH} characters).`;
+    return `${noun} exceeds the maximum length (~${MAX_CONTENT_PLAINTEXT_LENGTH} characters).`;
   }
   return null;
 }
