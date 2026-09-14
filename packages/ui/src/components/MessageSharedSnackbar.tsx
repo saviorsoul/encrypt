@@ -1,6 +1,5 @@
 import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
-import { feedSnackbarSx } from '../utils/feedSnackbar.ts';
+import { FeedSnackbar } from './FeedSnackbar.tsx';
 
 export type MessageSharedSnackbarProps = {
   noticeKey: number;
@@ -12,13 +11,12 @@ export function MessageSharedSnackbar({
   onClose,
 }: MessageSharedSnackbarProps) {
   return (
-    <Snackbar
+    <FeedSnackbar
       key={noticeKey > 0 ? `message-shared-${noticeKey}` : 'message-shared'}
       open={noticeKey > 0}
       autoHideDuration={5000}
       onClose={onClose}
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      sx={feedSnackbarSx}
     >
       <Alert
         severity="success"
@@ -28,6 +26,6 @@ export function MessageSharedSnackbar({
       >
         Message shared
       </Alert>
-    </Snackbar>
+    </FeedSnackbar>
   );
 }
