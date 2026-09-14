@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FriendshipMuteScope } from '@encrypt/core/api/feedApi';
 import type { IdentityDialogTarget } from '../components/IdentityDialog.tsx';
 
@@ -19,6 +19,11 @@ export type UseIdentityDialogOptions = {
   info?: string | null;
   onOpenIdentity?: (target: IdentityDialogTarget) => void;
   onCloseIdentity?: () => void;
+  /** When defined, dialog open state is driven by the URL key id. */
+  routedKeyId?: string | null;
+  /** Identity passed through router location state for non-friend targets. */
+  routedIdentity?: IdentityDialogTarget | null;
+  resolveIdentityByKeyId?: (keyId: string) => IdentityDialogTarget | null;
   onClearError?: () => void;
   onCancelInFlight?: () => void;
   onAddFriend?: (
@@ -47,32 +52,82 @@ export function useIdentityDialog({
   info = null,
   onOpenIdentity,
   onCloseIdentity,
+  routedKeyId,
+  routedIdentity = null,
+  resolveIdentityByKeyId,
   onClearError,
   onCancelInFlight,
   onAddFriend,
   getFriendMute,
   onToggleFriendMute,
 }: UseIdentityDialogOptions) {
-  const [open, setOpen] = useState(false);
-  const [identity, setIdentity] = useState<IdentityDialogTarget | null>(null);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [internalIdentity, setInternalIdentity] =
+    useState<IdentityDialogTarget | null>(null);
+  const [routeOpen, setRouteOpen] = useState(false);
+  const [displayIdentity, setDisplayIdentity] =
+    useState<IdentityDialogTarget | null>(null);
+  const routeMode = routedKeyId !== undefined;
+
+  const resolvedRoutedIdentity = useMemo(() => {
+    if (!routeMode || !routedKeyId) {
+      return null;
+    }
+    if (routedIdentity?.keyId === routedKeyId) {
+      return routedIdentity;
+    }
+    return resolveIdentityByKeyId?.(routedKeyId) ?? null;
+  }, [routeMode, routedKeyId, routedIdentity, resolveIdentityByKeyId]);
+
+  useEffect(() => {
+    if (!routeMode) {
+      return;
+    }
+    if (resolvedRoutedIdentity) {
+      setDisplayIdentity(resolvedRoutedIdentity);
+      setRouteOpen(true);
+    }
+  }, [routeMode, resolvedRoutedIdentity]);
+
+  useEffect(() => {
+    if (!routeMode) {
+      return;
+    }
+    if (!routedKeyId && routeOpen) {
+      setRouteOpen(false);
+    }
+  }, [routeMode, routedKeyId, routeOpen]);
+
+  const open = routeMode ? routeOpen : internalOpen;
+  const identity = routeMode ? displayIdentity : internalIdentity;
 
   const openIdentity = useCallback(
     (next: IdentityDialogTarget) => {
       onOpenIdentity?.(next);
-      setIdentity(next);
-      setOpen(true);
+      if (!routeMode) {
+        setInternalIdentity(next);
+        setInternalOpen(true);
+      }
     },
-    [onOpenIdentity],
+    [onOpenIdentity, routeMode],
   );
 
   const closeIdentity = useCallback(() => {
     onCloseIdentity?.();
-    setOpen(false);
-  }, [onCloseIdentity]);
+    if (routeMode) {
+      setRouteOpen(false);
+    } else {
+      setInternalOpen(false);
+    }
+  }, [onCloseIdentity, routeMode]);
 
   const handleExited = useCallback(() => {
-    setIdentity(null);
-  }, []);
+    if (routeMode) {
+      setDisplayIdentity(null);
+    } else {
+      setInternalIdentity(null);
+    }
+  }, [routeMode]);
 
   const addFriend = useCallback(
     async (name: string) => {
@@ -110,14 +165,16 @@ export function useIdentityDialog({
           keyId: identity.keyId,
           username: trimmed,
         });
-        setIdentity((current) =>
-          current
-            ? {
-                ...current,
-                label: trimmed,
-              }
-            : null,
-        );
+        if (!routeMode) {
+          setInternalIdentity((current) =>
+            current
+              ? {
+                  ...current,
+                  label: trimmed,
+                }
+              : null,
+          );
+        }
         return { ok: true as const };
       } catch (e) {
         return {
@@ -126,7 +183,7 @@ export function useIdentityDialog({
         };
       }
     },
-    [addLocalUser, identity, keyId, saveLocalUser],
+    [addLocalUser, identity, keyId, routeMode, saveLocalUser],
   );
 
   const isSelf =

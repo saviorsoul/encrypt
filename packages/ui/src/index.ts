@@ -184,3 +184,12 @@ export {
   useIdentityDialog,
   type UseIdentityDialogOptions,
 } from './hooks/useIdentityDialog.ts';
+export {
+  feedDialogRoutes,
+  feedPageDialogRoutePatterns,
+  feedUsersDialogRoutePatterns,
+  usersDrawerOpenFromPathname,
+  createMessageDialogOpenFromPathname,
+} from './lib/feedDialogRoutes.ts';
+export { useFeedPageDialogRoutes } from './hooks/useFeedPageDialogRoutes.ts';
+export { useFeedUsersDialogRoutes } from './hooks/useFeedUsersDialogRoutes.ts';

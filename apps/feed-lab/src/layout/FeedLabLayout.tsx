@@ -5,10 +5,7 @@ import { FeedLabTopNav } from '@lab/components/FeedLabTopNav.tsx';
 import { UsersDrawer } from '@lab/components/UsersDrawer.tsx';
 import { FeedLabFriendshipsProvider } from '@lab/providers/FeedLabFriendshipsProvider.tsx';
 import { viewportMinHeightSx } from '@encrypt/ui/feedTheme';
-
-function usersDrawerOpenFromPathname(pathname: string): boolean {
-  return pathname.startsWith('/users');
-}
+import { usersDrawerOpenFromPathname } from '@encrypt/ui';
 
 export function FeedLabLayout() {
   const location = useLocation();

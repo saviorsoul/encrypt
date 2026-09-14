@@ -5,10 +5,7 @@ import { FeedntTopNav } from '@feednt/components/FeedntTopNav.tsx';
 import { UsersDrawer } from '@feednt/components/UsersDrawer.tsx';
 import { FeedntFriendshipsProvider } from '@feednt/providers/FeedntFriendshipsProvider.tsx';
 import { viewportMinHeightSx } from '@encrypt/ui/feedTheme';
-
-function usersDrawerOpenFromPathname(pathname: string): boolean {
-  return pathname.startsWith('/users');
-}
+import { usersDrawerOpenFromPathname } from '@encrypt/ui';
 
 export function FeedntLayout() {
   const location = useLocation();

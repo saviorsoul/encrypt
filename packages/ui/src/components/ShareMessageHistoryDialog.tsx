@@ -171,12 +171,12 @@ export function ShareMessageHistoryDialog({
       </DialogContent>
       <DialogActions>
         {isComplete ? (
-          <Button variant="contained" onClick={handleClose}>
+          <Button variant="contained" onClick={handleClose} sx={{ mr: 'auto' }}>
             Close
           </Button>
         ) : (
           <>
-            <Button onClick={handleClose} disabled={busy}>
+            <Button onClick={handleClose} disabled={busy} sx={{ mr: 'auto' }}>
               Cancel
             </Button>
             <Button

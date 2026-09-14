@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FeedMessageSortMode } from '@encrypt/core/feed/types';
 import type { StoredMessage } from '@encrypt/core/feed/types';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@feednt/hooks/useBackendFeedData.ts';
@@ -35,6 +35,9 @@ import {
   isFeedInvitationalOnlyEnabled,
   IdentityDialog,
   useIdentityDialog,
+  useFeedPageDialogRoutes,
+  feedDialogRoutes,
+  type IdentityDialogTarget,
 } from '@encrypt/ui';
 import { saveFeedntUser } from '@feednt/services/db/storedUsers.ts';
 import { FeedntInvitationQrScan } from '@feednt/components/FeedntInvitationQrScan.tsx';
@@ -47,18 +50,19 @@ import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
 import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
 import { isCapacitorApp } from '@encrypt/platform/isCapacitorApp';
 
-function createMessageDialogOpenFromPathname(pathname: string): boolean {
-  return pathname.startsWith('/create-message');
-}
-
 export function FeedPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { messageId: shareMessageId } = useParams<{ messageId?: string }>();
-  const createMessageDialogOpen = createMessageDialogOpenFromPathname(
-    location.pathname,
-  );
-  const shareDialogOpen = shareMessageId != null;
+  const {
+    routedIdentityKeyId,
+    routedIdentityFromState,
+    createMessageDialogOpen,
+    shareMessageId,
+    shareDialogOpen,
+    addFriendOpen: addFriendDialogOpen,
+    acceptInvitationOpen,
+    qrScanOpen,
+    closeFeedDialog,
+  } = useFeedPageDialogRoutes();
   const { session, keys, feedntUsers } = useFeedntSession();
   const { usernameByKeyId, usernames, addLocalUser } = feedntUsers;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
@@ -71,9 +75,6 @@ export function FeedPage() {
   >(null);
   const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
   const [messageSharedNoticeKey, setMessageSharedNoticeKey] = useState(0);
-  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
-  const [qrScanOpen, setQrScanOpen] = useState(false);
-  const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);
   const feedInvitationalOnly = isFeedInvitationalOnlyEnabled();
 
   const friendships = useFeedntFriendships();
@@ -105,6 +106,22 @@ export function FeedPage() {
     sort: sortMode,
   });
   const { reload: reloadFeed } = feed;
+  const resolveIdentityByKeyId = useCallback(
+    (keyId: string): IdentityDialogTarget | null => {
+      const friend = friendships.friends.find((entry) => entry.keyId === keyId);
+      if (!friend) {
+        return null;
+      }
+      return {
+        keyId: friend.keyId,
+        publicKey: friend.publicKey,
+        label:
+          usernameByKeyId[friend.keyId]?.trim() || friend.label || friend.keyId,
+      };
+    },
+    [friendships.friends, usernameByKeyId],
+  );
+
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
@@ -125,13 +142,23 @@ export function FeedPage() {
     info: friendshipRequests.info,
     onClearError: friendshipRequests.clearError,
     onCancelInFlight: friendshipRequests.cancelInFlight,
-    onOpenIdentity: () => {
+    routedKeyId: routedIdentityKeyId,
+    routedIdentity:
+      routedIdentityFromState?.keyId === routedIdentityKeyId
+        ? routedIdentityFromState
+        : null,
+    resolveIdentityByKeyId,
+    onOpenIdentity: (target) => {
       friendshipRequests.clearError();
       friendshipRequests.clearInfo();
       void friendships.ensureFriendshipsLoaded();
+      navigate(feedDialogRoutes.identity(target.keyId), {
+        state: { identity: target },
+      });
     },
     onCloseIdentity: () => {
       friendshipRequests.cancelInFlight();
+      closeFeedDialog();
     },
     onAddFriend: async (name, target) => {
       if (!keys.keyId) {
@@ -296,12 +323,12 @@ export function FeedPage() {
   });
 
   const openCreateMessageDialog = useCallback(() => {
-    navigate('/create-message');
+    navigate(feedDialogRoutes.createMessage());
   }, [navigate]);
 
   const closeCreateMessageDialog = useCallback(() => {
-    navigate('/feed');
-  }, [navigate]);
+    closeFeedDialog();
+  }, [closeFeedDialog]);
 
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
@@ -339,31 +366,28 @@ export function FeedPage() {
         return;
       }
       setLastInteractedMessageId(messageId);
-      navigate(`/share/${encodeURIComponent(messageId)}`);
+      navigate(feedDialogRoutes.shareMessage(messageId));
     },
     [feed.notRegistered, feedInvitationalOnly, navigate],
   );
 
   const handleCloseShareDialog = useCallback(() => {
-    navigate('/feed');
-  }, [navigate]);
+    closeFeedDialog();
+  }, [closeFeedDialog]);
 
   const handleQrTokenScanned = useCallback(
     (token: string) => {
-      setQrScanOpen(false);
       navigate(`/invite/${encodeURIComponent(token)}`);
     },
     [navigate],
   );
 
   const handleQrScanRequest = useCallback(() => {
-    setAcceptInvitationOpen(false);
-    setQrScanOpen(true);
-  }, []);
+    navigate(feedDialogRoutes.scanInvitation());
+  }, [navigate]);
 
   const handleInvitationIdSubmit = useCallback(
     (token: string) => {
-      setAcceptInvitationOpen(false);
       navigate(`/invite/${encodeURIComponent(token)}`);
     },
     [navigate],
@@ -374,8 +398,8 @@ export function FeedPage() {
     friendInvitations.clearLastInvitationId();
     friendshipRequests.clearError();
     friendshipRequests.clearInfo();
-    setAddFriendDialogOpen(true);
-  }, [friendInvitations, friendshipRequests]);
+    navigate(feedDialogRoutes.addFriend());
+  }, [friendInvitations, friendshipRequests, navigate]);
 
   const handleSendRequestByPublicKey = useCallback(
     async (publicKeyText: string, name: string) => {
@@ -526,7 +550,7 @@ export function FeedPage() {
               ? null
               : friendships.friendshipsError
           }
-          onAcceptInvite={() => setAcceptInvitationOpen(true)}
+          onAcceptInvite={() => navigate(feedDialogRoutes.acceptInvitation())}
           acceptInviteDisabled={!keys.keyId}
           onInviteFriend={
             feedInvitationalOnly ? undefined : openAddFriendDialog
@@ -634,7 +658,7 @@ export function FeedPage() {
         requestBusy={friendshipRequests.busy}
         requestError={friendshipRequests.error}
         requestInfo={friendshipRequests.info}
-        onClose={() => setAddFriendDialogOpen(false)}
+        onClose={closeFeedDialog}
         onClearInvitationError={friendInvitations.clearError}
         onClearRequestError={friendshipRequests.clearError}
         onCancelInFlight={friendshipRequests.cancelInFlight}
@@ -646,7 +670,7 @@ export function FeedPage() {
 
       <AcceptInvitationDialog
         open={acceptInvitationOpen}
-        onClose={() => setAcceptInvitationOpen(false)}
+        onClose={closeFeedDialog}
         onSubmit={handleInvitationIdSubmit}
         qrScanAvailable
         onQrScanRequest={handleQrScanRequest}
@@ -654,7 +678,7 @@ export function FeedPage() {
 
       <FeedntInvitationQrScan
         open={qrScanOpen}
-        onClose={() => setQrScanOpen(false)}
+        onClose={closeFeedDialog}
         onTokenScanned={handleQrTokenScanned}
       />
     </>

@@ -43,9 +43,23 @@ function FeedLabRoutes() {
         <Route element={<FeedLabLayout />}>
           <Route index element={<Navigate to="/feed" replace />} />
           <Route path="feed" element={<FeedPage />} />
-          <Route path="users" element={<FeedPage />} />
           <Route path="create-message" element={<FeedPage />} />
           <Route path="share/:messageId" element={<FeedPage />} />
+          <Route path="identity/:keyId" element={<FeedPage />} />
+          <Route path="add-friend" element={<FeedPage />} />
+          <Route path="accept-invitation" element={<FeedPage />} />
+          <Route path="scan-invitation" element={<FeedPage />} />
+          <Route path="users" element={<FeedPage />} />
+          <Route path="users/identity/:keyId" element={<FeedPage />} />
+          <Route path="users/share-history/:keyId" element={<FeedPage />} />
+          <Route path="users/unfriend/:keyId" element={<FeedPage />} />
+          <Route path="users/add-friend" element={<FeedPage />} />
+          <Route path="users/accept-invitation" element={<FeedPage />} />
+          <Route path="users/scan-invitation" element={<FeedPage />} />
+          <Route path="users/accept-request/:keyId" element={<FeedPage />} />
+          <Route path="users/public-key/:keyId" element={<FeedPage />} />
+          <Route path="users/invitation-qr/:token" element={<FeedPage />} />
+          <Route path="users/remove-invitation/:token" element={<FeedPage />} />
         </Route>
       </Route>
     </Routes>

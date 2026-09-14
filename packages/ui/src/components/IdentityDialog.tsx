@@ -13,6 +13,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Stack,
   Switch,
   TextField,
@@ -22,6 +23,7 @@ import {
   Typography,
 } from '@mui/material';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import {
   formatEcPublicKeyText,
@@ -356,14 +358,36 @@ export function IdentityDialog({
         }}
       >
         <DialogTitle
-          title={title !== 'Identity' ? title : undefined}
+          component="div"
           sx={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
           }}
         >
-          {title}
+          <Typography
+            variant="h6"
+            component="span"
+            title={title !== 'Identity' ? title : undefined}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.3,
+            }}
+          >
+            {title}
+          </Typography>
+          <IconButton
+            aria-label="Close"
+            onClick={handleClose}
+            size="small"
+            sx={{ flexShrink: 0 }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -532,7 +556,9 @@ export function IdentityDialog({
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Close</Button>
+          <Button onClick={handleClose} sx={{ mr: 'auto' }}>
+            Close
+          </Button>
           {!isSelf && isFriend ? (
             <Button
               variant="contained"

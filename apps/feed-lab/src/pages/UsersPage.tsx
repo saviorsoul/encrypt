@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
@@ -36,7 +36,13 @@ import { RemoveInvitationConfirmDialog } from '@encrypt/ui';
 import { LazyInvitationQrScanDialog } from '@encrypt/ui/LazyInvitationQrScanDialog';
 import { useBackendFriendInvitations } from '@lab/hooks/useBackendFriendInvitations.ts';
 import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
-import { IdentityDialog, useIdentityDialog } from '@encrypt/ui';
+import {
+  IdentityDialog,
+  useIdentityDialog,
+  useFeedUsersDialogRoutes,
+  feedDialogRoutes,
+  type IdentityDialogTarget,
+} from '@encrypt/ui';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
 import {
   saveFeedLabUser,
@@ -59,36 +65,26 @@ export function UsersPage() {
   const api = useFeedApi();
   const { keys, feedLabUsers } = useFeedLabSession();
   const { addLocalUser, usernameByKeyId, usernames } = feedLabUsers;
+  const {
+    routedIdentityKeyId,
+    shareHistoryKeyId,
+    unfriendKeyId,
+    acceptRequestKeyId,
+    publicKeyKeyId,
+    invitationQrToken,
+    removeInvitationToken,
+    addFriendOpen: addFriendDialogOpen,
+    acceptInvitationOpen,
+    qrScanOpen,
+    routedIdentityFromState,
+    closeUsersDialog,
+  } = useFeedUsersDialogRoutes();
 
-  const [acceptFriendRequest, setAcceptFriendRequest] =
-    useState<PendingFriendRequest | null>(null);
   const [acceptFriendError, setAcceptFriendError] = useState<string | null>(
     null,
   );
   const [acceptFriendBusy, setAcceptFriendBusy] = useState(false);
-  const [addFriendDialogOpen, setAddFriendDialogOpen] = useState(false);
-  const [viewPublicKey, setViewPublicKey] = useState<{
-    x: string;
-    y: string;
-  } | null>(null);
-  const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
-  const [removeInvitationTarget, setRemoveInvitationTarget] = useState<{
-    token: string;
-    label: string | null;
-  } | null>(null);
-  const [acceptInvitationOpen, setAcceptInvitationOpen] = useState(false);
-  const [qrScanOpen, setQrScanOpen] = useState(false);
-  const [unfriendDialogOpen, setUnfriendDialogOpen] = useState(false);
-  const [unfriendTarget, setUnfriendTarget] = useState<{
-    keyId: string;
-    label: string;
-  } | null>(null);
   const [unfriendError, setUnfriendError] = useState<string | null>(null);
-  const [shareHistoryTarget, setShareHistoryTarget] = useState<{
-    keyId: string;
-    name: string | null;
-    publicKey: { x: string; y: string };
-  } | null>(null);
   const unfriendSucceededRef = useRef(false);
   const { copyAndNotify, snackbarProps } = useCopiedToClipboardSnackbar();
 
@@ -116,6 +112,114 @@ export function UsersPage() {
     },
   );
 
+  const resolveIdentityByKeyId = useCallback(
+    (keyId: string): IdentityDialogTarget | null => {
+      const friend = friendships.friends.find((entry) => entry.keyId === keyId);
+      if (friend) {
+        return {
+          keyId: friend.keyId,
+          publicKey: friend.publicKey,
+          label:
+            usernameByKeyId[friend.keyId]?.trim() ||
+            friend.label ||
+            friend.keyId,
+        };
+      }
+      const request = friendships.incomingRequests.find(
+        (entry) => entry.requesterKeyId === keyId,
+      );
+      if (request?.publicKey) {
+        return {
+          keyId,
+          publicKey: request.publicKey,
+          label:
+            usernameByKeyId[keyId]?.trim() ||
+            formatCommentAuthorLabel(keyId, usernameByKeyId),
+        };
+      }
+      return null;
+    },
+    [friendships.friends, friendships.incomingRequests, usernameByKeyId],
+  );
+
+  const acceptFriendRequest = useMemo((): PendingFriendRequest | null => {
+    const keyId = acceptRequestKeyId;
+    if (!keyId) {
+      return null;
+    }
+    const request = friendships.incomingRequests.find(
+      (entry) => entry.requesterKeyId === keyId,
+    );
+    if (!request) {
+      return null;
+    }
+    return {
+      requesterKeyId: request.requesterKeyId,
+      targetKeyId: request.targetKeyId,
+    };
+  }, [acceptRequestKeyId, friendships.incomingRequests]);
+
+  const viewPublicKey = useMemo(() => {
+    const keyId = publicKeyKeyId;
+    if (!keyId) {
+      return null;
+    }
+    const request = friendships.incomingRequests.find(
+      (entry) => entry.requesterKeyId === keyId,
+    );
+    return request?.publicKey ?? null;
+  }, [friendships.incomingRequests, publicKeyKeyId]);
+
+  const qrCodeToken = invitationQrToken;
+
+  const removeInvitationTarget = useMemo(() => {
+    const token = removeInvitationToken;
+    if (!token) {
+      return null;
+    }
+    const invitation = friendships.pendingInvitations.find(
+      (entry) => entry.token === token,
+    );
+    if (!invitation) {
+      return null;
+    }
+    return {
+      token: invitation.token,
+      label: invitation.label,
+    };
+  }, [friendships.pendingInvitations, removeInvitationToken]);
+
+  const unfriendTarget = useMemo(() => {
+    const keyId = unfriendKeyId;
+    if (!keyId) {
+      return null;
+    }
+    const friend = friendships.friends.find((entry) => entry.keyId === keyId);
+    if (!friend) {
+      return null;
+    }
+    return {
+      keyId: friend.keyId,
+      label: usernameByKeyId[friend.keyId]?.trim() || friend.label,
+    };
+  }, [friendships.friends, unfriendKeyId, usernameByKeyId]);
+
+  const shareHistoryTarget = useMemo(() => {
+    const keyId = shareHistoryKeyId;
+    if (!keyId) {
+      return null;
+    }
+    const friend = friendships.friends.find((entry) => entry.keyId === keyId);
+    if (!friend) {
+      return null;
+    }
+    return {
+      keyId: friend.keyId,
+      name: usernameByKeyId[friend.keyId]?.trim() || null,
+      publicKey: friend.publicKey,
+    };
+  }, [friendships.friends, shareHistoryKeyId, usernameByKeyId]);
+
   const identity = useIdentityDialog({
     keyId: keys.keyId,
     usernameByKeyId,
@@ -136,13 +240,23 @@ export function UsersPage() {
     info: friendshipRequests.info,
     onClearError: friendshipRequests.clearError,
     onCancelInFlight: friendshipRequests.cancelInFlight,
-    onOpenIdentity: () => {
+    routedKeyId: routedIdentityKeyId,
+    routedIdentity:
+      routedIdentityFromState?.keyId === routedIdentityKeyId
+        ? routedIdentityFromState
+        : null,
+    resolveIdentityByKeyId,
+    onOpenIdentity: (target) => {
       friendshipRequests.clearError();
       friendshipRequests.clearInfo();
       void friendships.ensureFriendshipsLoaded();
+      navigate(feedDialogRoutes.usersIdentity(target.keyId), {
+        state: { identity: target },
+      });
     },
     onCloseIdentity: () => {
       friendshipRequests.cancelInFlight();
+      closeUsersDialog();
     },
     onAddFriend: async (name, target) => {
       if (!keys.keyId) {
@@ -219,7 +333,7 @@ export function UsersPage() {
               return;
             }
           }
-          setAcceptFriendRequest(null);
+          closeUsersDialog();
         } catch (e) {
           setAcceptFriendError(
             e instanceof Error ? e.message : 'Failed to accept friend request.',
@@ -236,6 +350,7 @@ export function UsersPage() {
       acceptFriendRequest,
       addLocalUser,
       api,
+      closeUsersDialog,
       friendshipRequests,
       keys.keyId,
       refreshFriendData,
@@ -255,16 +370,16 @@ export function UsersPage() {
       return;
     }
     unfriendSucceededRef.current = true;
-    setUnfriendDialogOpen(false);
-  }, [friendshipRequests, keys.keyId, unfriendTarget]);
+    closeUsersDialog();
+  }, [closeUsersDialog, friendshipRequests, keys.keyId, unfriendTarget]);
 
   const openAddFriendDialog = useCallback(() => {
     friendInvitations.clearError();
     friendInvitations.clearLastInvitationId();
     friendshipRequests.clearError();
     friendshipRequests.clearInfo();
-    setAddFriendDialogOpen(true);
-  }, [friendInvitations, friendshipRequests]);
+    navigate(feedDialogRoutes.usersAddFriend());
+  }, [friendInvitations, friendshipRequests, navigate]);
 
   const handleSendRequestByPublicKey = useCallback(
     async (publicKeyText: string, name: string) => {
@@ -284,20 +399,17 @@ export function UsersPage() {
 
   const handleQrTokenScanned = useCallback(
     (token: string) => {
-      setQrScanOpen(false);
       navigate(`/invite/${encodeURIComponent(token)}`);
     },
     [navigate],
   );
 
   const handleQrScanRequest = useCallback(() => {
-    setAcceptInvitationOpen(false);
-    setQrScanOpen(true);
-  }, []);
+    navigate(feedDialogRoutes.usersScanInvitation());
+  }, [navigate]);
 
   const handleInvitationIdSubmit = useCallback(
     (token: string) => {
-      setAcceptInvitationOpen(false);
       navigate(`/invite/${encodeURIComponent(token)}`);
     },
     [navigate],
@@ -311,9 +423,9 @@ export function UsersPage() {
       removeInvitationTarget.token,
     );
     if (removed) {
-      setRemoveInvitationTarget(null);
+      closeUsersDialog();
     }
-  }, [friendInvitations, removeInvitationTarget]);
+  }, [closeUsersDialog, friendInvitations, removeInvitationTarget]);
 
   const outgoingInvitationTokens = new Set(
     friendships.outgoingRequests.map((request) => request.invitationToken),
@@ -351,7 +463,9 @@ export function UsersPage() {
                 variant="outlined"
                 size="small"
                 disabled={!keys.keyId}
-                onClick={() => setAcceptInvitationOpen(true)}
+                onClick={() =>
+                  navigate(feedDialogRoutes.usersAcceptInvitation())
+                }
               >
                 Enter code
               </Button>
@@ -420,7 +534,11 @@ export function UsersPage() {
                                 aria-label="Show public key"
                                 onClick={() => {
                                   if (request.publicKey) {
-                                    setViewPublicKey(request.publicKey);
+                                    navigate(
+                                      feedDialogRoutes.usersPublicKey(
+                                        request.requesterKeyId,
+                                      ),
+                                    );
                                   }
                                 }}
                                 sx={{ flexShrink: 0 }}
@@ -443,10 +561,11 @@ export function UsersPage() {
                             onClick={() => {
                               setAcceptFriendError(null);
                               friendshipRequests.clearError();
-                              setAcceptFriendRequest({
-                                requesterKeyId: request.requesterKeyId,
-                                targetKeyId: request.targetKeyId,
-                              });
+                              navigate(
+                                feedDialogRoutes.usersAcceptRequest(
+                                  request.requesterKeyId,
+                                ),
+                              );
                             }}
                           >
                             Accept
@@ -544,7 +663,13 @@ export function UsersPage() {
                         <IconButton
                           size="small"
                           aria-label="Show invitation QR code"
-                          onClick={() => setQrCodeToken(invitation.token)}
+                          onClick={() =>
+                            navigate(
+                              feedDialogRoutes.usersInvitationQr(
+                                invitation.token,
+                              ),
+                            )
+                          }
                           sx={{ flexShrink: 0 }}
                         >
                           <QrCode2OutlinedIcon fontSize="inherit" />
@@ -569,10 +694,11 @@ export function UsersPage() {
                             data-testid="users-remove-invitation"
                             disabled={friendInvitations.busy}
                             onClick={() =>
-                              setRemoveInvitationTarget({
-                                token: invitation.token,
-                                label: invitation.label,
-                              })
+                              navigate(
+                                feedDialogRoutes.usersRemoveInvitation(
+                                  invitation.token,
+                                ),
+                              )
                             }
                             sx={{ flexShrink: 0 }}
                           >
@@ -643,14 +769,12 @@ export function UsersPage() {
                                 }
                                 sx={{ flexShrink: 0 }}
                                 onClick={() => {
-                                  setShareHistoryTarget({
-                                    keyId: friend.keyId,
-                                    name:
-                                      usernameByKeyId[friend.keyId]?.trim() ||
-                                      null,
-                                    publicKey: friend.publicKey,
-                                  });
                                   shareMessageHistory.clearError();
+                                  navigate(
+                                    feedDialogRoutes.usersShareHistory(
+                                      friend.keyId,
+                                    ),
+                                  );
                                 }}
                               >
                                 <HistoryOutlinedIcon fontSize="small" />
@@ -694,13 +818,9 @@ export function UsersPage() {
                                 }
                                 setUnfriendError(null);
                                 friendshipRequests.clearError();
-                                setUnfriendTarget({
-                                  keyId: friend.keyId,
-                                  label:
-                                    usernameByKeyId[friend.keyId]?.trim() ||
-                                    friend.label,
-                                });
-                                setUnfriendDialogOpen(true);
+                                navigate(
+                                  feedDialogRoutes.usersUnfriend(friend.keyId),
+                                );
                               }}
                             >
                               <PersonRemoveOutlinedIcon fontSize="small" />
@@ -748,7 +868,7 @@ export function UsersPage() {
         requestBusy={friendshipRequests.busy}
         requestError={friendshipRequests.error}
         requestInfo={friendshipRequests.info}
-        onClose={() => setAddFriendDialogOpen(false)}
+        onClose={closeUsersDialog}
         onClearInvitationError={friendInvitations.clearError}
         onClearRequestError={friendshipRequests.clearError}
         onCancelInFlight={friendshipRequests.cancelInFlight}
@@ -792,7 +912,7 @@ export function UsersPage() {
             !acceptFriendBusy &&
             !shareMessageHistory.busy
           ) {
-            setAcceptFriendRequest(null);
+            closeUsersDialog();
             setAcceptFriendError(null);
           }
         }}
@@ -801,19 +921,18 @@ export function UsersPage() {
       />
 
       <UnfriendConfirmDialog
-        open={unfriendDialogOpen}
+        open={unfriendTarget != null}
         friendName={unfriendTarget?.label ?? ''}
         busy={friendshipRequests.busy}
         error={unfriendError}
         onClose={() => {
           if (!friendshipRequests.busy) {
-            setUnfriendDialogOpen(false);
+            closeUsersDialog();
           }
         }}
         onExited={() => {
           const shouldRefresh = unfriendSucceededRef.current;
           unfriendSucceededRef.current = false;
-          setUnfriendTarget(null);
           setUnfriendError(null);
           if (shouldRefresh) {
             void refreshFriendData();
@@ -827,7 +946,7 @@ export function UsersPage() {
         open={viewPublicKey != null}
         publicKey={viewPublicKey}
         title="Public key"
-        onClose={() => setViewPublicKey(null)}
+        onClose={closeUsersDialog}
       />
 
       <IdentityDialog {...identity.dialogProps} />
@@ -837,21 +956,21 @@ export function UsersPage() {
         invitationLabel={removeInvitationTarget?.label ?? null}
         busy={friendInvitations.busy}
         error={friendInvitations.error}
-        onClose={() => setRemoveInvitationTarget(null)}
+        onClose={closeUsersDialog}
         onConfirm={() => void handleRemoveInvitationConfirm()}
         onClearError={friendInvitations.clearError}
       />
 
       <AcceptInvitationDialog
         open={acceptInvitationOpen}
-        onClose={() => setAcceptInvitationOpen(false)}
+        onClose={closeUsersDialog}
         onSubmit={handleInvitationIdSubmit}
         qrScanAvailable
         onQrScanRequest={handleQrScanRequest}
       />
       <LazyInvitationQrScanDialog
         open={qrScanOpen}
-        onClose={() => setQrScanOpen(false)}
+        onClose={closeUsersDialog}
         onTokenScanned={handleQrTokenScanned}
       />
 
@@ -859,7 +978,7 @@ export function UsersPage() {
         <InvitationQrCodeDialog
           open={qrCodeToken != null}
           token={qrCodeToken}
-          onClose={() => setQrCodeToken(null)}
+          onClose={closeUsersDialog}
         />
       ) : null}
 
@@ -872,7 +991,7 @@ export function UsersPage() {
         progress={shareMessageHistory.progress}
         onClose={() => {
           if (!shareMessageHistory.busy) {
-            setShareHistoryTarget(null);
+            closeUsersDialog();
           }
         }}
         onClearError={shareMessageHistory.clearError}
