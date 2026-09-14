@@ -36,6 +36,8 @@ export function App() {
                   <Route element={<FeedntLayout />}>
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/users" element={<FeedPage />} />
+                    <Route path="/create-message" element={<FeedPage />} />
+                    <Route path="/share/:messageId" element={<FeedPage />} />
                     <Route path="/" element={<Navigate to="/feed" replace />} />
                   </Route>
                 </Route>

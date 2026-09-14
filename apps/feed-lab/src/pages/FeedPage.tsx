@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import type { FeedMessageSortMode } from '@encrypt/core/feed/types';
 import type { StoredMessage } from '@encrypt/core/feed/types';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useBackendFeedData } from '@lab/hooks/useBackendFeedData.ts';
@@ -53,8 +53,18 @@ import { useBackendFriendshipRequests } from '@lab/hooks/useBackendFriendshipReq
 import { formatEcPublicKeyText } from '@encrypt/core/crypto/ecPublicKey';
 import { isUnknownUserKeyIdError } from '@encrypt/core/utils/apiRegistrationError';
 
+function createMessageDialogOpenFromPathname(pathname: string): boolean {
+  return pathname.startsWith('/create-message');
+}
+
 export function FeedPage() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { messageId: shareMessageId } = useParams<{ messageId?: string }>();
+  const createMessageDialogOpen = createMessageDialogOpenFromPathname(
+    location.pathname,
+  );
+  const shareDialogOpen = shareMessageId != null;
   const { keys, feedLabUsers } = useFeedLabSession();
   const { usernameByKeyId, usernames, addLocalUser } = feedLabUsers;
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(
@@ -63,11 +73,6 @@ export function FeedPage() {
   const [instantCollapseTransition, setInstantCollapseTransition] =
     useState(false);
   const [lastInteractedMessageId, setLastInteractedMessageId] = useState<
-    string | null
-  >(null);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [createMessageDialogOpen, setCreateMessageDialogOpen] = useState(false);
-  const [shareTargetMessageId, setShareTargetMessageId] = useState<
     string | null
   >(null);
   const [messageSentNoticeKey, setMessageSentNoticeKey] = useState(0);
@@ -298,6 +303,14 @@ export function FeedPage() {
     reloadFeed,
   });
 
+  const openCreateMessageDialog = useCallback(() => {
+    navigate('/create-message');
+  }, [navigate]);
+
+  const closeCreateMessageDialog = useCallback(() => {
+    navigate('/feed');
+  }, [navigate]);
+
   const handleSendSuccess = useCallback(async () => {
     if (keys.keyId) {
       await reloadFeed();
@@ -320,30 +333,28 @@ export function FeedPage() {
     setMessageSharedNoticeKey(0);
   }, []);
 
+  useEffect(() => {
+    if (!shareMessageId) {
+      return;
+    }
+    clearShareError();
+    void ensureFriendshipsLoaded();
+  }, [clearShareError, ensureFriendshipsLoaded, shareMessageId]);
+
   const handleOpenShare = useCallback(
     (messageId: string) => {
       if (feedInvitationalOnly && feed.notRegistered) {
         return;
       }
       setLastInteractedMessageId(messageId);
-      clearShareError();
-      void ensureFriendshipsLoaded();
-      setShareTargetMessageId(messageId);
-      setShareDialogOpen(true);
+      navigate(`/share/${encodeURIComponent(messageId)}`);
     },
-    [
-      clearShareError,
-      ensureFriendshipsLoaded,
-      feed.notRegistered,
-      feedInvitationalOnly,
-    ],
+    [feed.notRegistered, feedInvitationalOnly, navigate],
   );
 
   const handleCloseShareDialog = useCallback(() => {
-    setShareDialogOpen(false);
-    setShareTargetMessageId(null);
-    clearShareError();
-  }, [clearShareError]);
+    navigate('/feed');
+  }, [navigate]);
 
   const handleQrTokenScanned = useCallback(
     (token: string) => {
@@ -390,6 +401,8 @@ export function FeedPage() {
     [friendshipRequests, keys.keyId, usernameByKeyId, usernames],
   );
 
+  const highlightedMessageId = shareMessageId ?? lastInteractedMessageId;
+
   const renderFeedMessage = useCallback(
     (message: StoredMessage) => {
       const isExpanded = expandedMessageIds.has(message.id);
@@ -399,7 +412,7 @@ export function FeedPage() {
         <MessageThreadCard
           message={message}
           expanded={isExpanded}
-          highlighted={lastInteractedMessageId === message.id}
+          highlighted={highlightedMessageId === message.id}
           onMessageInteract={handleMessageInteract}
           onToggleMessage={handleToggleMessage}
           onDecryptDelivery={decryptDelivery}
@@ -444,7 +457,7 @@ export function FeedPage() {
       identity.openIdentity,
       instantCollapseTransition,
       keys.keyId,
-      lastInteractedMessageId,
+      highlightedMessageId,
       lastShare,
       mergeDecryptedComments,
       messageErrors,
@@ -491,7 +504,7 @@ export function FeedPage() {
             </ButtonIconSlot>
           }
           disabled={!keys.keyId || (feedInvitationalOnly && feed.notRegistered)}
-          onClick={() => setCreateMessageDialogOpen(true)}
+          onClick={openCreateMessageDialog}
         >
           Create message
         </Button>
@@ -566,7 +579,7 @@ export function FeedPage() {
         open={createMessageDialogOpen}
         keys={keys}
         recipients={createMessageRecipients}
-        onClose={() => setCreateMessageDialogOpen(false)}
+        onClose={closeCreateMessageDialog}
         onSendSuccess={handleSendSuccess}
         onMessageSent={handleMessageSent}
       />
@@ -583,7 +596,7 @@ export function FeedPage() {
 
       <ShareMessageDialog
         open={shareDialogOpen}
-        messageId={shareTargetMessageId}
+        messageId={shareMessageId ?? null}
         busy={share.busy}
         error={share.error}
         recipients={recipients.recipients}
@@ -597,7 +610,7 @@ export function FeedPage() {
         onShare={(shareRecipients) =>
           share
             .shareMessage({
-              messageId: shareTargetMessageId ?? '',
+              messageId: shareMessageId ?? '',
               recipients: shareRecipients,
               allDeliveries: feed.allDeliveries,
               manifestLookup: feed.manifestLookup,
