@@ -68,6 +68,11 @@ jobs:
           java-version: '21'
 
       - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - run: node -v && npm -v
       - run: npm ci
@@ -127,6 +132,11 @@ jobs:
           java-version: '21'
 
       - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK components
+        run: sdkmanager "build-tools;36.0.0"
 
       - name: Sign Feednt Android APK
         env:
