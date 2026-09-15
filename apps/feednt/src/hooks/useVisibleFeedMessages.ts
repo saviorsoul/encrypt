@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StoredMessage } from '@encrypt/core/feed/types';
 import type { useBackendDecrypt } from '@feednt/hooks/useBackendDecrypt.ts';
+import { warmSenderIdentitiesForMessages } from '@feednt/lib/identityFromPayload.ts';
 
 type DecryptFeedContext = Parameters<
   ReturnType<typeof useBackendDecrypt>['decryptDeliveries']
@@ -40,12 +41,12 @@ export function useVisibleFeedMessages({
   );
 
   const pendingPreparation = useMemo(() => {
-    if (feedLoading || !automateDecryption || messages.length === 0) {
+    if (feedLoading || messages.length === 0) {
       return false;
     }
 
     return messages.some((message) => !visibleMessageIds.has(message.id));
-  }, [automateDecryption, feedLoading, messages, visibleMessageIds]);
+  }, [feedLoading, messages, visibleMessageIds]);
 
   useEffect(() => {
     feedContextRef.current = feedContext;
@@ -53,24 +54,6 @@ export function useVisibleFeedMessages({
 
   useEffect(() => {
     if (feedLoading) {
-      return;
-    }
-
-    if (!automateDecryption) {
-      if (lastProcessedMessagesSyncKeyRef.current === messagesSyncKey) {
-        return;
-      }
-      lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
-      setVisibleMessages((current) => {
-        if (
-          current.length === messages.length &&
-          current.every((message, index) => message === messages[index])
-        ) {
-          return current;
-        }
-        return messages;
-      });
-      setPreparing(false);
       return;
     }
 
@@ -103,18 +86,27 @@ export function useVisibleFeedMessages({
     let cancelled = false;
     setPreparing(true);
 
-    void decryptDeliveries(messages, feedContextRef.current)
-      .then(() => {
-        if (!cancelled) {
-          setVisibleMessages(messages);
-          lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setPreparing(false);
-        }
-      });
+    const newMessages = messages.filter(
+      (message) => !visibleIds.has(message.id),
+    );
+
+    void (async () => {
+      await warmSenderIdentitiesForMessages(newMessages);
+      if (cancelled) {
+        return;
+      }
+      if (automateDecryption) {
+        await decryptDeliveries(messages, feedContextRef.current);
+      }
+      if (!cancelled) {
+        setVisibleMessages(messages);
+        lastProcessedMessagesSyncKeyRef.current = messagesSyncKey;
+      }
+    })().finally(() => {
+      if (!cancelled) {
+        setPreparing(false);
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -127,13 +119,6 @@ export function useVisibleFeedMessages({
     messagesSyncKey,
     visibleMessages,
   ]);
-
-  if (!automateDecryption) {
-    return {
-      visibleMessages: feedLoading ? visibleMessages : messages,
-      preparing: false,
-    };
-  }
 
   return {
     visibleMessages,

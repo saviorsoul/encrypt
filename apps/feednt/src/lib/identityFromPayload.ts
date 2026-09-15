@@ -10,7 +10,10 @@ export type FeedIdentity = {
   publicKey: { x: string; y: string };
 };
 
-export async function getSenderIdentityFromCorePayload(
+const senderIdentityCache = new Map<string, FeedIdentity | null>();
+const senderIdentityPending = new Map<string, Promise<FeedIdentity | null>>();
+
+async function resolveSenderIdentityFromCorePayload(
   payload: string,
 ): Promise<FeedIdentity | null> {
   try {
@@ -21,6 +24,44 @@ export async function getSenderIdentityFromCorePayload(
   } catch {
     return null;
   }
+}
+
+export function getCachedSenderIdentityFromCorePayload(
+  payload: string,
+): FeedIdentity | null | undefined {
+  if (!senderIdentityCache.has(payload)) {
+    return undefined;
+  }
+  return senderIdentityCache.get(payload) ?? null;
+}
+
+export function getSenderIdentityFromCorePayload(
+  payload: string,
+): Promise<FeedIdentity | null> {
+  if (senderIdentityCache.has(payload)) {
+    return Promise.resolve(senderIdentityCache.get(payload) ?? null);
+  }
+
+  let pending = senderIdentityPending.get(payload);
+  if (!pending) {
+    pending = resolveSenderIdentityFromCorePayload(payload).then((identity) => {
+      senderIdentityCache.set(payload, identity);
+      senderIdentityPending.delete(payload);
+      return identity;
+    });
+    senderIdentityPending.set(payload, pending);
+  }
+  return pending;
+}
+
+export async function warmSenderIdentitiesForMessages(
+  messages: ReadonlyArray<{ payload: string }>,
+): Promise<void> {
+  await Promise.all(
+    messages.map((message) =>
+      getSenderIdentityFromCorePayload(message.payload),
+    ),
+  );
 }
 
 export async function getCommentAuthorIdentityFromPayload(

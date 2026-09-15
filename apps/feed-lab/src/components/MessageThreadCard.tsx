@@ -42,6 +42,7 @@ import {
   COMMENTS_PANEL_CONTENT_GROW_MS,
 } from '@lab/lib/commentsPanelTiming.ts';
 import {
+  getCachedSenderIdentityFromCorePayload,
   getCommentAuthorIdentityFromPayload,
   getSenderIdentityFromCorePayload,
   getSharerIdentityFromSharePayload,
@@ -104,6 +105,22 @@ type MessageThreadCardProps = {
 
 const REDACTED_PREVIEW_WORDS = 24;
 const REDACTED_COMMENT_WORDS = 12;
+
+function createInitialSenderState(
+  payload: string,
+  usernameByKeyId: Record<string, string>,
+): { identity: FeedIdentity | null; label: string | null } {
+  const cached = getCachedSenderIdentityFromCorePayload(payload);
+  if (cached === undefined) {
+    return { identity: null, label: null };
+  }
+  return {
+    identity: cached,
+    label: cached
+      ? formatCommentAuthorLabel(cached.keyId, usernameByKeyId)
+      : null,
+  };
+}
 
 function getFriendDeliveryMute(
   getFriendMute: MessageThreadCardProps['getFriendMute'],
@@ -236,9 +253,11 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   instantCollapseTransition = false,
 }: MessageThreadCardProps) {
   const [senderIdentity, setSenderIdentity] = useState<FeedIdentity | null>(
-    null,
+    () => createInitialSenderState(message.payload, usernameByKeyId).identity,
   );
-  const [senderLabel, setSenderLabel] = useState<string | null>(null);
+  const [senderLabel, setSenderLabel] = useState<string | null>(
+    () => createInitialSenderState(message.payload, usernameByKeyId).label,
+  );
   const [sharerIdentity, setSharerIdentity] = useState<FeedIdentity | null>(
     null,
   );
@@ -263,16 +282,25 @@ export const MessageThreadCard = memo(function MessageThreadCard({
   useEffect(() => {
     let cancelled = false;
 
-    void getSenderIdentityFromCorePayload(message.payload).then((identity) => {
-      if (!cancelled) {
-        setSenderIdentity(identity);
-        setSenderLabel(
-          identity
-            ? formatCommentAuthorLabel(identity.keyId, usernameByKeyId)
-            : null,
-        );
+    const applyIdentity = (identity: FeedIdentity | null) => {
+      if (cancelled) {
+        return;
       }
-    });
+      setSenderIdentity(identity);
+      setSenderLabel(
+        identity
+          ? formatCommentAuthorLabel(identity.keyId, usernameByKeyId)
+          : null,
+      );
+    };
+
+    const cached = getCachedSenderIdentityFromCorePayload(message.payload);
+    if (cached !== undefined) {
+      applyIdentity(cached);
+      return;
+    }
+
+    void getSenderIdentityFromCorePayload(message.payload).then(applyIdentity);
 
     return () => {
       cancelled = true;
