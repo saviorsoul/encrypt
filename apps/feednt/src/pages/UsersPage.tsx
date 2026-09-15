@@ -41,6 +41,7 @@ import {
   useIdentityDialog,
   useFeedUsersDialogRoutes,
   feedDialogRoutes,
+  UsersCollapsibleSection,
   type IdentityDialogTarget,
 } from '@encrypt/ui';
 import { useCopiedToClipboardSnackbar } from '@encrypt/ui/useCopiedToClipboardSnackbar';
@@ -495,8 +496,7 @@ export function UsersPage() {
           ) : (
             <Stack spacing={2}>
               {friendships.incomingRequests.length > 0 ? (
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2">Incoming requests</Typography>
+                <UsersCollapsibleSection title="Incoming requests">
                   {friendships.incomingRequests.map((request) => {
                     const localName =
                       usernameByKeyId[request.requesterKeyId]?.trim() || null;
@@ -585,12 +585,14 @@ export function UsersPage() {
                       </Stack>
                     );
                   })}
-                </Stack>
+                </UsersCollapsibleSection>
               ) : null}
 
               {friendships.outgoingRequests.length > 0 ? (
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2">Outgoing requests</Typography>
+                <UsersCollapsibleSection
+                  title={`Outgoing requests (${friendships.outgoingRequests.length})`}
+                  defaultExpanded={false}
+                >
                   {friendships.outgoingRequests.map((request) => {
                     const entry = formatFriendListEntry(
                       request.targetKeyId,
@@ -616,14 +618,14 @@ export function UsersPage() {
                       </Box>
                     );
                   })}
-                </Stack>
+                </UsersCollapsibleSection>
               ) : null}
 
               {shareablePendingInvitations.length > 0 ? (
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2">
-                    Pending invitations ({shareablePendingInvitations.length})
-                  </Typography>
+                <UsersCollapsibleSection
+                  title={`Pending invitations (${shareablePendingInvitations.length})`}
+                  defaultExpanded={false}
+                >
                   {shareablePendingInvitations.map((invitation) => (
                     <Stack
                       key={invitation.token}
@@ -707,13 +709,12 @@ export function UsersPage() {
                       </Tooltip>
                     </Stack>
                   ))}
-                </Stack>
+                </UsersCollapsibleSection>
               ) : null}
 
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">
-                  Your friends ({friendships.friends.length})
-                </Typography>
+              <UsersCollapsibleSection
+                title={`Your friends (${friendships.friends.length})`}
+              >
                 {friendships.friends.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
                     No friends yet. Accept an invitation from someone else to
@@ -830,7 +831,7 @@ export function UsersPage() {
                     );
                   })
                 )}
-              </Stack>
+              </UsersCollapsibleSection>
             </Stack>
           )}
           {usersRefreshing ? (

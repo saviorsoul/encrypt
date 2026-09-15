@@ -193,3 +193,7 @@ export {
 } from './lib/feedDialogRoutes.ts';
 export { useFeedPageDialogRoutes } from './hooks/useFeedPageDialogRoutes.ts';
 export { useFeedUsersDialogRoutes } from './hooks/useFeedUsersDialogRoutes.ts';
+export {
+  UsersCollapsibleSection,
+  type UsersCollapsibleSectionProps,
+} from './components/UsersCollapsibleSection.tsx';
