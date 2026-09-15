@@ -2,7 +2,7 @@
  * Design target for decrypted message/comment length. Used only to size the
  * ciphertext wire limit below — runtime validation uses ciphertext length.
  */
-export const MAX_CONTENT_PLAINTEXT_LENGTH = 500;
+export const MAX_CONTENT_PLAINTEXT_LENGTH = 2000;
 
 /** AES-GCM auth tag appended to ciphertext by Web Crypto (bytes). */
 export const AES_GCM_TAG_BYTES = 16;
@@ -24,8 +24,8 @@ export const MAX_UTF8_BYTES_PER_CODE_UNIT = 4;
  *
  * Wire format: base64(AES-GCM(plaintext) || 16-byte tag); IV is a sibling field.
  * Sized for MAX_CONTENT_PLAINTEXT_LENGTH worst-case UTF-8:
- *   bytes = 500 * 4 + 16 = 2016
- *   base64 = ceil(2016 / 3) * 4 = 2688
+ *   bytes = 2000 * 4 + 16 = 8016
+ *   base64 = ceil(8016 / 3) * 4 = 10688
  */
 export const MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH =
   Math.ceil(
