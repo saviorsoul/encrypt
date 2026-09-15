@@ -27,6 +27,35 @@ import { validateJsonSyntaxText } from '../utils/validateJsonSyntaxText.ts';
 
 const allowSelfOnlyMessage = !isFeedInvitationalOnlyEnabled();
 
+const MESSAGE_FIELD_MIN_ROWS = 5;
+const MESSAGE_FIELD_VIEWPORT_CHROME_PX = 360;
+const MESSAGE_FIELD_ROW_HEIGHT_PX = 23;
+
+function useDialogMessageFieldMaxRows(
+  minRows = MESSAGE_FIELD_MIN_ROWS,
+): number {
+  const [maxRows, setMaxRows] = useState(minRows);
+
+  useEffect(() => {
+    const syncMaxRows = () => {
+      const availableHeight =
+        window.innerHeight - MESSAGE_FIELD_VIEWPORT_CHROME_PX - 40;
+      setMaxRows(
+        Math.max(
+          minRows,
+          Math.floor(availableHeight / MESSAGE_FIELD_ROW_HEIGHT_PX),
+        ),
+      );
+    };
+
+    syncMaxRows();
+    window.addEventListener('resize', syncMaxRows);
+    return () => window.removeEventListener('resize', syncMaxRows);
+  }, [minRows]);
+
+  return maxRows;
+}
+
 export type SendMode = 'message' | 'json';
 
 export type SendMessageRecipients = {
@@ -72,12 +101,16 @@ type SendMessageTextFieldProps = {
   resetKey: number;
   disabled: boolean;
   onDraftChange: (text: string, gate: MessageDraftGate) => void;
+  maxRows: number;
+  scrollWhenFull?: boolean;
 };
 
 const SendMessageTextField = memo(function SendMessageTextField({
   resetKey,
   disabled,
   onDraftChange,
+  maxRows,
+  scrollWhenFull = false,
 }: SendMessageTextFieldProps) {
   const [value, setValue] = useState('');
   const [limitState, setLimitState] = useState(() =>
@@ -109,8 +142,8 @@ const SendMessageTextField = memo(function SendMessageTextField({
       value={value}
       onChange={handleChange}
       multiline
-      minRows={5}
-      maxRows={10}
+      minRows={MESSAGE_FIELD_MIN_ROWS}
+      maxRows={maxRows}
       fullWidth
       placeholder="Enter text to encrypt..."
       disabled={disabled}
@@ -120,8 +153,19 @@ const SendMessageTextField = memo(function SendMessageTextField({
         input: {
           sx: (theme) => ({
             fontSize: theme.typography.body2.fontSize,
+            alignItems: 'flex-start',
           }),
         },
+        ...(scrollWhenFull
+          ? {
+              htmlInput: {
+                sx: {
+                  overflow: 'auto !important',
+                  resize: 'none',
+                },
+              },
+            }
+          : {}),
       }}
     />
   );
@@ -301,6 +345,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
   } = form;
   const hasFriendsForPolicy =
     recipients.recipientOptions.length > 0 || allowSelfOnlyMessage;
+  const dialogMaxRows = useDialogMessageFieldMaxRows();
 
   const actionButtons =
     sendMode === 'message' ? (
@@ -347,6 +392,7 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 1,
+          flexShrink: 0,
         }}
       >
         {variant === 'paper' ? (
@@ -389,6 +435,8 @@ export function SendMessagePanel<TRecipients extends SendMessageRecipients>({
             resetKey={messageFieldResetKey}
             disabled={busy || recipientsLoading}
             onDraftChange={handleMessageDraftChange}
+            maxRows={variant === 'plain' ? dialogMaxRows : 10}
+            scrollWhenFull={variant === 'plain'}
           />
 
           <MessagePolicyOptionsReveal

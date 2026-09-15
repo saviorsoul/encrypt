@@ -80,7 +80,8 @@ export function SendMessageDialog<
           sx: {
             display: 'flex',
             flexDirection: 'column',
-            maxHeight: 'min(90vh, 720px)',
+            maxHeight: 'calc(100vh - 40px)',
+            my: '20px',
             overflow: 'hidden',
           },
         },
@@ -89,14 +90,7 @@ export function SendMessageDialog<
         },
       }}
     >
-      <DialogContent
-        sx={{
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          minHeight: 0,
-          flex: '1 1 auto',
-        }}
-      >
+      <DialogContent>
         <SendMessagePanel
           variant="plain"
           form={form}
@@ -104,7 +98,7 @@ export function SendMessageDialog<
           showActions={false}
         />
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ flexShrink: 0 }}>
         <SendMessageDialogActions form={form} onClose={handleClose} />
       </DialogActions>
     </AppDialog>
