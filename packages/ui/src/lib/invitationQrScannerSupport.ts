@@ -2,9 +2,11 @@ export type InvitationQrScannerSession = {
   stop: () => Promise<void>;
 };
 
+let primedStreamPromise: Promise<MediaStream> | null = null;
+
 /** Request camera access while a user gesture is still active (mobile browsers). */
 export function primeInvitationQrCameraAccess(): void {
-  if (!window.isSecureContext) {
+  if (!window.isSecureContext || primedStreamPromise) {
     return;
   }
 
@@ -13,18 +15,42 @@ export function primeInvitationQrCameraAccess(): void {
     return;
   }
 
-  void getUserMedia
-    .call(navigator.mediaDevices, {
-      video: { facingMode: { ideal: 'environment' } },
-    })
+  primedStreamPromise = getUserMedia.call(navigator.mediaDevices, {
+    video: { facingMode: { ideal: 'environment' } },
+  });
+}
+
+/** Returns a primed stream once, for reuse by the scanner dialog. */
+export async function takePrimedCameraStream(): Promise<MediaStream | null> {
+  if (!primedStreamPromise) {
+    return null;
+  }
+
+  const promise = primedStreamPromise;
+  primedStreamPromise = null;
+
+  try {
+    return await promise;
+  } catch {
+    return null;
+  }
+}
+
+export function discardPrimedCameraStream(): void {
+  if (!primedStreamPromise) {
+    return;
+  }
+
+  void primedStreamPromise
     .then((stream) => {
       for (const track of stream.getTracks()) {
         track.stop();
       }
     })
     .catch(() => {
-      /* scanner dialog surfaces errors */
+      /* ignore discard errors */
     });
+  primedStreamPromise = null;
 }
 
 export function isInvitationQrScanSupported(): boolean {

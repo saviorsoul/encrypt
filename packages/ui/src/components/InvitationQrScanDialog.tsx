@@ -42,6 +42,7 @@ export function InvitationQrScanDialog({
     null,
   );
   const sessionRef = useRef<InvitationQrScannerSession | null>(null);
+  const scannerStartedForOpenRef = useRef(false);
   const onTokenScannedRef = useRef(onTokenScanned);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [invalidScanError, setInvalidScanError] = useState<string | null>(null);
@@ -83,6 +84,7 @@ export function InvitationQrScanDialog({
 
   useEffect(() => {
     if (!open) {
+      scannerStartedForOpenRef.current = false;
       setVideoElement(null);
       return;
     }
@@ -93,7 +95,7 @@ export function InvitationQrScanDialog({
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open || !videoElement) {
+    if (!open || !videoElement || scannerStartedForOpenRef.current) {
       return;
     }
 
@@ -101,6 +103,8 @@ export function InvitationQrScanDialog({
       setCameraError(getInvitationQrScannerErrorMessage());
       return;
     }
+
+    scannerStartedForOpenRef.current = true;
 
     let cancelled = false;
 

@@ -11,7 +11,10 @@ import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { parseInvitationTokenFromText } from '@encrypt/core/invite/invitationLink';
-import { primeInvitationQrCameraAccess } from '../lib/invitationQrScannerSupport.ts';
+import {
+  discardPrimedCameraStream,
+  primeInvitationQrCameraAccess,
+} from '../lib/invitationQrScannerSupport.ts';
 
 type AcceptInvitationTab = 'id' | 'qr';
 
@@ -42,6 +45,8 @@ export function AcceptInvitationDialog({
       setTab('id');
       setValue('');
       setError(null);
+    } else {
+      discardPrimedCameraStream();
     }
   }
 

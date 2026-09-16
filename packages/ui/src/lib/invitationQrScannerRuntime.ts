@@ -1,28 +1,31 @@
 import type { InvitationQrScannerSession } from './invitationQrScannerSupport.ts';
-import { getInvitationQrScannerErrorMessage } from './invitationQrScannerSupport.ts';
+import { takePrimedCameraStream } from './invitationQrScannerSupport.ts';
 
 const SCAN_INTERVAL_MS = 100;
 
+let inflightOpen: Promise<MediaStream> | null = null;
+
 export async function openCameraStream(): Promise<MediaStream> {
-  const configs: MediaTrackConstraints[] = [
-    { facingMode: { ideal: 'environment' } },
-    { facingMode: 'user' },
-  ];
+  if (inflightOpen) {
+    return inflightOpen;
+  }
 
-  let lastError: unknown;
-  for (const video of configs) {
-    try {
-      return await navigator.mediaDevices.getUserMedia({ video });
-    } catch (error) {
-      lastError = error;
+  inflightOpen = (async () => {
+    const primed = await takePrimedCameraStream();
+    if (primed) {
+      return primed;
     }
-  }
 
-  if (lastError instanceof Error) {
-    throw lastError;
-  }
+    return navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+    });
+  })();
 
-  throw new Error(getInvitationQrScannerErrorMessage());
+  try {
+    return await inflightOpen;
+  } finally {
+    inflightOpen = null;
+  }
 }
 
 export async function attachVideoStream(
