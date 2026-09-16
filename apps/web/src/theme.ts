@@ -33,6 +33,11 @@ const sharedThemeOptions = {
             border: `1px solid ${alpha(paletteColor.main, 0.4)}`,
           };
         },
+        outlined: ({ theme }: { theme: Theme }) => ({
+          backgroundColor: theme.palette.background.paper,
+          border: 'none',
+          boxShadow: theme.shadows[2],
+        }),
       },
     },
   },
