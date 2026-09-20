@@ -1,0 +1,16 @@
+{
+  "extends": "../web/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../web/src/*"],
+      "@electron/*": ["./electron/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "../web/src/vite-env.d.ts",
+    "../../../packages/platform/src/global.d.ts"
+  ]
+}

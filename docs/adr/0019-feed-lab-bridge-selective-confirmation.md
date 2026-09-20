@@ -148,7 +148,7 @@ When the user loads a private key via file picker (non-bridge mode), `SignNetwor
 - [`feedLabBridgeQuickOp.ts`](../../packages/core/src/feed/feedLabBridgeQuickOp.ts) — strict payload types, parsers, and `buildFeedLabBridgeQuickOpApiAuthGetPayload`
 - [`externalFeedApiAuth.ts`](../../packages/core/src/api/externalFeedApiAuth.ts) — GET auth uses `op-quick`; POST/DELETE use `ecdsa-sign`
 - [`feedLabBridgeOracles.ts`](../../packages/core/src/feed/feedLabBridgeOracles.ts) — `op-quick` validates then signs
-- [`FeedLabBridgeHandler.tsx`](../../apps/web/src/components/providers/FeedLabBridgeHandler.tsx) — auto-executes validated `op-quick` for paired sessions
+- [`FeedLabBridgeHandler.tsx`](../../apps/encrypt/web/src/components/providers/FeedLabBridgeHandler.tsx) — auto-executes validated `op-quick` for paired sessions
 
 Auto-approval requires a paired session with a known `keyId` in `approvedSessions`.
 
@@ -156,8 +156,8 @@ Auto-approval requires a paired session with a known `keyId` in `approvedSession
 
 - Code:
   - [`packages/core/src/feed/feedLabBridgeQuickOp.ts`](../../packages/core/src/feed/feedLabBridgeQuickOp.ts)
-  - [`apps/web/src/components/providers/FeedLabBridgeHandler.tsx`](../../apps/web/src/components/providers/FeedLabBridgeHandler.tsx)
-  - [`apps/web/src/components/providers/FeedLabBridgeConfirmDialog.tsx`](../../apps/web/src/components/providers/FeedLabBridgeConfirmDialog.tsx)
+  - [`apps/encrypt/web/src/components/providers/FeedLabBridgeHandler.tsx`](../../apps/encrypt/web/src/components/providers/FeedLabBridgeHandler.tsx)
+  - [`apps/encrypt/web/src/components/providers/FeedLabBridgeConfirmDialog.tsx`](../../apps/encrypt/web/src/components/providers/FeedLabBridgeConfirmDialog.tsx)
   - [`packages/core/src/crypto/authProof.ts`](../../packages/core/src/crypto/authProof.ts)
   - [`packages/core/src/api/externalFeedApiAuth.ts`](../../packages/core/src/api/externalFeedApiAuth.ts)
 - Related ADRs:

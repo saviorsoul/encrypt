@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@lab/*": ["./src/*"],
+      "@api/*": ["../../api/src/*"]
+    },
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["src", "../../../packages/platform/src/global.d.ts"]
+}

@@ -184,22 +184,21 @@ services:
   feed-lab:
     build:
       context: .
-      dockerfile: apps/feed-lab/Dockerfile
+      dockerfile: apps/feed-lab/web/Dockerfile
     container_name: encrypt-feed-lab
     env_file:
       - .env.docker
     ports:
       - '5174:5174'
     volumes:
-      - ./apps/feed-lab/src:/app/apps/feed-lab/src
-      - ./apps/feed-lab/public:/app/apps/feed-lab/public
-      - ./apps/feed-lab/index.html:/app/apps/feed-lab/index.html
-      - ./apps/feed-lab/vite.config.ts:/app/apps/feed-lab/vite.config.ts
+      - ./apps/feed-lab/web/src:/app/apps/feed-lab/web/src
+      - ./apps/feed-lab/web/public:/app/apps/feed-lab/web/public
+      - ./apps/feed-lab/web/index.html:/app/apps/feed-lab/web/index.html
+      - ./apps/feed-lab/web/vite.config.ts:/app/apps/feed-lab/web/vite.config.ts
       - ./packages/core/src:/app/packages/core/src
       - ./packages/ui/src:/app/packages/ui/src
       - ./packages/ui/package.json:/app/packages/ui/package.json
       - ./packages/platform/src:/app/packages/platform/src
-      - ./apps/web/src:/app/apps/web/src
       - ./.env.docker:/app/.env:ro
     depends_on:
       api:

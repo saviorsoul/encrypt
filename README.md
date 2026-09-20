@@ -25,14 +25,19 @@ Pre-built desktop installers are published on [GitHub Releases](https://github.c
 
 npm workspaces monorepo:
 
-| Package              | Path               | Description                                      |
-| -------------------- | ------------------ | ------------------------------------------------ |
-| `@encrypt/web`       | `apps/web`         | Main React + Electron app (local-first)          |
-| `@encrypt/extension` | `apps/extension`   | Chromium MV3 extension (`encrypt://` deep links) |
-| `@encrypt/api`       | `apps/api`         | Koa HTTP API, Prisma, PostgreSQL/Citus           |
-| `@encrypt/feed-lab`  | `apps/feed-lab`    | Dev UI for testing the backend                   |
-| `@encrypt/core`      | `packages/core`    | Shared crypto, feed types, API client            |
-| `@encrypt/schemas`   | `packages/schemas` | Shared schemas                                   |
+| Package              | Path                      | Description                                      |
+| -------------------- | ------------------------- | ------------------------------------------------ |
+| `@encrypt/web`       | `apps/encrypt/web`        | Main React web app (local-first)                 |
+| `@encrypt/desktop`   | `apps/encrypt/desktop`    | Electron desktop shell                           |
+| `@encrypt/mobile`    | `apps/encrypt/mobile`     | Capacitor mobile shell                           |
+| `@feednt/web`        | `apps/feednt/web`         | Feednt shared React UI                           |
+| `@feednt/desktop`    | `apps/feednt/desktop`     | Feednt Electron shell                            |
+| `@feednt/mobile`     | `apps/feednt/mobile`      | Feednt Capacitor shell                           |
+| `@feed-lab/web`      | `apps/feed-lab/web`       | Dev UI for testing the backend                   |
+| `@encrypt/extension` | `apps/extension`          | Chromium MV3 extension (`encrypt://` deep links) |
+| `@encrypt/api`       | `apps/api`                | Koa HTTP API, Prisma, PostgreSQL/Citus           |
+| `@encrypt/core`      | `packages/core`           | Shared crypto, feed types, API client            |
+| `@encrypt/schemas`   | `packages/schemas`        | Shared schemas                                   |
 
 ## Prerequisites for local development
 
@@ -92,7 +97,7 @@ Alternatively, download the Linux installer from [https://nodejs.org](https://no
 3. Start the main app:
 
    ```bash
-   npm start
+   npm run encrypt:dev
    ```
 
    The app opens at [http://localhost:5173](http://localhost:5173). The page reloads when you edit files.
@@ -126,7 +131,7 @@ To run API and feed-lab on the host (with Citus still in Docker):
 
 ```bash
 npm run dev:api    # API on port 3000
-npm run dev:lab    # feed-lab on port 5174
+npm run feed-lab:dev    # feed-lab on port 5174
 ```
 
 Database setup on the host (with `DATABASE_URL` in `.env`):
@@ -153,7 +158,7 @@ The same UI runs as a desktop app via Electron. The desktop app has additional f
 Starts Vite and opens the app in an Electron window with hot reload:
 
 ```bash
-npm run electron:dev
+npm run encrypt:desktop:dev
 ```
 
 ### Preview production build
@@ -161,7 +166,7 @@ npm run electron:dev
 Builds the app for Electron and runs it locally without packaging:
 
 ```bash
-npm run electron:preview
+npm run encrypt:desktop:preview
 ```
 
 ### Package installers
@@ -181,16 +186,16 @@ Packaged builds register the `encrypt://` URL scheme (deep links from the browse
 Check protocol wiring (unit tests + OS probe):
 
 ```bash
-npm run test:protocol
+npm run encrypt:test:protocol
 ```
 
 After installing the desktop app, require the OS handler:
 
 ```bash
-REQUIRE_OS_HANDLER=1 npm run test:protocol
+REQUIRE_OS_HANDLER=1 npm run encrypt:test:protocol
 ```
 
-Manual browser check: open [`apps/web/electron/protocol-test.html`](apps/web/electron/protocol-test.html) and click a link (do not rely on typing `encrypt://` in the address bar).
+Manual browser check: open [`apps/encrypt/desktop/electron/protocol-test.html`](apps/encrypt/desktop/electron/protocol-test.html) and click a link (do not rely on typing `encrypt://` in the address bar).
 
 ### Browser extension (Chromium)
 
@@ -216,10 +221,10 @@ Build and run the desktop app, passing a file path after `--`:
 
 ```bash
 # Cold start with a file (builds dist/, then opens the app)
-npm run electron:preview -- /path/to/file.json
+npm run encrypt:desktop:preview -- /path/to/file.json
 
 # App already built or already running — open a file without rebuilding
-npm run electron:run -- /path/to/file.json
+npm run encrypt:desktop:run -- /path/to/file.json
 ```
 
 Use an absolute path to a real `.json` or `.jwk` file. The path must come **after** `--` so npm forwards it to Electron.
@@ -230,28 +235,37 @@ Canceling the chooser dialog clears the queued file with no other side effects.
 
 Root scripts delegate to workspaces. Run them from the repository root.
 
-### Main app (`@encrypt/web`)
+### Encrypt (`@encrypt/web`, `@encrypt/desktop`, `@encrypt/mobile`)
 
-| Command                    | Description                                                  |
-| -------------------------- | ------------------------------------------------------------ |
-| `npm start`                | Dev server at [http://localhost:5173](http://localhost:5173) |
-| `npm test`                 | Run web + API tests                                          |
-| `npm run build`            | Production web build to `apps/web/dist/`                     |
-| `npm run build:pages`      | Build for GitHub Pages                                       |
-| `npm run preview`          | Preview the production web build                             |
-| `npm run electron:dev`     | Electron dev server with hot reload                          |
-| `npm run electron:preview` | Build and run the Electron app locally                       |
-| `npm run electron:run`     | Run Electron from existing `dist/` build                     |
-| `npm run electron:build`   | Package desktop installers to `release/`                     |
-| `npm run build:extension`  | Build Chromium extension to `apps/extension/dist/`           |
-| `npm run dev:extension`    | Same as `build:extension`                                    |
+| Command                           | Description                                                  |
+| --------------------------------- | ------------------------------------------------------------ |
+| `npm run encrypt:dev`             | Dev server at [http://localhost:5173](http://localhost:5173) |
+| `npm run encrypt:test`            | Run web + API tests                                          |
+| `npm run encrypt:build`           | Production web build to `apps/encrypt/web/dist/`             |
+| `npm run encrypt:build:pages`     | Build for GitHub Pages                                       |
+| `npm run encrypt:preview`         | Preview the production web build                             |
+| `npm run encrypt:desktop:dev`     | Electron dev server with hot reload                          |
+| `npm run encrypt:desktop:preview` | Build and run the Electron app locally                       |
+| `npm run encrypt:desktop:run`     | Run Electron from existing `dist/` build                     |
+| `npm run encrypt:desktop:build`   | Package desktop installers to `release/`                     |
+| `npm run encrypt:mobile:dev`      | Capacitor dev server (port 5175)                             |
+| `npm run build:extension`         | Build Chromium extension to `apps/extension/dist/`           |
+| `npm run dev:extension`           | Same as `build:extension`                                    |
+
+### Feednt (`@feednt/web`, `@feednt/desktop`, `@feednt/mobile`)
+
+| Command                      | Description                         |
+| ---------------------------- | ----------------------------------- |
+| `npm run feednt:dev`         | Feednt web dev server (port 5180)   |
+| `npm run feednt:desktop:dev` | Feednt Electron dev with hot reload |
+| `npm run feednt:mobile:dev`  | Feednt Capacitor dev server         |
 
 ### API + feed-lab
 
 | Command                       | Description                                 |
 | ----------------------------- | ------------------------------------------- |
 | `npm run dev:api`             | API dev server (port 3000)                  |
-| `npm run dev:lab`             | feed-lab dev server (port 5174)             |
+| `npm run feed-lab:dev`        | feed-lab dev server (port 5174)             |
 | `npm run dev:stack`           | Start Docker stack (Citus + API + feed-lab) |
 | `npm run dev:stack:build`     | Build images and start stack                |
 | `npm run dev:stack:logs`      | Follow Docker logs                          |

@@ -26,44 +26,44 @@ jobs:
         include:
           - os: ubuntu-latest
             app: encrypt
-            workspace: '@encrypt/web'
+            workspace: '@encrypt/desktop'
             builder_args: --linux deb AppImage --x64
             artifact: electron-linux-x64-encrypt
             artifact_path: |
-              apps/web/release/*.deb
-              apps/web/release/*.AppImage
+              apps/encrypt/desktop/release/*.deb
+              apps/encrypt/desktop/release/*.AppImage
           - os: ubuntu-24.04-arm
             app: encrypt
-            workspace: '@encrypt/web'
+            workspace: '@encrypt/desktop'
             builder_args: --linux AppImage --arm64
             artifact: electron-linux-arm64-encrypt
-            artifact_path: apps/web/release/*.AppImage
+            artifact_path: apps/encrypt/desktop/release/*.AppImage
           - os: windows-latest
             app: encrypt
-            workspace: '@encrypt/web'
+            workspace: '@encrypt/desktop'
             builder_args: --win nsis
             artifact: electron-windows-encrypt
-            artifact_path: apps/web/release/*.exe
+            artifact_path: apps/encrypt/desktop/release/*.exe
           - os: ubuntu-latest
             app: feednt
-            workspace: '@feednt/local'
+            workspace: '@feednt/desktop'
             builder_args: --linux deb AppImage --x64
             artifact: electron-linux-x64-feednt
             artifact_path: |
-              apps/feednt/local/release/*.deb
-              apps/feednt/local/release/*.AppImage
+              apps/feednt/desktop/release/*.deb
+              apps/feednt/desktop/release/*.AppImage
           - os: ubuntu-24.04-arm
             app: feednt
-            workspace: '@feednt/local'
+            workspace: '@feednt/desktop'
             builder_args: --linux AppImage --arm64
             artifact: electron-linux-arm64-feednt
-            artifact_path: apps/feednt/local/release/*.AppImage
+            artifact_path: apps/feednt/desktop/release/*.AppImage
           - os: windows-latest
             app: feednt
-            workspace: '@feednt/local'
+            workspace: '@feednt/desktop'
             builder_args: --win nsis
             artifact: electron-windows-feednt
-            artifact_path: apps/feednt/local/release/*.exe
+            artifact_path: apps/feednt/desktop/release/*.exe
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false

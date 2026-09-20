@@ -5,7 +5,7 @@
 
 ## Context
 
-[feed-lab](../../apps/feed-lab/) is a static web client (GCS + `HashRouter` in production) that signs API requests and encrypted payloads with a private key loaded via browser file picker. Users want to use the **Encrypt system app** (Electron desktop, Capacitor mobile) as the sole holder of the private key while feed-lab runs in an **external browser tab**.
+[feed-lab](../../apps/feed-lab/web/) is a static web client (GCS + `HashRouter` in production) that signs API requests and encrypted payloads with a private key loaded via browser file picker. Users want to use the **Encrypt system app** (Electron desktop, Capacitor mobile) as the sole holder of the private key while feed-lab runs in an **external browser tab**.
 
 [ADR 0015](./0015-browser-integration-via-encrypt-protocol.md) established `encrypt://` for one-way extension → desktop flows (encrypt, decrypt, copy-public-key). Feed-lab needs a **request/response** channel for:
 
@@ -23,7 +23,7 @@ Loopback HTTP was rejected in ADR 0015 for the extension MVP. Feed-lab uses a **
 | `encrypt://feed-pair?origin=…&session=…&callback=…&bridgeSessionKeyId=…&bridgeSessionPublicJwk=…` | Pair browser origin with system app session |
 | `encrypt://feed-op?session=…&requestId=…&op=…&payload=…&bridgeSessionKeyId=…&bridgeSessionPublicJwk=…` | Request a signing/ECDH oracle (`payload` = base64url JSON) |
 
-Parsing lives in [`apps/web/electron/deepLinks.js`](../../apps/web/electron/deepLinks.js) and shared helpers in [`packages/core/src/feed/feedLabBridge.ts`](../../packages/core/src/feed/feedLabBridge.ts).
+Parsing lives in [`apps/encrypt/desktop/electron/deepLinks.js`](../../apps/encrypt/desktop/electron/deepLinks.js) and shared helpers in [`packages/core/src/feed/feedLabBridge.ts`](../../packages/core/src/feed/feedLabBridge.ts).
 
 ### 2. Return channel: same-origin callback + `localStorage` event
 
@@ -73,7 +73,7 @@ Feed Lab bridge callbacks are opened via `shell.openExternal` in the Electron ma
 - When **`VITE_FEED_LAB_PROTOCOL_BRIDGE=true`**, production-host callbacks must use hash routes (`#/bridge-callback`); dev host uses pathname routes
 - `encrypt://feed-pair` rejects callbacks whose origin does not match the `origin` param (validated in `deepLinks.js` and again before opening)
 
-Validation lives in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts), [`feedLabBridgeOpenExternal.ts`](../../packages/core/src/feed/feedLabBridgeOpenExternal.ts) (renderer), and [`feedLabBridgeOpenExternal.js`](../../apps/web/electron/feedLabBridgeOpenExternal.js) (main / deep-link parser). Configure via `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, and `VITE_FEED_LAB_PROTOCOL_BRIDGE` in repo-root `.env`.
+Validation lives in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts), [`feedLabBridgeOpenExternal.ts`](../../packages/core/src/feed/feedLabBridgeOpenExternal.ts) (renderer), and [`feedLabBridgeOpenExternal.js`](../../apps/encrypt/desktop/electron/feedLabBridgeOpenExternal.js) (main / deep-link parser). Configure via `VITE_FEED_LAB_HOSTNAME`, `VITE_FEED_LAB_DEV_HOSTNAME`, and `VITE_FEED_LAB_PROTOCOL_BRIDGE` in repo-root `.env`.
 
 ### 8. Protocol bridge feature flag (default off)
 
@@ -97,7 +97,7 @@ Enable for local or staged testing:
 VITE_FEED_LAB_PROTOCOL_BRIDGE=true
 ```
 
-Flag is read in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts) (shared) and [`feedLabBridgeConfig.js`](../../apps/web/electron/feedLabBridgeConfig.js) (Electron main). Documented in repo-root [`.env.example`](../../.env.example).
+Flag is read in [`feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts) (shared) and [`feedLabBridgeConfig.js`](../../apps/encrypt/desktop/electron/feedLabBridgeConfig.js) (Electron main). Documented in repo-root [`.env.example`](../../.env.example).
 
 ## Consequences
 
@@ -180,12 +180,12 @@ Threat model notes:
   - [`packages/core/src/feed/feedLabBridgeOracles.ts`](../../packages/core/src/feed/feedLabBridgeOracles.ts)
   - [`packages/core/src/feed/feedLabBridgeClientCrypto.ts`](../../packages/core/src/feed/feedLabBridgeClientCrypto.ts)
   - [`packages/core/src/feed/feedLabBridgeSessionCrypto.ts`](../../packages/core/src/feed/feedLabBridgeSessionCrypto.ts)
-  - [`apps/feed-lab/src/crypto/systemAppSigner.ts`](../../apps/feed-lab/src/crypto/systemAppSigner.ts)
-  - [`apps/feed-lab/src/crypto/systemAppBridgeClient.ts`](../../apps/feed-lab/src/crypto/systemAppBridgeClient.ts)
+  - [`apps/feed-lab/web/src/crypto/systemAppSigner.ts`](../../apps/feed-lab/web/src/crypto/systemAppSigner.ts)
+  - [`apps/feed-lab/web/src/crypto/systemAppBridgeClient.ts`](../../apps/feed-lab/web/src/crypto/systemAppBridgeClient.ts)
   - [`packages/core/src/feed/feedLabBridgeConfig.ts`](../../packages/core/src/feed/feedLabBridgeConfig.ts)
   - [`packages/core/src/feed/feedLabBridgeOpenExternal.ts`](../../packages/core/src/feed/feedLabBridgeOpenExternal.ts)
-  - [`apps/web/electron/feedLabBridgeOpenExternal.js`](../../apps/web/electron/feedLabBridgeOpenExternal.js)
-  - [`apps/web/src/components/providers/FeedLabBridgeHandler.tsx`](../../apps/web/src/components/providers/FeedLabBridgeHandler.tsx)
+  - [`apps/encrypt/desktop/electron/feedLabBridgeOpenExternal.js`](../../apps/encrypt/desktop/electron/feedLabBridgeOpenExternal.js)
+  - [`apps/encrypt/web/src/components/providers/FeedLabBridgeHandler.tsx`](../../apps/encrypt/web/src/components/providers/FeedLabBridgeHandler.tsx)
 - Related ADRs:
   - [0015](./0015-browser-integration-via-encrypt-protocol.md)
   - [0009](./0009-api-authentication-with-server-minted-redis-nonces.md)

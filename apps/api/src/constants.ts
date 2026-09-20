@@ -1,4 +1,4 @@
-/** Mirrors apps/web MAX_IMPORT_JSON_FILE_BYTES — bodyParser jsonLimit. */
+/** Mirrors apps/encrypt/web MAX_IMPORT_JSON_FILE_BYTES — bodyParser jsonLimit. */
 export const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
 export const MANIFEST_VERSION = 9 as const;

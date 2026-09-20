@@ -1,11 +1,11 @@
 import path from 'node:path';
 import { defineConfig, loadEnv, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
-import { feedntNativeBuildEnvPlugin } from '../vite/feedntNativeBuildEnvPlugin.ts';
+import { feedntNativeBuildEnvPlugin } from '../web/vite/feedntNativeBuildEnvPlugin.ts';
 import { contentSecurityPolicyPlugin } from './vite/contentSecurityPolicyPlugin.ts';
 
 const repoRoot = path.resolve(__dirname, '../../..');
-const feedntRoot = path.resolve(__dirname, '..');
+const feedntRoot = path.resolve(__dirname, '../web');
 
 export default defineConfig(({ command, mode }) => {
   const isDevServer = command === 'serve';

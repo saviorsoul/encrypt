@@ -5,7 +5,7 @@
 
 ## Context
 
-[feed-lab](../../apps/feed-lab/) serves browser users and integrates with the Encrypt system app via the bridge ([ADR 0018](./0018-feed-lab-bridge-via-encrypt-protocol.md), [ADR 0019](./0019-feed-lab-bridge-selective-confirmation.md)). Mobile bridge UX remains limited (OS context switches, iOS custom-scheme constraints).
+[feed-lab](../../apps/feed-lab/web/) serves browser users and integrates with the Encrypt system app via the bridge ([ADR 0018](./0018-feed-lab-bridge-via-encrypt-protocol.md), [ADR 0019](./0019-feed-lab-bridge-selective-confirmation.md)). Mobile bridge UX remains limited (OS context switches, iOS custom-scheme constraints).
 
 We need a **native Feednt product** that:
 
@@ -19,8 +19,8 @@ We need a **native Feednt product** that:
 
 | Surface | Path | Role |
 | ------- | ---- | ---- |
-| Shared React UI | `apps/feednt/src` | Product logic, providers, pages |
-| Electron desktop | `apps/feednt/local` | Thin shell (`com.feednt.app`) |
+| Shared React UI | `apps/feednt/web/src` | Product logic, providers, pages |
+| Electron desktop | `apps/feednt/desktop` | Thin shell (`com.feednt.app`) |
 | Capacitor mobile | `apps/feednt/mobile` | Thin shell (`com.feednt.app`) |
 
 Runtime composition: each shell injects a `PlatformAdapter` via build alias `@feednt/runtime` → local `platform.ts` calling `createFeedntPlatformAdapter()` from `@encrypt/platform/safeStoragePrivateKeyUnlock`.
@@ -34,12 +34,12 @@ Runtime composition: each shell injects a `PlatformAdapter` via build alias `@fe
 | `@encrypt/platform` | Private-key custody (Electron safeStorage, Capacitor SecureStorage) |
 | `@encrypt/csp` | Network-aware CSP for Feednt; strict CSP for Encrypt |
 
-Feednt **does not** depend on `apps/web`, `apps/feed-lab`, or bridge packages.
+Feednt **does not** depend on `apps/encrypt/web`, `apps/feed-lab/web`, or bridge packages.
 
 ### 3. feed-lab unchanged in role
 
-- Browser + optional Encrypt bridge remains in `apps/feed-lab`
-- Bridge host remains in `apps/web` (Encrypt app)
+- Browser + optional Encrypt bridge remains in `apps/feed-lab/web`
+- Bridge host remains in `apps/encrypt/web` + `apps/encrypt/desktop` (Encrypt app)
 - ADR 0018 “external browser” applies to feed-lab, not Feednt native
 
 ### 4. Key storage namespace

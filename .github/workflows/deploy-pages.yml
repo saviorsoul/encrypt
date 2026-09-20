@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/web/**'
+      - 'apps/encrypt/web/**'
       - 'packages/core/**'
       - 'package-lock.json'
       - 'package.json'
@@ -52,10 +52,10 @@ jobs:
           cache: npm
       - run: node -v && npm -v
       - run: npm ci
-      - run: npm run build:pages
+      - run: npm run encrypt:build:pages
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: apps/web/dist
+          path: apps/encrypt/web/dist
 
   deploy:
     needs: build

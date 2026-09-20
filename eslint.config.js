@@ -18,8 +18,8 @@ export default tseslint.config(
       '**/build/**',
       '**/coverage/**',
       '**/node_modules/**',
-      'apps/mobile/android/**',
-      'apps/mobile/ios/**',
+      'apps/encrypt/mobile/android/**',
+      'apps/encrypt/mobile/ios/**',
     ],
   },
   js.configs.recommended,
@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+    files: ['apps/encrypt/web/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -93,7 +93,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/mobile/**/*.{js,jsx,ts,tsx}'],
+    files: ['apps/encrypt/mobile/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -113,7 +113,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/feed-lab/e2e/**/*.{js,ts}'],
+    files: ['apps/feed-lab/web/e2e/**/*.{js,ts}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: {
@@ -129,17 +129,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/feed-lab/src/hooks/**/*.{ts,tsx}'],
+    files: ['apps/feed-lab/web/src/hooks/**/*.{ts,tsx}'],
     rules: {
       'react-hooks/set-state-in-effect': 'off',
     },
   },
   {
     files: [
-      'apps/web/src/components/providers/**/*.{tsx,ts}',
-      'apps/web/src/components/layout/ProofOfConceptsNav.tsx',
-      'apps/web/src/components/manifest-steps/StepActionRow.tsx',
-      'apps/feed-lab/src/providers/**/*.{tsx,ts}',
+      'apps/encrypt/web/src/components/providers/**/*.{tsx,ts}',
+      'apps/encrypt/web/src/components/layout/ProofOfConceptsNav.tsx',
+      'apps/encrypt/web/src/components/manifest-steps/StepActionRow.tsx',
+      'apps/feed-lab/web/src/providers/**/*.{tsx,ts}',
     ],
     rules: {
       'react-refresh/only-export-components': 'off',
@@ -147,8 +147,8 @@ export default tseslint.config(
   },
   {
     files: [
-      'apps/web/**/*.test.{js,jsx,ts,tsx}',
-      'apps/web/src/setupTests.js',
+      'apps/encrypt/web/**/*.test.{js,jsx,ts,tsx}',
+      'apps/encrypt/web/src/setupTests.js',
     ],
     languageOptions: {
       globals: {
@@ -182,13 +182,16 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/vite.config.ts'],
+    files: [
+      'apps/encrypt/web/vite.config.ts',
+      'apps/encrypt/desktop/vite.config.ts',
+    ],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ['apps/feed-lab/vite.config.ts'],
+    files: ['apps/feed-lab/web/vite.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
@@ -200,27 +203,30 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/mobile/vite.config.ts', 'apps/mobile/capacitor.config.ts'],
+    files: ['apps/encrypt/mobile/vite.config.ts', 'apps/encrypt/mobile/capacitor.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ['apps/mobile/scripts/**/*.mjs'],
-    languageOptions: {
-      globals: globals.node,
-      sourceType: 'module',
-    },
-  },
-  {
-    files: ['apps/web/electron/**/*.js'],
+    files: ['apps/encrypt/mobile/scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['apps/feednt/public/**/*.js', 'apps/feed-lab/public/**/*.js'],
+    files: ['apps/encrypt/desktop/electron/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
+    files: [
+      'apps/feednt/web/public/**/*.js',
+      'apps/feed-lab/web/public/**/*.js',
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -228,28 +234,28 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/feednt/local/electron/**/*.js'],
+    files: ['apps/feednt/desktop/electron/**/*.js'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['apps/feednt/local/scripts/**/*.mjs'],
+    files: ['apps/feednt/desktop/scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['apps/web/scripts/**/*.mjs'],
+    files: ['apps/encrypt/desktop/scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'module',
     },
   },
   {
-    files: ['apps/web/electron/**/*.cjs'],
+    files: ['apps/encrypt/desktop/electron/**/*.cjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'commonjs',
@@ -259,7 +265,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/feednt/local/electron/**/*.cjs'],
+    files: ['apps/feednt/desktop/electron/**/*.cjs'],
     languageOptions: {
       globals: globals.node,
       sourceType: 'commonjs',

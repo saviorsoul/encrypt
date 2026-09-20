@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const dist = path.join(root, 'dist');
-const webIcons = path.resolve(root, '../web/electron/icons');
+const webIcons = path.resolve(root, '../encrypt/desktop/electron/icons');
 
 function copyFile(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });

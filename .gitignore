@@ -14,21 +14,26 @@ playwright/.cache/
 
 # production
 /build
-/release
 dist/
 apps/landing-page/public/docs/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 docs/.vitepress/.temp/
-apps/web/release
-apps/feednt/local/release
-apps/feednt/local/electron/build-env.json
-apps/feednt/dist/feednt-build-env.json
+
+# Electron desktop installers (electron-builder output)
+apps/encrypt/desktop/release/
+apps/encrypt/web/release/
+apps/feednt/desktop/release/
+
+# Native / electron build artifacts
+apps/feednt/desktop/electron/build-env.json
+apps/feednt/web/dist/feednt-build-env.json
 
 # misc
 .DS_Store
+__pycache__/
 apps/api/keys/
-apps/feed-lab/e2e/keys/
+apps/feed-lab/web/e2e/keys/
 .env
 .env.local
 .env.development.local

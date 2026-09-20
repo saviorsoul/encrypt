@@ -44,7 +44,7 @@ These are **real but incremental** gains relative to non-extractable renderer ke
 
 ## Cons
 
-- **Huge refactor** — private-key paths span `packages/core`, `apps/web` (encrypt/decrypt hooks, tray, deep links, one-to-one, manifests, comments), and `apps/feed-lab`; Electron and web builds diverge or need dual implementations.
+- **Huge refactor** — private-key paths span `packages/core`, `apps/encrypt/web` (encrypt/decrypt hooks, tray, deep links, one-to-one, manifests, comments), and `apps/feed-lab/web`; Electron and web builds diverge or need dual implementations.
 - **Modest gain vs renderer XSS** — if IPC exposes generic sign/derive/decrypt, a compromised renderer has similar operational power to today’s non-extractable `CryptoKey`s (`exportKey` is already blocked).
 - **Plaintext still crosses IPC** for many flows unless main owns full encrypt/decrypt pipelines (ciphertext in, plaintext out).
 - **Main becomes high-value target** — bugs in IPC handlers are as critical as renderer key leaks; main joins the TCB for every crypto operation.
@@ -90,6 +90,6 @@ These are **real but incremental** gains relative to non-extractable renderer ke
   - [0016](./0016-electron-safe-storage-private-key-persistence.md) — Electron safeStorage persistence; session-locked keychain (proposed)
 - Code (current renderer crypto):
   - `packages/core/src/crypto/privateKeyMaterial.ts` — `UploadedPrivateKeyMaterial`
-  - `apps/web/src/crypto/privateKeyFile.ts` — `withUploadedPrivateKey`
-  - `apps/web/electron/safeStoragePrivateKey.js` — `safeStorage` encrypt/decrypt
-  - `apps/web/electron/main.js` — `private-key:safe-storage:*` IPC handlers
+  - `apps/encrypt/web/src/crypto/privateKeyFile.ts` — `withUploadedPrivateKey`
+  - `apps/encrypt/desktop/electron/safeStoragePrivateKey.js` — `safeStorage` encrypt/decrypt
+  - `apps/encrypt/desktop/electron/main.js` — `private-key:safe-storage:*` IPC handlers

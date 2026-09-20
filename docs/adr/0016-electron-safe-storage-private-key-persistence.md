@@ -153,7 +153,7 @@ Automated coverage: `src/tests/electron/privateKeySafeStorageSession.test.js` (`
 
 ### Session-locked keychain IPC
 
-Implemented in Decision §8. Main auto-locks after the renderer arms the session (`private-key:safe-storage:arm-session`), which runs once the in-memory `CryptoKey` cache is warm — not immediately when `load` returns JWK over IPC. See `apps/web/electron/privateKeySafeStorageSession.js`.
+Implemented in Decision §8. Main auto-locks after the renderer arms the session (`private-key:safe-storage:arm-session`), which runs once the in-memory `CryptoKey` cache is warm — not immediately when `load` returns JWK over IPC. See `apps/encrypt/desktop/electron/privateKeySafeStorageSession.js`.
 
 ## Hardening backlog (Electron private key)
 
@@ -181,12 +181,12 @@ withUploadedPrivateKey(fn)
 ## References
 
 - Code:
-  - `apps/web/electron/safeStoragePrivateKey.js` — encrypt, decrypt, file I/O
-  - `apps/web/electron/privateKeySafeStorageSession.js` — session phase machine
-  - `apps/web/electron/main.js` — IPC handlers
-  - `apps/web/electron/preload.cjs` — `privateKeySafeStorage` bridge
-  - `apps/web/src/crypto/electronSafeStoragePrivateKey.ts` — renderer wrapper
-  - `apps/web/src/crypto/privateKeyFile.ts` — `withUploadedPrivateKey` integration
-  - `apps/web/src/crypto/sessionPrivateKeyStorage.ts` — in-memory cache + clear
-  - `apps/web/src/components/providers/ElectronPrivateKeyWarmup.tsx` — login warmup
+  - `apps/encrypt/desktop/electron/safeStoragePrivateKey.js` — encrypt, decrypt, file I/O
+  - `apps/encrypt/desktop/electron/privateKeySafeStorageSession.js` — session phase machine
+  - `apps/encrypt/desktop/electron/main.js` — IPC handlers
+  - `apps/encrypt/desktop/electron/preload.cjs` — `privateKeySafeStorage` bridge
+  - `apps/encrypt/web/src/crypto/electronSafeStoragePrivateKey.ts` — renderer wrapper
+  - `apps/encrypt/web/src/crypto/privateKeyFile.ts` — `withUploadedPrivateKey` integration
+  - `apps/encrypt/web/src/crypto/sessionPrivateKeyStorage.ts` — in-memory cache + clear
+  - `apps/encrypt/web/src/components/providers/ElectronPrivateKeyWarmup.tsx` — login warmup
 - Related ADRs: [0002](./0002-in-memory-non-extractable-private-key-cache.md), [0004](./0004-main-process-owns-external-file-reads.md), [0017](./0017-electron-main-process-private-key-crypto.md) (postponed main-process crypto)

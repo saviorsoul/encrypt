@@ -10,8 +10,8 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../../..');
 
 const targetDirs = [
-  path.join(repoRoot, 'apps/feednt/public'),
-  path.join(repoRoot, 'apps/feed-lab/public'),
+  path.join(repoRoot, 'apps/feednt/web/public'),
+  path.join(repoRoot, 'apps/feed-lab/web/public'),
 ];
 
 const html = renderGdprPageHtml();

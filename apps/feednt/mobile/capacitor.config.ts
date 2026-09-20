@@ -39,7 +39,7 @@ function readRootEnvValue(key: string): string | undefined {
 function readBuiltApiUrl(): string | undefined {
   try {
     const raw = readFileSync(
-      resolve(__dirname, '../dist/feednt-build-env.json'),
+      resolve(__dirname, '../web/dist/feednt-build-env.json'),
       'utf8',
     );
     const parsed = JSON.parse(raw) as { apiUrl?: string };
@@ -61,7 +61,7 @@ const useHttpAndroidScheme =
 const config: CapacitorConfig = {
   appId: 'com.feednt.app',
   appName: 'Feednt',
-  webDir: '../dist',
+  webDir: '../web/dist',
   server: {
     // Capacitor defaults to https://localhost. That blocks http:// API calls
     // (mixed content). Use http scheme when the API URL is plain HTTP.

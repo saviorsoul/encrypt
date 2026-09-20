@@ -30,7 +30,7 @@ Incoming URLs are delivered by:
 | Linux / Windows (cold start)  | `process.argv`                                 |
 | macOS                         | `open-url` (may arrive before `ready`; queued) |
 
-Main parses and validates URLs in [`apps/web/electron/deepLinks.js`](../../apps/web/electron/deepLinks.js) before dispatch.
+Main parses and validates URLs in [`apps/encrypt/desktop/electron/deepLinks.js`](../../apps/encrypt/desktop/electron/deepLinks.js) before dispatch.
 
 ### 2. Deep-link contract (hostname = action)
 
@@ -59,10 +59,10 @@ Encrypt deep links always open the in-app recipient picker after confirmation. T
 
 Tray and deep-link paths share one encrypt pipeline:
 
-- **Command:** [`useElectronEncryptPlaintextMessage`](../../apps/web/src/hooks/useElectronEncryptPlaintextMessage.ts) — encrypt plaintext for a recipient, save thread, copy ciphertext, tray flash.
-- **Ingress adapters:** [`ElectronDeepLinkHandler`](../../apps/web/src/components/providers/ElectronDeepLinkHandler.tsx) confirms then handles deep-link IPC; [`ElectronDesktopEncryptHandler`](../../apps/web/src/components/providers/ElectronDesktopEncryptHandler.tsx) handles tray encrypt IPC only.
+- **Command:** [`useElectronEncryptPlaintextMessage`](../../apps/encrypt/web/src/hooks/useElectronEncryptPlaintextMessage.ts) — encrypt plaintext for a recipient, save thread, copy ciphertext, tray flash.
+- **Ingress adapters:** [`ElectronDeepLinkHandler`](../../apps/encrypt/web/src/components/providers/ElectronDeepLinkHandler.tsx) confirms then handles deep-link IPC; [`ElectronDesktopEncryptHandler`](../../apps/encrypt/web/src/components/providers/ElectronDesktopEncryptHandler.tsx) handles tray encrypt IPC only.
 
-**Tray-only:** [`ElectronTraySync`](../../apps/web/src/components/providers/ElectronTraySync.tsx) syncs auth state and recipient usernames to the OS tray menu. Deep links always use the in-app recipient picker; tray encrypt uses the OS menu recipient.
+**Tray-only:** [`ElectronTraySync`](../../apps/encrypt/web/src/components/providers/ElectronTraySync.tsx) syncs auth state and recipient usernames to the OS tray menu. Deep links always use the in-app recipient picker; tray encrypt uses the OS menu recipient.
 
 ### 5. Extension launches protocol without a dedicated “open app” action
 
@@ -142,14 +142,14 @@ Chromium may prompt once to allow the external protocol; that is expected browse
 ## References
 
 - Code:
-  - [`apps/web/electron/deepLinks.js`](../../apps/web/electron/deepLinks.js) — parse, validate, build
-  - [`apps/web/electron/main.js`](../../apps/web/electron/main.js) — protocol registration, dispatch, pending queues
-  - [`apps/web/src/hooks/useElectronEncryptPlaintextMessage.ts`](../../apps/web/src/hooks/useElectronEncryptPlaintextMessage.ts) — shared encrypt command
-  - [`apps/web/src/components/providers/ElectronDeepLinkHandler.tsx`](../../apps/web/src/components/providers/ElectronDeepLinkHandler.tsx) — deep-link confirm + execution
-  - [`apps/web/src/components/providers/ElectronDesktopEncryptHandler.tsx`](../../apps/web/src/components/providers/ElectronDesktopEncryptHandler.tsx) — tray encrypt ingress
-  - [`apps/web/src/components/providers/ElectronTraySync.tsx`](../../apps/web/src/components/providers/ElectronTraySync.tsx) — tray-only recipient sync
+  - [`apps/encrypt/desktop/electron/deepLinks.js`](../../apps/encrypt/desktop/electron/deepLinks.js) — parse, validate, build
+  - [`apps/encrypt/desktop/electron/main.js`](../../apps/encrypt/desktop/electron/main.js) — protocol registration, dispatch, pending queues
+  - [`apps/encrypt/web/src/hooks/useElectronEncryptPlaintextMessage.ts`](../../apps/encrypt/web/src/hooks/useElectronEncryptPlaintextMessage.ts) — shared encrypt command
+  - [`apps/encrypt/web/src/components/providers/ElectronDeepLinkHandler.tsx`](../../apps/encrypt/web/src/components/providers/ElectronDeepLinkHandler.tsx) — deep-link confirm + execution
+  - [`apps/encrypt/web/src/components/providers/ElectronDesktopEncryptHandler.tsx`](../../apps/encrypt/web/src/components/providers/ElectronDesktopEncryptHandler.tsx) — tray encrypt ingress
+  - [`apps/encrypt/web/src/components/providers/ElectronTraySync.tsx`](../../apps/encrypt/web/src/components/providers/ElectronTraySync.tsx) — tray-only recipient sync
   - [`apps/extension/`](../../apps/extension/) — MV3 extension, deep-link builder, protocol click handoff
-  - [`apps/web/scripts/check-encrypt-protocol.mjs`](../../apps/web/scripts/check-encrypt-protocol.mjs) — packaging / OS handler smoke check
+  - [`apps/encrypt/desktop/scripts/check-encrypt-protocol.mjs`](../../apps/encrypt/desktop/scripts/check-encrypt-protocol.mjs) — packaging / OS handler smoke check
 - Related ADRs:
   - [0004](./0004-main-process-owns-external-file-reads.md) — main vs renderer trust for external inputs
   - [0002](./0002-in-memory-non-extractable-private-key-cache.md) — private-key unlock for tray/deep-link encrypt

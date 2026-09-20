@@ -1,0 +1,50 @@
+{
+  "name": "@encrypt/web",
+  "version": "0.5.9",
+  "private": true,
+  "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
+  "license": "MIT",
+  "homepage": "https://saviorsoul.github.io/encrypt",
+  "bugs": "https://github.com/saviorsoul/encrypt/issues",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@encrypt/core": "*",
+    "@encrypt/platform": "*",
+    "@encrypt/ui": "*",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^6.30.3",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && GITHUB_PAGES=true vite build && cp dist/index.html dist/404.html",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-react": "^4.5.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.1"
+  }
+}

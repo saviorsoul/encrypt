@@ -1,0 +1,103 @@
+{
+  "name": "@feednt/desktop",
+  "version": "0.5.9",
+  "private": true,
+  "description": "Desktop app for Feedn't",
+  "author": "saviorsoul <artur.banka@gmail.com> (https://github.com/saviorsoul)",
+  "license": "MIT",
+  "homepage": "https://feednt.com",
+  "bugs": "https://github.com/saviorsoul/encrypt/issues",
+  "type": "module",
+  "main": "electron/main.js",
+  "desktopName": "com.feednt.app",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "predev": "npm run generate:gdpr-html -w @encrypt/ui",
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5180 && node scripts/electron-dev.mjs\"",
+    "prebuild": "npm run generate:gdpr-html -w @encrypt/ui",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "build:electron": "npm run build",
+    "electron:dev": "npm run dev",
+    "electron:preview": "npm run build && node scripts/electron-run.mjs",
+    "electron:run": "node scripts/electron-run.mjs",
+    "electron:build": "npm run build && electron-builder",
+    "electron:package": "electron-builder --publish never",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@encrypt/core": "*",
+    "@encrypt/csp": "*",
+    "@encrypt/platform": "*",
+    "@encrypt/ui": "*",
+    "@feednt/web": "*",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^6.30.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-react": "^4.5.0",
+    "concurrently": "^9.2.1",
+    "electron": "43.2.0",
+    "electron-builder": "~26.15.7",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.feednt.app",
+    "productName": "Feednt",
+    "artifactName": "${productName}_${version}_${arch}.${ext}",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js",
+      "name": "feednt"
+    },
+    "asarUnpack": [
+      "electron/tray-icon.png",
+      "electron/tray-icon-24.png",
+      "electron/tray-icon-48.png",
+      "electron/tray-icon.ico",
+      "electron/icon.png"
+    ],
+    "icon": "electron/icons",
+    "linux": {
+      "target": [
+        "deb",
+        "AppImage"
+      ],
+      "category": "Network",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "feednt"
+        }
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.social-networking"
+    }
+  }
+}

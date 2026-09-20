@@ -12,7 +12,7 @@ Citus (coordinator + 3 workers), API, and feed-lab on the `encrypt-local` networ
    cp .env.example .env
    ```
 
-   Edit `.env` if needed. Vite apps (`apps/web`, `apps/feed-lab`) read from the repo root via `envDir`. The API loads `.env` via dotenv on startup.
+   Edit `.env` if needed. Vite apps (`apps/encrypt/web`, `apps/feed-lab/web`) read from the repo root via `envDir`. The API loads `.env` via dotenv on startup.
 
 3. **Docker env** — `.env.docker` at the repo root (committed defaults). Edit for custom Citus credentials or ports. Compose passes it via `env_file`, mounts it at `/app/.env` inside `api` and `feed-lab` (for dotenv / Vite `envDir`), and uses it for `${POSTGRES_*}` interpolation.
 
