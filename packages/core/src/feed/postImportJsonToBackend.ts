@@ -1,4 +1,4 @@
-import { COMMENT_WRAP } from '../crypto/commentConstants.ts';
+import { COMMENT_WRAP } from '../constants/comment.ts';
 import type { FeedApi } from '../api/feedApi.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -2,8 +2,8 @@ import {
   FEED_BRIDGE_PAIRING_STORAGE_KEY,
   FEED_BRIDGE_PENDING_PAIR_STORAGE_PREFIX,
   FEED_BRIDGE_RESULT_STORAGE_PREFIX,
-  type FeedLabBridgePairing,
-} from '@encrypt/core/feed/feedLabBridge';
+} from '@encrypt/core/constants/feedLabBridge';
+import type { FeedLabBridgePairing } from '@encrypt/core/feed/feedLabBridge';
 import type { FeedBridgeEncryptedStorageRecord } from '@encrypt/core/feed/feedLabBridgeSessionCrypto';
 import { getBridgeSessionKeyId } from '@lab/crypto/bridgeSessionKey.ts';
 

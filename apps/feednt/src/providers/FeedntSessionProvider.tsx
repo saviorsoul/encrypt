@@ -17,7 +17,7 @@ import {
   importPrivateKeyToSafeStorage,
   isPrivateKeyImportSelectionCancelled,
   unlockPrivateKeyMaterialFromSafeStorage,
-} from '@encrypt/platform/feednt';
+} from '@encrypt/platform/safeStoragePrivateKeyUnlock';
 import { setActivePrivateKeyId } from '@encrypt/platform/activePrivateKeyId';
 import { setPrivateKeySafeStorageAuthState } from '@encrypt/platform/privateKeySafeStorageSession';
 import { getChallengeUrl } from '@feednt/lib/apiBaseUrl.ts';

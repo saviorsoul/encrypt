@@ -7,6 +7,8 @@ import {
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
+} from '@encrypt/core/constants/auth';
+import {
   authHeadersToRecord,
   computeAuthTimeSlot,
   signAuthProof,

@@ -8,7 +8,7 @@ import {
   HKDF_SALT_LENGTH,
   MANIFEST_VERSION,
   MANIFEST_WRAP,
-} from '../constants/manifestConstants.ts';
+} from '../constants/manifest.ts';
 import { signManifestBody } from '../crypto/manifestSign.ts';
 import type {
   KeyManifestMap,

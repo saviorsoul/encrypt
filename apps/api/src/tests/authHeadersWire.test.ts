@@ -7,6 +7,8 @@ import {
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
+} from '@encrypt/core/constants/auth';
+import {
   authHeadersToRecord,
   computeAuthTimeSlot,
   formatAuthPublicKeyWire,
@@ -15,7 +17,7 @@ import {
 import {
   ES256_SIGNATURE_BASE64_BODY_LENGTH,
   ES256_SIGNATURE_BASE64_LENGTH,
-} from '@encrypt/core/crypto/es256Constants';
+} from '@encrypt/core/constants/es256';
 import { slimEcPrivateJwk } from '@encrypt/core/crypto/jwkThumbprint';
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { bytesToBase64 } from '@encrypt/core/utils/bytes';

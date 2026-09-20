@@ -2,6 +2,8 @@ import type { Middleware } from 'koa';
 import {
   AUTH_HEADER_NEXT_NONCE,
   AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
+} from '@encrypt/core/constants/auth';
+import {
   assertAuthKeyIdMatchesPublicKey,
   buildAuthRequestDescriptorFromContext,
   isAuthTimeSlotAccepted,

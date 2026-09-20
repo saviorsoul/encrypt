@@ -11,6 +11,8 @@ import {
   AUTH_HEADER_TIME_SLOT,
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
+} from '@encrypt/core/constants/auth';
+import {
   authHeadersToRecord,
   computeAuthTimeSlot,
   formatAuthPublicKeyWire,

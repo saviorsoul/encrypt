@@ -1,5 +1,5 @@
 import { initCapacitorBridge } from '@encrypt/platform/capacitor/initCapacitorBridge';
-import { createFeedntPlatformAdapter } from '@encrypt/platform/feednt';
+import { createFeedntPlatformAdapter } from '@encrypt/platform/safeStoragePrivateKeyUnlock';
 
 initCapacitorBridge({
   storageKeyPrefix: 'feednt-pk-',

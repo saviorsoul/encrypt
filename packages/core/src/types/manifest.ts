@@ -1,4 +1,4 @@
-import type { MANIFEST_WRAP } from '../constants/manifestConstants.ts';
+import type { MANIFEST_WRAP } from '../constants/manifest.ts';
 
 /**
  * Recipient identity + public ECDH material for manifest KEK derivation (encrypt path).

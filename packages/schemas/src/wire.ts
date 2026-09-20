@@ -1,8 +1,5 @@
-import { AUTH_NONCE_BYTES } from '@encrypt/core/crypto/authProof';
-import {
-  COMMENT_VERSION,
-  COMMENT_WRAP,
-} from '@encrypt/core/crypto/commentConstants';
+import { AUTH_NONCE_BYTES } from '@encrypt/core/constants/auth';
+import { COMMENT_VERSION, COMMENT_WRAP } from '@encrypt/core/constants/comment';
 import {
   AES_GCM_IV_BASE64_LENGTH,
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,
@@ -10,7 +7,7 @@ import {
 import {
   MANIFEST_VERSION,
   MANIFEST_WRAP,
-} from '@encrypt/core/constants/manifestConstants';
+} from '@encrypt/core/constants/manifest';
 import {
   MANIFEST_SHARE_VERSION,
   MANIFEST_SHARE_WRAP,
@@ -25,7 +22,7 @@ import { JWK_THUMBPRINT_SHA256_BASE64URL_LENGTH } from '@encrypt/core/crypto/jwk
 import {
   ES256_SIGNATURE_BASE64_LENGTH,
   ES256_SIGNATURE_BASE64_PATTERN,
-} from '@encrypt/core/crypto/es256Constants';
+} from '@encrypt/core/constants/es256';
 import {
   DEFAULT_INBOX_LIMIT,
   MAX_BASE64_FIELD_LENGTH,

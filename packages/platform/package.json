@@ -18,11 +18,10 @@
     "./activePrivateKeyId": "./src/activePrivateKeyId.ts",
     "./isElectronApp": "./src/isElectronApp.ts",
     "./isCapacitorApp": "./src/isCapacitorApp.ts",
-    "./runtime": "./src/runtime.ts",
     "./electron/safeStoragePrivateKey": "./electron/safeStoragePrivateKey.js",
     "./electron/privateKeySafeStorageSession": "./electron/privateKeySafeStorageSession.js",
     "./capacitor/initCapacitorBridge": "./capacitor/initCapacitorBridge.ts",
-    "./feednt": "./src/feednt.ts"
+    "./safeStoragePrivateKeyUnlock": "./src/safeStoragePrivateKeyUnlock.ts"
   },
   "dependencies": {
     "@encrypt/core": "*"

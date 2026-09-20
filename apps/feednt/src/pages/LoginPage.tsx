@@ -10,7 +10,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { generatePrivateKeyDownloadFile } from '@encrypt/core/crypto/privateKeyDownload';
-import { hasStoredPrivateKeyInSafeStorage } from '@encrypt/platform/feednt';
+import { hasStoredPrivateKeyInSafeStorage } from '@encrypt/platform/safeStoragePrivateKeyUnlock';
 import { AcceptInvitationDialog } from '@encrypt/ui/AcceptInvitationDialog';
 import { CopiedToClipboardSnackbar } from '@encrypt/ui/CopiedToClipboardSnackbar';
 import { GdprConsentCheckbox } from '@encrypt/ui/GdprConsentCheckbox';

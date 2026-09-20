@@ -3,7 +3,7 @@ import {
   AUTH_NONCE_BYTES,
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
-} from '@encrypt/core/crypto/authProof';
+} from '@encrypt/core/constants/auth';
 import { base64ToBytes } from '@encrypt/core/utils/bytes';
 import {
   consumeAndRotateAuthNonce,

@@ -1,5 +1,9 @@
-export type { PlatformAdapter, PrivateKeySafeStorageStatus, StoredPrivateKeyJwkPayload, TrayAuthState } from './types.ts';
-export { createPlatformAdapter } from './runtime.ts';
+export type {
+  PlatformAdapter,
+  PrivateKeySafeStorageStatus,
+  StoredPrivateKeyJwkPayload,
+  TrayAuthState,
+} from './types.ts';
 export {
   withUploadedPrivateKey,
   importPlatformPrivateKeyFromFile,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { AUTH_SIGNABLE_VERSION } from '@encrypt/core/constants/auth';
 import {
-  AUTH_SIGNABLE_VERSION,
   computeAuthTimeSlot,
   generateAuthNonce,
 } from '@encrypt/core/crypto/authProof';

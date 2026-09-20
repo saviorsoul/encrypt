@@ -23,7 +23,7 @@ We need a **native Feednt product** that:
 | Electron desktop | `apps/feednt/local` | Thin shell (`com.feednt.app`) |
 | Capacitor mobile | `apps/feednt/mobile` | Thin shell (`com.feednt.app`) |
 
-Runtime composition: each shell injects a `PlatformAdapter` via build alias `@feednt/runtime` → `createPlatformAdapter()` from `@encrypt/platform`.
+Runtime composition: each shell injects a `PlatformAdapter` via build alias `@feednt/runtime` → local `platform.ts` calling `createFeedntPlatformAdapter()` from `@encrypt/platform/safeStoragePrivateKeyUnlock`.
 
 ### 2. Shared packages (composition, not inheritance)
 

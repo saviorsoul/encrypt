@@ -6,6 +6,12 @@ import {
 import { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
 import { bytesToBase64, base64ToBytes } from '@encrypt/core/utils/bytes';
 import {
+  AUTH_NONCE_BYTES,
+  AUTH_SIGNABLE_VERSION,
+  AUTH_TIME_SLOT_SECONDS,
+  AUTH_TIME_SLOT_SKEW,
+} from '@encrypt/core/constants/auth';
+import {
   assertAuthKeyIdMatchesPublicKey,
   buildAuthRequestDescriptorFromParts,
   buildAuthSignable,
@@ -16,10 +22,6 @@ import {
   parseAuthTimeSlotHeader,
   signAuthProof,
   verifyAuthProof,
-  AUTH_SIGNABLE_VERSION,
-  AUTH_TIME_SLOT_SECONDS,
-  AUTH_TIME_SLOT_SKEW,
-  AUTH_NONCE_BYTES,
   generateAuthNonce,
 } from '@encrypt/core/crypto/authProof';
 import {

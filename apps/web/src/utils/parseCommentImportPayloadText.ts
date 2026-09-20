@@ -1,4 +1,4 @@
-import { COMMENT_VERSION, COMMENT_WRAP } from '@/crypto/commentConstants.ts';
+import { COMMENT_VERSION, COMMENT_WRAP } from '@/crypto/comment.ts';
 import { validateCommentPayload } from '@/crypto/commentCrypto.ts';
 import type { CommentPayload } from '@/types/comment.ts';
 import type { ParseCommentImportPayloadResult } from '@/types/comment.ts';

@@ -1,8 +1,8 @@
 import {
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
-  generateAuthNonce,
-} from '@encrypt/core/crypto/authProof';
+} from '@encrypt/core/constants/auth';
+import { generateAuthNonce } from '@encrypt/core/crypto/authProof';
 import { getRedisClient } from '@/lib/redis.js';
 import type {
   AuthNonceEntry,

@@ -4,8 +4,8 @@ import {
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
-  parseAuthTimeSlotHeader,
-} from '@encrypt/core/crypto/authProof';
+} from '@encrypt/core/constants/auth';
+import { parseAuthTimeSlotHeader } from '@encrypt/core/crypto/authProof';
 import type { AuthHeadersWire } from '../schemas/common.js';
 
 function readHeader(

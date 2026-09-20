@@ -1,4 +1,4 @@
-import { AUTH_NONCE_TTL_SECONDS } from '@encrypt/core/crypto/authProof';
+import { AUTH_NONCE_TTL_SECONDS } from '@encrypt/core/constants/auth';
 import type {
   AuthNonceEntry,
   ConsumeAndRotateOutcome,

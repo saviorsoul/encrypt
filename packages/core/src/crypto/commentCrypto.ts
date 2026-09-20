@@ -4,8 +4,8 @@ import {
   COMMENT_HKDF_INFO,
   COMMENT_VERSION,
   COMMENT_WRAP,
-} from '../crypto/commentConstants.ts';
-import { HKDF_SALT_LENGTH } from '../constants/manifestConstants.ts';
+} from '../constants/comment.ts';
+import { HKDF_SALT_LENGTH } from '../constants/manifest.ts';
 import {
   aesGcmDecryptManifestBody,
   parseEncryptedContentWire,

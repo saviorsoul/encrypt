@@ -4,6 +4,8 @@ import {
   AUTH_HEADER_PUBLIC_KEY,
   AUTH_HEADER_SIGNATURE,
   AUTH_HEADER_TIME_SLOT,
+} from '@encrypt/core/constants/auth';
+import {
   authHeadersToRecord,
   computeAuthTimeSlot,
   formatAuthPublicKeyWire,
@@ -12,14 +14,14 @@ import {
 import {
   COMMENT_VERSION,
   COMMENT_WRAP,
-} from '@encrypt/core/crypto/commentConstants';
-import { MANIFEST_WRAP } from '@encrypt/core/constants/manifestConstants';
+} from '@encrypt/core/constants/comment';
+import { MANIFEST_WRAP } from '@encrypt/core/constants/manifest';
 import {
   MANIFEST_SHARE_VERSION,
   MANIFEST_SHARE_WRAP,
 } from '@encrypt/core/constants/manifestShare';
 import type { importUploadedPrivateKeyMaterial } from '@encrypt/core/crypto/privateKeyMaterial';
-import { ES256_SIGNATURE_BASE64_BODY_LENGTH } from '@encrypt/core/crypto/es256Constants';
+import { ES256_SIGNATURE_BASE64_BODY_LENGTH } from '@encrypt/core/constants/es256';
 import { API_BASE_URL } from './apiStack.ts';
 
 /** Schema-valid ES256 signature placeholder (length + alphabet; not a real signature). */

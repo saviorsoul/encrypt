@@ -1,11 +1,13 @@
-import type { UploadedPrivateKeyMaterial } from '../crypto/privateKeyMaterial.ts';
 import {
   AUTH_HEADER_NEXT_NONCE,
   AUTH_HEADER_NEXT_NONCE_EXPIRES_AT,
-  parseAuthNonceExpiresAtHeader,
-  parseAuthNonceHeader,
   AUTH_NONCE_MIN_REMAINING_SECONDS,
   AUTH_NONCE_TTL_SECONDS,
+} from '../constants/auth.ts';
+import type { UploadedPrivateKeyMaterial } from '../crypto/privateKeyMaterial.ts';
+import {
+  parseAuthNonceExpiresAtHeader,
+  parseAuthNonceHeader,
   authHeadersToRecord,
   computeAuthTimeSlot,
   signAuthProof,

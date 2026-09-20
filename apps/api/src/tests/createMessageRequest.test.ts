@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ES256_SIGNATURE_BASE64_BODY_LENGTH } from '@encrypt/core/crypto/es256Constants';
+import { ES256_SIGNATURE_BASE64_BODY_LENGTH } from '@encrypt/core/constants/es256';
 import {
   MANIFEST_WRAP,
   MAX_CONTENT_CIPHERTEXT_BASE64_LENGTH,

@@ -1,4 +1,4 @@
-import type { COMMENT_WRAP } from '../crypto/commentConstants.ts';
+import type { COMMENT_WRAP } from '../constants/comment.ts';
 import type { ManifestEncryptedContentSignableBody } from '../types/manifest.ts';
 
 export type CommentSignableBody = {

@@ -8,10 +8,7 @@ import type {
   ManifestPayload,
   ManifestSignableBody,
 } from '../types/manifest.ts';
-import {
-  MANIFEST_VERSION,
-  MANIFEST_WRAP,
-} from '../constants/manifestConstants.ts';
+import { MANIFEST_VERSION, MANIFEST_WRAP } from '../constants/manifest.ts';
 import {
   deriveAesGcmKekFromHkdfMaterial,
   deriveEcdhSharedSecretBits,

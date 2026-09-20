@@ -3,11 +3,13 @@ import {
   isFeedLabProtocolBridgeEnabled,
 } from '@encrypt/core/feed/feedLabBridgeConfig';
 import {
+  FEED_BRIDGE_PENDING_PAIR_STORAGE_PREFIX,
+  FEED_BRIDGE_REQUEST_TIMEOUT_MS,
+} from '@encrypt/core/constants/feedLabBridge';
+import {
   buildFeedOpDeepLink,
   buildFeedPairDeepLink,
   decodeFeedBridgePayload,
-  FEED_BRIDGE_PENDING_PAIR_STORAGE_PREFIX,
-  FEED_BRIDGE_REQUEST_TIMEOUT_MS,
   feedBridgeResultStorageKey,
   type FeedLabBridgeOracleOp,
   type FeedLabBridgePairing,

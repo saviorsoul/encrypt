@@ -1,6 +1,6 @@
+import { AUTH_SIGNABLE_VERSION } from '../constants/auth.ts';
 import type { AuthSignableGetBody } from '../crypto/authProof.ts';
 import {
-  AUTH_SIGNABLE_VERSION,
   isAuthTimeSlotAccepted,
   parseAuthNonceHeader,
 } from '../crypto/authProof.ts';
