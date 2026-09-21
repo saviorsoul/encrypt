@@ -1,18 +1,36 @@
 # Encrypt
 
-End-to-end encrypted messaging app. The user-facing client is built with React and Electron; shared crypto and feed logic live in `@encrypt/core`.
+Open-source tools for **end-to-end encrypted** messaging.
 
-## Usage
+This repository holds several related apps that share the same encryption mechanism but serves different purposes.
 
-There is a GitHub Pages site — [saviorsoul.github.io/encrypt/](https://saviorsoul.github.io/encrypt/) — that you can visit to learn more about this app. However, the best user experience is always provided by the desktop application.
+## The apps
 
-The **Encrypt** app (web and Electron) does not connect to any backend service. All messages are stored locally in the built-in browser database, IndexedDB.
+### Encrypt — private messaging on your device
 
-This repository also includes a **feed API** and **feed-lab** dev UI for testing server-backed encrypted feeds during development. Those are optional and not used by the published desktop or GitHub Pages app.
+**Encrypt** lets you write and read encrypted messages locally. Nothing is uploaded to servers - your inbox and recipients lives on your own computer or phone.
 
-## Discord
+- Works fully offline
+- Import and export encrypted messages as text of files
+- Desktop extras: no network access, system tray shortcuts, clipboard encrypt/decrypt, and **Open with → Encrypt** for `.json` / `.jwk` files
 
-There is a [Discord](https://discord.gg/PAmgfU7ZR9) server you can join for announcements, release plans, or just to get in touch.
+Try the web version at [saviorsoul.github.io/encrypt/](https://saviorsoul.github.io/encrypt/). For day-to-day use, install the desktop app (see [Download](#download) below).
+
+### Feedn't — encrypted feed
+
+**Feedn't** is an alternative to mainstream social networks: a feed you can share with friends, with end-to-end encryption so the server never sees your posts in plain text.
+
+- Messages sync through a backend, but are encrypted before they leave your device
+- Native apps for web, desktop, and mobile
+- Designed to know as little about you as possible
+
+Encrypt and Feedn't are separate apps but use the same cryptographic protocol.
+
+### Browser extension — encrypt text from any webpage
+
+A small **Chromium extension** connects your browser to the Encrypt desktop app. Highlight text on a page, choose _Encrypt_ or _Decrypt_, and the desktop app handles the cryptography.
+
+The extension never holds your private key; all crypto runs inside Encrypt.
 
 ## Download
 
@@ -20,26 +38,58 @@ Pre-built desktop installers are published on [GitHub Releases](https://github.c
 
 - **Windows** — download the `.exe` installer
 - **Linux** — download the `.deb` package (Ubuntu / Debian)
+- **Android** — download the `.apk` package
 
-## Repository structure
+## Discord
 
-npm workspaces monorepo:
+Join the [Discord](https://discord.gg/PAmgfU7ZR9) server for announcements, release plans, or to get in touch.
 
-| Package              | Path                      | Description                                      |
-| -------------------- | ------------------------- | ------------------------------------------------ |
-| `@encrypt/web`       | `apps/encrypt/web`        | Main React web app (local-first)                 |
-| `@encrypt/desktop`   | `apps/encrypt/desktop`    | Electron desktop shell                           |
-| `@encrypt/mobile`    | `apps/encrypt/mobile`     | Capacitor mobile shell                           |
-| `@feednt/web`        | `apps/feednt/web`         | Feednt shared React UI                           |
-| `@feednt/desktop`    | `apps/feednt/desktop`     | Feednt Electron shell                            |
-| `@feednt/mobile`     | `apps/feednt/mobile`      | Feednt Capacitor shell                           |
-| `@feed-lab/web`      | `apps/feed-lab/web`       | Dev UI for testing the backend                   |
-| `@encrypt/extension` | `apps/extension`          | Chromium MV3 extension (`encrypt://` deep links) |
-| `@encrypt/api`       | `apps/api`                | Koa HTTP API, Prisma, PostgreSQL/Citus           |
-| `@encrypt/core`      | `packages/core`           | Shared crypto, feed types, API client            |
-| `@encrypt/schemas`   | `packages/schemas`        | Shared schemas                                   |
+---
 
-## Prerequisites for local development
+## For developers
+
+The project is an **npm workspaces monorepo**. Apps live under `apps/`; shared cryptography, feed logic, and UI live in `packages/` (mainly `@encrypt/core`).
+
+Beyond the user-facing apps above, the repo also ships **feed-lab** (dev UI for Feed API flows) and the **Feed API** itself (Koa, PostgreSQL/Citus).
+
+### Repository structure
+
+Workspaces are declared in the root `package.json`. High-level layout:
+
+```
+apps/
+  encrypt/          # Local-first messaging (web, desktop, mobile)
+  feednt/           # Feedn't — server-backed feed client (web, desktop, mobile)
+  feed-lab/         # Feed API dev UI (web)
+  api/              # Feed API (Koa + Prisma)
+  extension/        # Chromium extension for Encrypt desktop
+  landing-page/     # Marketing / docs site
+packages/
+  core/             # Crypto, feed logic, API client
+  schemas/          # Shared JSON schemas
+  ui/               # Shared MUI components
+  platform/         # OS secure storage adapters
+  csp/              # Content-Security-Policy helpers
+```
+
+| Package              | Path                   | Description                                      |
+| -------------------- | ---------------------- | ------------------------------------------------ |
+| `@encrypt/web`       | `apps/encrypt/web`     | Encrypt React web app (local-first)              |
+| `@encrypt/desktop`   | `apps/encrypt/desktop` | Encrypt Electron desktop shell                   |
+| `@encrypt/mobile`    | `apps/encrypt/mobile`  | Encrypt Capacitor mobile shell                   |
+| `@feednt/web`        | `apps/feednt/web`      | Feedn't shared React UI                          |
+| `@feednt/desktop`    | `apps/feednt/desktop`  | Feedn't Electron shell                           |
+| `@feednt/mobile`     | `apps/feednt/mobile`   | Feedn't Capacitor shell                          |
+| `@feed-lab/web`      | `apps/feed-lab/web`    | feed-lab dev UI for the Feed API                 |
+| `@encrypt/api`       | `apps/api`             | Feed API — Koa, Prisma, PostgreSQL/Citus         |
+| `@encrypt/extension` | `apps/extension`       | Chromium MV3 extension (`encrypt://` deep links) |
+| `@encrypt/core`      | `packages/core`        | Shared crypto, feed types, API client            |
+| `@encrypt/schemas`   | `packages/schemas`     | Shared schemas                                   |
+| `@encrypt/ui`        | `packages/ui`          | Shared UI components                             |
+| `@encrypt/platform`  | `packages/platform`    | Secure storage / platform adapters               |
+| `@encrypt/csp`       | `packages/csp`         | CSP configuration helpers                        |
+
+### Prerequisites
 
 You need **Node.js 24 or newer** and **npm** (included with Node.js).
 
@@ -53,15 +103,15 @@ npm --version
 docker compose version   # optional, for API + feed-lab stack
 ```
 
-## Install Node.js
+### Install Node.js
 
-### Windows
+#### Windows
 
 1. Download the **LTS** installer from [https://nodejs.org](https://nodejs.org).
 2. Run the installer and accept the defaults (npm is included).
 3. Open **Command Prompt** or **PowerShell** and run `node --version` to confirm.
 
-### Linux
+#### Linux
 
 **Ubuntu / Debian**
 
@@ -79,7 +129,7 @@ sudo apt install -y nodejs
 
 Alternatively, download the Linux installer from [https://nodejs.org](https://nodejs.org). If you use [nvm](https://github.com/nvm-sh/nvm), run `nvm use` in the project directory (see `.nvmrc`).
 
-## Getting started
+### Getting started
 
 1. Clone the repository and go into the project folder:
 
@@ -94,15 +144,18 @@ Alternatively, download the Linux installer from [https://nodejs.org](https://no
    npm install
    ```
 
-3. Start the main app:
+3. Start the app you are working on:
 
    ```bash
-   npm run encrypt:dev
+   npm run encrypt:dev      # Encrypt web — http://localhost:5173
+   npm run feednt:dev       # Feedn't web — http://localhost:5180
+   npm run feed-lab:dev     # feed-lab — http://localhost:5174 (Feed API optional)
+   npm run dev:api          # Feed API — http://localhost:3000
    ```
 
-   The app opens at [http://localhost:5173](http://localhost:5173). The page reloads when you edit files.
+   For Encrypt, the page reloads when you edit files. Feedn't and feed-lab need `VITE_API_URL` in `.env` when talking to a local API (see below).
 
-### Environment variables
+#### Environment variables
 
 For local API or feed-lab development, copy the env template:
 
@@ -114,7 +167,7 @@ Vite apps read from the repo root (`envDir`). The API loads `.env` on startup. S
 
 Docker uses committed defaults in `.env.docker`. See [docker/README.md](docker/README.md) for the full stack.
 
-### Backend + feed-lab (optional)
+#### Backend + feed-lab (optional)
 
 To run the API and feed-lab against a Citus database in Docker:
 
@@ -142,18 +195,11 @@ npm run db:setup
 
 More detail: [docker/README.md](docker/README.md).
 
-## Desktop app (Electron)
+### Encrypt desktop app (Electron)
 
-The same UI runs as a desktop app via Electron. The desktop app has additional functionality:
+The desktop shell adds network isolation, file associations, system-tray actions (clipboard encrypt/decrypt, import message, copy public key), and `encrypt://` deep-link handling for the browser extension.
 
-- disabled network requests
-- opening files directly in your system (Open with → Encrypt)
-- system tray functions:
-  - encrypt plain text from the **clipboard** to a specific recipient and write encrypted text back to the **clipboard**
-  - import an encrypted message
-  - copy the public key of the current user
-
-### Development
+#### Development
 
 Starts Vite and opens the app in an Electron window with hot reload:
 
@@ -161,7 +207,7 @@ Starts Vite and opens the app in an Electron window with hot reload:
 npm run encrypt:desktop:dev
 ```
 
-### Preview production build
+#### Preview production build
 
 Builds the app for Electron and runs it locally without packaging:
 
@@ -169,7 +215,7 @@ Builds the app for Electron and runs it locally without packaging:
 npm run encrypt:desktop:preview
 ```
 
-### Package installers
+#### Package installers
 
 Builds platform-specific installers with [electron-builder](https://www.electron.build/):
 
@@ -197,25 +243,21 @@ REQUIRE_OS_HANDLER=1 npm run encrypt:test:protocol
 
 Manual browser check: open [`apps/encrypt/desktop/electron/protocol-test.html`](apps/encrypt/desktop/electron/protocol-test.html) and click a link (do not rely on typing `encrypt://` in the address bar).
 
-### Browser extension (Chromium)
+#### Browser extension (Chromium)
 
-Build and load the unpacked MV3 extension that sends selections to the desktop app via `encrypt://` deep links:
+Build and load the unpacked MV3 extension that sends selections to the Encrypt desktop app via `encrypt://` deep links:
 
 ```bash
 npm run build:extension
 ```
 
-Then load `apps/extension/dist` in Chrome/Chromium (**Extensions → Load unpacked**). The Encrypt desktop app must be installed so the OS handles `encrypt://`.
+Load `apps/extension/dist` in Chrome/Chromium (**Extensions → Load unpacked**). The Encrypt desktop app must be installed so the OS handles `encrypt://`. Details: [apps/extension/README.md](apps/extension/README.md).
 
-### Open files from the file manager (Ubuntu)
+#### Open files from the file manager (Ubuntu)
 
-The desktop app accepts `.json` and `.jwk` files opened from the file manager or passed on the command line. When a file is sent to the app, a dialog asks whether to **import an encrypted message**, **add a recipient with the provided public key**, or **sign in with a private key**.
+When a `.json` or `.jwk` file is opened, the app asks whether to **import an encrypted message**, **add a recipient**, or **sign in with a private key**. After installing the `.deb`, use **Open With → Encrypt** (or **Open With Other Application** once). Installed binary: `/opt/Encrypt/encrypt`.
 
-After installing the `.deb` package (from [GitHub Releases](https://github.com/saviorsoul/encrypt/releases/latest) or a local `release/` build), right-click a `.json` or `.jwk` file and choose **Open With → Encrypt**. If Encrypt is not listed, use **Open With Other Application** once; later opens will show it in the menu.
-
-The installed binary is at `/opt/Encrypt/encrypt`. File associations are registered automatically by the `.deb` installer.
-
-#### Manual verification (development)
+##### Manual verification
 
 Build and run the desktop app, passing a file path after `--`:
 
@@ -231,11 +273,11 @@ Use an absolute path to a real `.json` or `.jwk` file. The path must come **afte
 
 Canceling the chooser dialog clears the queued file with no other side effects.
 
-## Commands
+### Commands
 
 Root scripts delegate to workspaces. Run them from the repository root.
 
-### Encrypt (`@encrypt/web`, `@encrypt/desktop`, `@encrypt/mobile`)
+#### Encrypt (`@encrypt/web`, `@encrypt/desktop`, `@encrypt/mobile`)
 
 | Command                           | Description                                                  |
 | --------------------------------- | ------------------------------------------------------------ |
@@ -252,15 +294,15 @@ Root scripts delegate to workspaces. Run them from the repository root.
 | `npm run build:extension`         | Build Chromium extension to `apps/extension/dist/`           |
 | `npm run dev:extension`           | Same as `build:extension`                                    |
 
-### Feednt (`@feednt/web`, `@feednt/desktop`, `@feednt/mobile`)
+#### Feedn't (`@feednt/web`, `@feednt/desktop`, `@feednt/mobile`)
 
-| Command                      | Description                         |
-| ---------------------------- | ----------------------------------- |
-| `npm run feednt:dev`         | Feednt web dev server (port 5180)   |
-| `npm run feednt:desktop:dev` | Feednt Electron dev with hot reload |
-| `npm run feednt:mobile:dev`  | Feednt Capacitor dev server         |
+| Command                      | Description                          |
+| ---------------------------- | ------------------------------------ |
+| `npm run feednt:dev`         | Feedn't web dev server (port 5180)   |
+| `npm run feednt:desktop:dev` | Feedn't Electron dev with hot reload |
+| `npm run feednt:mobile:dev`  | Feedn't Capacitor dev server         |
 
-### API + feed-lab
+#### API + feed-lab
 
 | Command                       | Description                                 |
 | ----------------------------- | ------------------------------------------- |
@@ -275,7 +317,7 @@ Root scripts delegate to workspaces. Run them from the repository root.
 | `npm run db:seed`             | Seed database                               |
 | `npm run db:setup`            | Migrate + distribute (host or CI)           |
 
-### Tooling
+#### Tooling
 
 | Command                | Description                                   |
 | ---------------------- | --------------------------------------------- |
@@ -284,7 +326,7 @@ Root scripts delegate to workspaces. Run them from the repository root.
 | `npm run format`       | Format all files with Prettier                |
 | `npm run format:check` | Check formatting without writing changes      |
 
-## Linting and formatting
+### Linting and formatting
 
 The project uses **ESLint** for code quality and **Prettier** for formatting. Prettier runs as an ESLint rule (`eslint-plugin-prettier`), so formatting problems appear as ESLint errors and are fixed together with `npm run lint:fix`.
 
@@ -293,7 +335,7 @@ Config files:
 - `eslint.config.js` — ESLint rules (TypeScript, React Hooks, React Refresh)
 - `.prettierrc` — Prettier style options
 
-### Editor setup (VS Code / Cursor)
+#### Editor setup (VS Code / Cursor)
 
 Install the recommended extensions when prompted, or from `.vscode/extensions.json`:
 
@@ -302,7 +344,7 @@ Install the recommended extensions when prompted, or from `.vscode/extensions.js
 
 Workspace settings in `.vscode/settings.json` enable format on save (Prettier) and ESLint auto-fix on save.
 
-## Development with AI
+### Development with AI
 
 This project is built with a mix of deliberate engineering and AI-assisted development. Cryptography, data handling, and security rules are designed and reviewed by a human: documented in open RFCs and ADRs, backed by automated tests, and checked against a clear threat model.
 
